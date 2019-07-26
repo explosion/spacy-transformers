@@ -83,6 +83,12 @@ def batch_by_length(seqs, min_batch):
             batches.append(batch)
         else:
             batches[-1].extend(batch)
+    # Check lengths match
     assert sum(len(b) for b in batches) == len(seqs)
+    # Check no duplicates
+    seen = set()
+    for b in batches:
+        seen.update(b)
+    assert len(seen) == len(seqs)
     batches = [list(sorted(batch)) for batch in batches]
     return batches
