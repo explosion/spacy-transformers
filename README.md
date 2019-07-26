@@ -13,6 +13,12 @@ state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 
 ## 🚀 Quickstart
 
+Installing the package from pip will automatically install all dependencies, including PyTorch and spaCy.
+
+```bash
+pip install spacy-pytorch-transformers
+```
+
 The following will download and install the weights, PyTorch, and other
 required dependencies:
 
