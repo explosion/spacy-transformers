@@ -18,11 +18,11 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=("[CLS]", "[BOS]", "[SEP
         return []
     wp_tokens = [wpt.replace("##", "", 1) for wpt in wp_tokens]
     assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
-    output = _align(spacy_tokens, wp_tokens)
+    output = _align(spacy_tokens, wp_tokens, offset)
     return output
 
 
-def _align(seq1, seq2):
+def _align(seq1, seq2, offset):
     # Map character positions to tokens
     map1 = _get_char_map(seq1)
     map2 = _get_char_map(seq2)
@@ -32,7 +32,7 @@ def _align(seq1, seq2):
     for char_position in range(map1.shape[0]):
         i = map1[char_position]
         j = map2[char_position]
-        alignment[i].add(j)
+        alignment[i].add(offset+j)
     return [sorted(list(s)) for s in alignment]
 
 
