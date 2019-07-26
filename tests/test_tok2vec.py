@@ -38,7 +38,7 @@ def test_from_pretrained(tok2vec, docs):
 
 @pytest.mark.parametrize("text1,text2,is_similar,threshold", [
     ("The dog barked.", "The puppy barked.", True, 0.5),
-    ("i ate an apple.", "an apple ate i.", False, 0.8)
+    ("i ate an apple.", "an apple ate i.", False, 0.8),
     ("rats are cute", "cats please me", True, 0.6)
 ])
 def test_similarity(nlp, tok2vec, text1, text2, is_similar, threshold):
@@ -50,6 +50,3 @@ def test_similarity(nlp, tok2vec, text1, text2, is_similar, threshold):
         assert similarity >= threshold
     else:
         assert similarity < threshold
-
-
-def test_sentence_batching():
