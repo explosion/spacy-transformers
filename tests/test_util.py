@@ -11,6 +11,8 @@ from spacy_pytorch_transformers.util import align_word_pieces, pad_batch, batch_
     (["a", "b", "c"], ["ab", "c"], [[0], [0], [1]]),
     (["ab", "cd"], ["a", "bc", "d"], [[0, 1], [1, 2]]),
     (["abcd"], ["ab", "##cd"], [[0, 1]]),
+    (["d", "e", "f"], ["[CLS]", "d", "e", "f"], [[1], [2], [3]]),
+    ([], [], [])
 ]) 
 def test_align_word_pieces(spacy_tokens, wp_tokens, expected_alignment):
     output = align_word_pieces(spacy_tokens, wp_tokens)
