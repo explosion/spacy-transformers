@@ -1,0 +1,3 @@
+spacy>=2.1.6
+pytorch_transformers>=1.0.0
+torch>=0.4.1
