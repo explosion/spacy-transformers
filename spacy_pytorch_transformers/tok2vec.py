@@ -116,7 +116,7 @@ def get_word_pieces(docs, drop=0.0):
     return [doc._.pytt_word_pieces for doc in docs], None
 
 
-def with_length_batching(model, min_batch, min_density=0.8):
+def with_length_batching(model, min_batch):
     """Wrapper that applies a model to variable-length sequences by first batching
     and padding the sequences. This allows us to group similarly-lengthed sequences
     together, making the padding less wasteful. If min_batch==1, no padding will
@@ -126,7 +126,7 @@ def with_length_batching(model, min_batch, min_density=0.8):
 
     def apply_model_to_batches(inputs, drop=0.0):
         backprops = []
-        batches = batch_by_length(inputs, min_batch, min_density)
+        batches = batch_by_length(inputs, min_batch)
         # Initialize this, so we can place the outputs back in order.
         outputs = [[None for _ in col_names] for _ in inputs]
         for indices in batches:
