@@ -55,5 +55,5 @@ jobs:
     displayName: 'Install with pip (Windows)'
 
   - script: |
-      python -m pytest spacy_pytorch_transformers
+      python -m pytest tests
     displayName: 'Run tests'
