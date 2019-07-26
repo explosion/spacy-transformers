@@ -1,4 +1,6 @@
 import pytest
+import numpy
+from numpy.testing import assert_equal
 from spacy_pytorch_transformers.util import align_word_pieces, pad_batch, batch_by_length
 
 
@@ -27,3 +29,18 @@ def test_batch_by_length(lengths, min_batch, expected):
     batches = batch_by_length(seqs, min_batch)
     assert batches == expected
 
+
+@pytest.mark.parametrize("lengths,expected_shape", [
+    ([1, 2], (2, 2)),
+    ([1, 2, 3], (3, 3)),
+    ([0, 1], (2, 1)),
+    ([1], (1, 1)),
+    ([1, 5, 2, 4], (4, 5)),
+])
+def test_pad_batch(lengths, expected_shape):
+    seqs = [numpy.ones((length,), dtype="f") for length in lengths]
+    padded = pad_batch(seqs)
+    for i, seq in enumerate(seqs):
+        assert padded[i].sum() == seq.sum()
+        assert_equal(padded[i, :len(seq)], seq)
+    assert padded.shape == expected_shape
