@@ -46,9 +46,9 @@ def _get_char_map(seq):
     return char_map
 
 
-def pad_batch(batch, value=0):
-    """Pad a batch so that sequences are the same length, and form them into
-    a single array."""
+def pad_batch(batch):
+    """Pad a batch with zeros so that sequences are the same length, and form
+    them into a single array. Supports only 1d input arrays."""
     max_len = max(len(seq) for seq in batch)
     padded = []
     xp = get_array_module(batch[0])
@@ -56,7 +56,7 @@ def pad_batch(batch, value=0):
         # Ugh, numpy.pad sucks.
         pad_desc = (0, max_len - len(seq))
         padded.append(
-            xp.pad(seq, pad_desc, mode="constant", constant_values=(0, value))
+            xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0))
         )
     return xp.vstack(padded)
 
