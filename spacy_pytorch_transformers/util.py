@@ -1,4 +1,5 @@
 import spacy.gold
+from thinc.neural.ops import get_array_module
 
 
 def align_word_pieces(spacy_tokens, wp_tokens, specials=("[CLS]", "[BOS]", "[SEP]")):
@@ -41,7 +42,9 @@ def pad_batch(batch, value=0):
     for seq in batch:
         # Ugh, numpy.pad sucks.
         pad_desc = (0, max_len - len(seq))
-        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, value)))
+        padded.append(
+            xp.pad(seq, pad_desc, mode="constant", constant_values=(0, value))
+        )
     return xp.vstack(padded)
 
 
@@ -49,7 +52,7 @@ def batch_by_length(seqs, min_batch, min_density):
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Two
     constraints are available for the batching:
-    
+
     * min_batch: Try to form batches of at least N members.
     * min_density: Try to form batches where ratio of actual to padding elements
         is at least N.
@@ -62,7 +65,6 @@ def batch_by_length(seqs, min_batch, min_density):
     batch = []
     prev_length = None
     cells_in_batch = 0
-    batch_len = 0
     for length, i in lengths_indices:
         if length == prev_length:
             batch.append(i)
@@ -76,7 +78,7 @@ def batch_by_length(seqs, min_batch, min_density):
             # If not, go ahead and add it to the batch. Otherwise, make a new
             # batch.
             active = sum(len(seqs[b]) for b in batch) + length
-            total = (len(batch)+1) * len(seqs[batch[0]])
+            total = (len(batch) + 1) * len(seqs[batch[0]])
             if (active / total) >= min_density:
                 batch.append(i)
             else:
