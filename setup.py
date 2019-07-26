@@ -32,7 +32,7 @@ def setup_package():
         install_requires=[
             "spacy>=2.1.6,<2.2.0",
             "pytorch_transformers>=1.0.0,<1.1.0",
-            "torch>=1.1.0,<1.2.0",
+            "torch>=0.4.1",
         ],
         python_requires=">=3.6",
         classifiers=[
