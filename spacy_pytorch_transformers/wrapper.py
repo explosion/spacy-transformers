@@ -51,5 +51,5 @@ class PyTT_Wrapper(PyTorchWrapper):
                 self._optimizer.step()
                 self._optimizer.zero_grad()
             return None
-
+        assert output.last_hidden_state is not None
         return output, backward_pytorch
