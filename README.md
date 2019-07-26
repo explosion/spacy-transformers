@@ -1,3 +1,5 @@
+<a href="https://explosion.ai"><img src="https://explosion.ai/assets/img/logo.svg" width="125" height="125" align="right" /></a>
+
 # spaCy wrapper for Huggingface's PyTorch Transformers
 
 This package provides [spaCy](https://spacy.io) model pipelines that wrap [Huggingface's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
