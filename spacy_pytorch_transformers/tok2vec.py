@@ -103,6 +103,7 @@ class PyTT_TokenVectorEncoder(Pipe):
 def get_vector_via_tensor(doc):
     return doc.tensor.sum(axis=0)
 
+
 def get_similarity_via_tensor(doc1, doc2):
     v1 = doc1.vector
     v2 = doc2.vector

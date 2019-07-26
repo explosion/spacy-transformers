@@ -1,6 +1,6 @@
 <a href="https://explosion.ai"><img src="https://explosion.ai/assets/img/logo.svg" width="125" height="125" align="right" /></a>
 
-# spaCy wrapper for Huggingface's PyTorch Transformers
+# spaCy wrapper for PyTorch Transformers
 
 This package provides [spaCy](https://spacy.io) model pipelines that wrap [Huggingface's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
@@ -11,7 +11,13 @@ state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 [![GitHub](https://img.shields.io/github/release/explosion/spacy-pytorch-transformers/all.svg?style=flat-square)](https://github.com/explosion/spacy-pytorch-transformers)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
 
-## Quickstart
+## 🚀 Quickstart
+
+Installing the package from pip will automatically install all dependencies, including PyTorch and spaCy.
+
+```bash
+pip install spacy-pytorch-transformers
+```
 
 The following will download and install the weights, PyTorch, and other
 required dependencies:
@@ -23,15 +29,133 @@ python -m spacy download en_transformer_bertbaseuncased_pytorch
 Once all that's downloaded (over 1gb), you can load it as a normal pipeline,
 and access the outputs directly via extension attributes.
 
+## 📖 Usage
+
+### Extension attributes
+
+This wrapper sets the following [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes) on the `Doc`, `Span` and `Token` objects:
+
+| Name                   | Type | Description                                                                                                                    |
+| ---------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `._.pytt_alignment`    |      |                                                                                                                                |
+| `._.pytt_word_pieces`  |      | A Torch tensor of word-piece IDs.                                                                                              |
+| `._.pytt_word_pieces_` |      | The string forms of the word-piece IDs.                                                                                        |
+| `._.pytt_outputs`      |      | All outputs produced by the PyTorch Transformer model.                                                                         |
+| `._.pytt_gradients`    |      | Gradients of the pytt_outputs. These get incremented during `nlp.update`, and then cleared at the end once the update is made. |
+
+The values can be accessed via the `._` attribute. For example:
+
 ```python
-import spacy
-nlp = spacy.load("en_transformer_bertbaseuncased_pytorch")
-doc = nlp("Hello this is some text")
-doc._.word_piece_tokens
-doc._.word_piece_ids
-doc._.transformer_outputs
-doc._.transformer_cls_vector
+doc = nlp("This is a text.")
+print(doc._.pytt_word_pieces)
 ```
+
+## 🎛 API
+
+### <kbd>class</kbd> `PyTT_TokenVectorEncoder`
+
+spaCy pipeline component to use PyTorch-Transformers models. The component assigns the output of the transformer to the `doc._.pytt_outputs` extension attribute. We also calculate an alignment between the word-piece
+tokens and the spaCy tokenization, so that we can use the last hidden states
+to set the `doc.tensor` attribute. When multiple word-piece tokens align to
+the same spaCy token, the spaCy token receives the sum of their values.
+
+#### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_pretrained`
+
+| Name        | Type                      | Description |
+| ----------- | ------------------------- | ----------- |
+| `name`      |                           |             |
+| `**cfg`     | -                         |             |
+| **RETURNS** | `PyTT_TokenVectorEncoder` |             |
+
+#### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.Model`
+
+| Name        | Type                 | Description |
+| ----------- | -------------------- | ----------- |
+| `name`      |                      |             |
+| `**cfg`     | -                    |             |
+| **RETURNS** | `thinc.neural.Model` |             |
+
+#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.__init__`
+
+| Name        | Type                          | Description |
+| ----------- | ----------------------------- | ----------- |
+| `name`      |                               |             |
+| `model`     | `thinc.neural.Model` / `True` |             |
+| `**cfg`     | -                             |             |
+| **RETURNS** | `PyTT_TokenVectorEncoder`     |             |
+
+#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.__call__`
+
+| Name        | Type               | Description |
+| ----------- | ------------------ | ----------- |
+| `doc`       | `spacy.tokens.Doc` |             |
+| **RETURNS** | `spacy.tokens.Doc` |             |
+
+#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.pipe`
+
+| Name         | Type               | Description                                            |
+| ------------ | ------------------ | ------------------------------------------------------ |
+| `stream`     | iterable           | A stream of documents.                                 |
+| `batch_size` | int                | The number of texts to buffer. Defaults to `128`.      |
+| **YIELDS**   | `spacy.tokens.Doc` | Processed documents in the order of the original text. |
+
+#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.begin_update`
+
+| Name        | Type     | Description           |
+| ----------- | -------- | --------------------- |
+| `docs`      | iterable | A batch of documents. |
+| `drop`      | float    | The dropout rate.     |
+| `**cfg`     | -        |                       |
+| **RETURNS** |          |                       |
+
+#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.predict`
+
+| Name        | Type     | Description           |
+| ----------- | -------- | --------------------- |
+| `docs`      | iterable | A batch of documents. |
+| **RETURNS** |          |                       |
+
+#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.set_annotations`
+
+| Name      | Type     | Description           |
+| --------- | -------- | --------------------- |
+| `docs`    | iterable | A batch of documents. |
+| `outputs` |          |                       |
+
+### <kbd>class</kbd> `PyTT_Language`
+
+A subclass of [`spacy.Language`](https://spacy.io/api/language) that holds a
+PyTorch-Transformer (PyTT) pipeline. PyTT pipelines work only slightly differently from spaCy's default pipelines.
+Specifically, we introduce a new pipeline component at the start of the pipeline,
+`PyTT_TokenVectorEncoder`. We then modify the [`nlp.update`](https://spacy.io/api/language#update) function to run
+the `PyTT_TokenVectorEncoder` before the other pipeline components, and
+backprop it after the other components are done.
+
+#### <kbd>staticmethod</kbd> `PyTT_Language.install_extensions`
+
+Register the [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes) on the `Doc`, `Span` and `Token` objects. If the extensions have already been registered, spaCy will raise an error. The following extensions will be set:
+
+#### <kbd>method</kbd> `PyTT_Language.make_doc`
+
+Create a `Doc` object from text. Applies spaCy's tokenizer and the PyTorch-Transformers tokenizer and aligns the tokens.
+
+| Name        | Type               | Description          |
+| ----------- | ------------------ | -------------------- |
+| `text`      | unicode            | The text to process. |
+| **RETURNS** | `spacy.tokens.Doc` | The processed `Doc`. |
+
+#### <kbd>method</kbd> `PyTT_Language.update`
+
+Update the models in the pipeline.
+
+| Name            | Type     | Description                                                                                                                                |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `docs`          | iterable | A batch of `Doc` objects or unicode. If unicode, a `Doc` object will be created from the text.                                             |
+| `golds`         | iterable | A batch of `GoldParse` objects or dictionaries. Dictionaries will be used to create [`GoldParse`](https://spacy.io/api/goldparse) objects. |
+| `drop`          | float    | The dropout rate.                                                                                                                          |
+| `sgd`           | callable | An optimizer.                                                                                                                              |
+| `losses`        | dict     | Dictionary to update with the loss, keyed by pipeline component.                                                                           |
+| `component_cfg` | dict     | Config parameters for specific pipeline components, keyed by component name.                                                               |
 
 ## Transfer learning
 
