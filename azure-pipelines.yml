@@ -49,5 +49,5 @@ jobs:
     displayName: 'Install with pip (Windows)'
 
   - script: |
-      python -m pytest tests
+      python -m pytest tests --cov=spacy_pytorch_transformers
     displayName: 'Run tests'
