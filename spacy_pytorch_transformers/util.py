@@ -64,15 +64,12 @@ def batch_by_length(seqs, min_batch, min_density):
     batches = []
     batch = []
     prev_length = None
-    cells_in_batch = 0
     for length, i in lengths_indices:
-        if length == prev_length:
+        if not batch or length == prev_length:
             batch.append(i)
-            cells_in_batch += length
         elif len(batch) >= min_batch:
             batches.append(batch)
-            batch = []
-            cells_in_batch = 0
+            batch = [i]
         else:
             # Would adding this to the batch screw up the batch density?
             # If not, go ahead and add it to the batch. Otherwise, make a new
@@ -83,6 +80,9 @@ def batch_by_length(seqs, min_batch, min_density):
                 batch.append(i)
             else:
                 batches.append(batch)
-                batch = []
+                batch = [i]
         prev_length = length
+    if batch:
+        batches.append(batch)
+    assert sum(len(b) for b in batches) == len(seqs)
     return batches

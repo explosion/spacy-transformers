@@ -72,7 +72,10 @@ class PyTT_TokenVectorEncoder(Pipe):
             yield from docs
 
     def predict(self, docs):
-        return self.model(docs)
+        outputs, _ = self.model.begin_update(docs)
+        for out in outputs:
+            assert out.last_hidden_state is not None
+        return outputs
 
     def set_annotations(self, docs, outputs):
         for doc, output in zip(docs, outputs):
@@ -126,7 +129,7 @@ def with_length_batching(model, min_batch, min_density=0.8):
         # Initialize this, so we can place the outputs back in order.
         outputs = [[None for _ in col_names] for _ in inputs]
         for indices in batches:
-            X = _pad([inputs[i] for i in indices])
+            X = pad_batch([inputs[i] for i in indices])
             Y, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
             for col in range(len(col_names)):
@@ -138,7 +141,7 @@ def with_length_batching(model, min_batch, min_density=0.8):
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
-                dY = _pad([d_outputs[i] for i in indices])
+                dY = pad_batch([d_outputs[i] for i in indices])
                 dX = get_dX(dY, sgd=sgd)
                 if dX is not None:
                     for i, j in enumerate(indices):
