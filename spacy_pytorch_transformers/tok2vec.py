@@ -17,6 +17,7 @@ class PyTT_TokenVectorEncoder(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
+    name = "pytt_tok2vec"
 
     @classmethod
     def from_pretrained(cls, name, **cfg):
