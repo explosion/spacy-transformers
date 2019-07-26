@@ -1,5 +1,29 @@
-import spacy.gold
+import numpy as np
 from thinc.neural.ops import get_array_module
+
+
+def _align(seq1, seq2):
+    # Map character positions to tokens
+    map1 = _get_char_map(seq1)
+    map2 = _get_char_map(seq2)
+    # For each token in seq1, get the set of tokens in seq2
+    # that share at least one character with that token.
+    alignment = [set() for _ in seq1]
+    for char_position in range(map1.shape[0]):
+        i = map1[char_position]
+        j = map2[char_position]
+        alignment[i].add(j)
+    return [sorted(list(s)) for s in alignment]
+
+
+def _get_char_map(seq):
+    char_map = np.zeros((sum(len(token) for token in seq),), dtype='i')
+    offset = 0
+    for i, token in enumerate(seq):
+        for j in range(len(token)):
+            char_map[offset + j] = i
+        offset += len(token)
+    return char_map
 
 
 def align_word_pieces(spacy_tokens, wp_tokens, specials=("[CLS]", "[BOS]", "[SEP]")):
@@ -18,18 +42,7 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=("[CLS]", "[BOS]", "[SEP
         return []
     wp_tokens = [wpt.replace("##", "", 1) for wpt in wp_tokens]
     assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
-    if len(wp_tokens) > len(spacy_tokens):
-        cost, w2s, s2w, multi_w2s, multi_s2w = spacy.gold.align(wp_tokens, spacy_tokens)
-    else:
-        cost, s2w, w2s, multi_s2w, multi_w2s = spacy.gold.align(spacy_tokens, wp_tokens)
-    output = []
-    for i in range(len(spacy_tokens)):
-        if s2w[i] != -1:
-            output.append([offset + s2w[i]])
-        else:
-            output.append([])
-    for i, j in multi_w2s.items():
-        output[j].append(offset + i)
+    output = _align(spacy_tokens, wp_tokens)
     return output
 
 
