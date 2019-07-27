@@ -157,6 +157,22 @@ Update the models in the pipeline.
 | `losses`        | dict     | Dictionary to update with the loss, keyed by pipeline component.                                                                           |
 | `component_cfg` | dict     | Config parameters for specific pipeline components, keyed by component name.                                                               |
 
+### Entry points
+
+This package exposes several [entry points](https://spacy.io/usage/saving-loading#entry-points) that tell spaCy how to initialize its components. If `spacy-pytorch-transformers` and spaCy are installed in the same environment, you'll be able to run the following and it'll work as expected:
+
+```python
+tok2vec = nlp.create_pipe("pytt_tok2vec")
+```
+
+This also means that your custom models can ship a `pytt_tok2vec` component and define `"pytt_tok2vec"` in their pipelines, and spaCy will know how to create those components when you deserialize the model. The following entry points are set:
+
+| Name           | Target                    | Type              | Description                      |
+| -------------- | ------------------------- | ----------------- | -------------------------------- |
+| `pytt_tok2vec` | `PyTT_TokenVectorEncoder` | `spacy_factories` | Factory to create the component. |
+| `pytt_textcat` | `PyTT_TextCategorizer`    | `spacy_factories` | Factory to create the component. |
+| `pytt`         | `PyTT_Language`           | `spacy_languages` | Custom `Language` subclass.      |
+
 ## Transfer learning
 
 The main use-case for pretrained transformer models is transfer learning. You
