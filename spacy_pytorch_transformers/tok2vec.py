@@ -73,7 +73,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             yield from docs
 
     def predict(self, docs):
-        outputs, _ = self.model.begin_update(docs)
+        outputs = self.model.predict(docs)
         for out in outputs:
             assert out.last_hidden_state is not None
         return outputs
@@ -93,17 +93,21 @@ class PyTT_TokenVectorEncoder(Pipe):
             for i, word_piece_slice in enumerate(doc._.pytt_alignment):
                 for j in word_piece_slice:
                     doc.tensor[i] += wp_tensor[j] / max(1, align_sizes[j])
-            doc.user_hooks["vector"] = get_vector_via_tensor
-            doc.user_span_hooks["vector"] = get_vector_via_tensor
-            doc.user_token_hooks["vector"] = get_vector_via_tensor
+            doc.user_hooks["vector"] = get_doc_vector_via_tensor
+            doc.user_span_hooks["vector"] = get_span_vector_via_tensor
+            doc.user_token_hooks["vector"] = get_token_vector_via_tensor
             doc.user_hooks["similarity"] = get_similarity_via_tensor
             doc.user_span_hooks["similarity"] = get_similarity_via_tensor
             doc.user_token_hooks["similarity"] = get_similarity_via_tensor
 
-
-def get_vector_via_tensor(doc):
+def get_doc_vector_via_tensor(doc):
     return doc.tensor.sum(axis=0)
 
+def get_span_vector_via_tensor(span):
+    return span.doc.tensor[span.start:span.end].sum(axis=0)
+
+def get_token_vector_via_tensor(token):
+    return token.doc.tensor[token.i]
 
 def get_similarity_via_tensor(doc1, doc2):
     v1 = doc1.vector
@@ -136,9 +140,10 @@ def with_length_batching(model, min_batch):
             backprops.append(get_dX)
             for col in range(len(col_names)):
                 for i, j in enumerate(indices):
-                    # The index j tells us where the row was.
-                    # We also need to remember to unpad.
-                    outputs[j][col] = Y[col][i, : len(inputs[j])]
+                    if Y[col][i] is not None:
+                        # The index j tells us where the row was.
+                        # We also need to remember to unpad.
+                        outputs[j][col] = Y[col][i, : len(inputs[j])]
 
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
