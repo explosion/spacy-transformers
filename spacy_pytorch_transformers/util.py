@@ -32,12 +32,12 @@ def _align(seq1, seq2, offset):
     for char_position in range(map1.shape[0]):
         i = map1[char_position]
         j = map2[char_position]
-        alignment[i].add(offset+j)
+        alignment[i].add(offset + j)
     return [sorted(list(s)) for s in alignment]
 
 
 def _get_char_map(seq):
-    char_map = numpy.zeros((sum(len(token) for token in seq),), dtype='i')
+    char_map = numpy.zeros((sum(len(token) for token in seq),), dtype="i")
     offset = 0
     for i, token in enumerate(seq):
         for j in range(len(token)):
@@ -55,9 +55,7 @@ def pad_batch(batch):
     for seq in batch:
         # Ugh, numpy.pad sucks.
         pad_desc = (0, max_len - len(seq))
-        padded.append(
-            xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0))
-        )
+        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
     return xp.vstack(padded)
 
 
