@@ -17,17 +17,21 @@ class PyTT_TokenVectorEncoder(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
+
     name = "pytt_tok2vec"
 
     @classmethod
-    def from_pretrained(cls, name, **cfg):
-        cfg["from_pretrained"] = name
-        model = cls.Model(name, **cfg)
-        self = cls(name, model=model, **cfg)
+    def from_pretrained(cls, vocab, **cfg):
+        cfg["from_pretrained"] = True
+        model = cls.Model(**cfg)
+        self = cls(vocab, model=model, **cfg)
         return self
 
     @classmethod
-    def Model(cls, name, **cfg):
+    def Model(cls, **cfg):
+        name = cfg.get("pytt_name")
+        if not name:
+            raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
             model = PyTT_Wrapper.from_pretrained(name)
         else:
@@ -41,8 +45,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         model.nO = nO
         return model
 
-    def __init__(self, name, model=True, **cfg):
-        self.name = name
+    def __init__(self, vocab, model=True, **cfg):
+        self.vocab = vocab
         self.model = model
         self.cfg = cfg
 
