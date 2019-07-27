@@ -211,6 +211,12 @@ registered, spaCy will raise an error. [See here](#extension-attributes) for the
 extension attributes that will be set. You shouldn't have to call this method
 yourself – it already runs when you import the package.
 
+#### <kbd>method</kbd> `PyTT_Language.__init__`
+
+See [`Language.__init__`](https://spacy.io/api/language#init). Expects either a
+`pytt_name` setting in the `meta` or as a keyword argument, specifying the
+pre-trained model name. This is used to set up the model-specific tokenizer.
+
 #### <kbd>method</kbd> `PyTT_Language.make_doc`
 
 Create a `Doc` object from text. Applies spaCy's tokenizer and the
