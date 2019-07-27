@@ -50,3 +50,23 @@ def test_similarity(nlp, tok2vec, text1, text2, is_similar, threshold):
         assert similarity >= threshold
     else:
         assert similarity < threshold
+
+
+def test_tok2vec_to_bytes(tok2vec):
+    pass
+
+def test_tok2vec_to_disk(tok2vec):
+    pass
+
+def test_tok2vec_pickle_dumps(tok2vec):
+    pass
+
+
+def test_tok2vec_to_from_bytes(tok2vec):
+    pass
+
+def test_tok2vec_to_from_disk(tok2vec):
+    pass
+
+def test_tok2vec_pickle_dumps_loads(tok2vec):
+    pass
