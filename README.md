@@ -179,7 +179,9 @@ backprop it after the other components are done.
 Register the
 [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
 on the `Doc`, `Span` and `Token` objects. If the extensions have already been
-registered, spaCy will raise an error. The following extensions will be set:
+registered, spaCy will raise an error. [See here](#extension-attributes) for the
+extension attributes that will be set. You shouldn't have to call this method
+yourself – it already runs when you import the package.
 
 #### <kbd>method</kbd> `PyTT_Language.make_doc`
 
