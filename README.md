@@ -196,10 +196,16 @@ Transformer models have cubic runtime and memory complexity with respect to
 sequence length. This means that longer texts need to be divided into sentences
 in order to achieve reasonable efficiency.
 
-`spacy_pytorch_transformers` handles this internally, so long as some sort of
+`spacy-pytorch-transformers` handles this internally, so long as some sort of
 sentence-boundary detection component has been added to the pipeline. We
-recommend `nlp.add_pipe(nlp.create_pipe("sentencizer"), first=True)`. The
-default rules for the sentencizer component are very simple, but you can
+recommend:
+
+```python
+sentencizer = nlp.create_pipe("sentencizer")
+nlp.add_pipe(sentencizer, first=True)
+```
+
+The default rules for the sentencizer component are very simple, but you can
 also create a custom sentence-boundary detection component that works well on
 your data. See spaCy's documentation for details. If a sentencizer is available
 and the `per_sentence=True` configuration option is set, the transformer model
@@ -207,7 +213,7 @@ will predict over sentences, and the resulting tensor features will be
 reconstructed to produce document-level annotations.
 
 In order to further improve efficiency, especially for CPU processing,
-`spacy_pytorch_transformers` also performs length-based subbatching internally.
+`spacy-pytorch-transformers` also performs length-based subbatching internally.
 The subbatching regroups batches by sequence length, to minimise the amount of
 padding required. The configuration option `batch_by_length` controls this
 behaviour. You can set it to 0 or `None` to disable the subbatching, or set it
