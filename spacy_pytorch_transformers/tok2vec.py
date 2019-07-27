@@ -22,6 +22,14 @@ class PyTT_TokenVectorEncoder(Pipe):
 
     @classmethod
     def from_pretrained(cls, vocab, name, **cfg):
+        """Create a PyTT_TokenVectorEncoder instance using pre-trained weights
+        from a PyTorch Transformer model, even if it's not installed as a
+        spaCy package.
+
+        vocab (spacy.vocab.Vocab): The spaCy vocab to use.
+        name (unicode): Name of pre-trained model, e.g. 'bert-base-uncased'.
+        RETURNS (PyTT_TokenVectorEncoder): The token vector encoder.
+        """
         cfg["from_pretrained"] = True
         cfg["pytt_name"] = name
         model = cls.Model(**cfg)
@@ -30,6 +38,12 @@ class PyTT_TokenVectorEncoder(Pipe):
 
     @classmethod
     def Model(cls, **cfg):
+        """Create an instance of `PyTT_Wrapper`, which holds the
+        PyTorch-Transformers model.
+
+        **cfg: Optional config parameters.
+        RETURNS (thinc.neural.Model): The wrapped model.
+        """
         name = cfg.get("pytt_name")
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
@@ -47,11 +61,45 @@ class PyTT_TokenVectorEncoder(Pipe):
         return model
 
     def __init__(self, vocab, model=True, **cfg):
+        """Initialize the component.
+
+        vocab (spacy.vocab.Vocab): The spaCy vocab to use.
+        model (thinc.neural.Model / True): The component's model or `True` if
+            not initialized yet.
+        **cfg: Optional config parameters.
+        """
         self.vocab = vocab
         self.model = model
         self.cfg = cfg
 
+    def __call__(self, doc):
+        """Process a Doc and assign the extracted features.
+
+        doc (spacy.tokens.Doc): The Doc to process.
+        RETURNS (spacy.tokens.Doc): The processed Doc.
+        """
+        self.require_model()
+        outputs = self.predict([doc])
+        self.set_annotations([doc], outputs)
+        return doc
+
+    def pipe(self, stream, batch_size=128):
+        """Process Doc objects as a stream and assign the extracted features.
+
+        stream (iterable): A stream of Doc objects.
+        batch_size (int): The number of texts to buffer.
+        YIELDS (spacy.tokens.Doc): Processed Docs in order.
+        """
+        for docs in minibatch(stream, size=batch_size):
+            docs = list(docs)
+            outputs = self.predict(docs)
+            self.set_annotations(docs, outputs)
+            yield from docs
+
     def begin_update(self, docs, drop=None, **cfg):
+        """Get the predictions and a callback to complete the gradient update.
+        This is only used internally within PyTT_Language.update.
+        """
         outputs, backprop = self.model.begin_update(docs, drop=drop)
         self.set_annotations(docs, outputs)
 
@@ -64,26 +112,25 @@ class PyTT_TokenVectorEncoder(Pipe):
 
         return outputs, finish_update
 
-    def __call__(self, doc):
-        self.require_model()
-        outputs = self.predict([doc])
-        self.set_annotations([doc], outputs)
-        return doc
-
-    def pipe(self, stream, batch_size=128, n_threads=-1):
-        for docs in minibatch(stream, size=batch_size):
-            docs = list(docs)
-            outputs = self.predict(docs)
-            self.set_annotations(docs, outputs)
-            yield from docs
-
     def predict(self, docs):
+        """Run the transformer model on a batch of docs and return the
+        extracted features.
+
+        docs (iterable): A batch of Docs to process.
+        RETURNS (namedtuple): Named tuple containing the outputs.
+        """
         outputs, _ = self.model.begin_update(docs)
         for out in outputs:
             assert out.last_hidden_state is not None
         return outputs
 
     def set_annotations(self, docs, outputs):
+        """Assign the extracted features to the Doc objects and overwrite the
+        vector and similarity hooks.
+
+        docs (iterable): A batch of `Doc` objects.
+        outputs (iterable): A batch of outputs.
+        """
         for doc, output in zip(docs, outputs):
             doc._.pytt_outputs = output
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
