@@ -1,3 +1,4 @@
+from collections import namedtuple
 import spacy.pipeline
 from spacy._ml import build_simple_cnn_text_classifier
 from thinc.api import layerize
@@ -11,10 +12,11 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         tok2vec = layerize(get_pytt_last_hidden)
         tok2vec.nO = cfg["token_vector_width"]
         return build_simple_cnn_text_classifier(
-            tok2vec, nr_class=nr_class, width=width, **cfg)
+            tok2vec, nr_class=nr_class, width=width, **cfg
+        )
 
 
-def get_pytt_last_hidden(docs, drop=0.):
+def get_pytt_last_hidden(docs, drop=0.0):
     """Function that can be wrapped as a pipeline component, that gets the
     pytt_last_hidden extension attribute from a batch of Doc objects. During
     the backward pass, we accumulate the gradients into doc._.pytt_gradients.
