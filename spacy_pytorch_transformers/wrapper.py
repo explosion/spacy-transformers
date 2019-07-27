@@ -1,9 +1,8 @@
 from collections import namedtuple
-import pytorch_transformers as pytt
 import torch
-
 from thinc.extra.wrappers import PyTorchWrapper, torch2xp, xp2torch
 
+from .util import get_pytt_model
 
 
 class PyTT_Wrapper(PyTorchWrapper):
@@ -35,7 +34,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             y_var = self._model(ids)
         self._model.training = is_training
         converted_outputs = []
-        for var in y_var[:len(self.out_cols)]:
+        for var in y_var[: len(self.out_cols)]:
             if isinstance(var, tuple):
                 converted_outputs.append(var)
             else:
@@ -56,6 +55,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                 self._optimizer.step()
                 self._optimizer.zero_grad()
             return None
+
         assert output.last_hidden_state is not None
         self._model.eval()
         return output, backward_pytorch

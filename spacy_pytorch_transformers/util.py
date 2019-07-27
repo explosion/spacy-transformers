@@ -3,9 +3,8 @@ import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
 
 
-SPECIAL_TOKENS = (
-    "[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>"
-)
+SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>")
+
 
 def get_pytt_config(name):
     """Map a name to the appropriate pytorch_transformers.*Config class."""

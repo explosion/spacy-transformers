@@ -152,14 +152,18 @@ class PyTT_TokenVectorEncoder(Pipe):
             doc.user_span_hooks["similarity"] = get_similarity_via_tensor
             doc.user_token_hooks["similarity"] = get_similarity_via_tensor
 
+
 def get_doc_vector_via_tensor(doc):
     return doc.tensor.sum(axis=0)
 
+
 def get_span_vector_via_tensor(span):
-    return span.doc.tensor[span.start:span.end].sum(axis=0)
+    return span.doc.tensor[span.start : span.end].sum(axis=0)
+
 
 def get_token_vector_via_tensor(token):
     return token.doc.tensor[token.i]
+
 
 def get_similarity_via_tensor(doc1, doc2):
     v1 = doc1.vector

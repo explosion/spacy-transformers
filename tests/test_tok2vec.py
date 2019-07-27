@@ -2,7 +2,6 @@ import pytest
 import numpy
 from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_TokenVectorEncoder
-import pytorch_transformers as pytt
 from spacy.vocab import Vocab
 import pickle
 

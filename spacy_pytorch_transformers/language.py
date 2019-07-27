@@ -23,6 +23,7 @@ class PyTT_Language(Language):
     * doc._.pytt_gradients: Gradients of the pytt_outputs. These get incremented
         during nlp.update(), and then cleared at the end once the update is made.
     """
+
     lang_factory_name = "pytt"
 
     @staticmethod
