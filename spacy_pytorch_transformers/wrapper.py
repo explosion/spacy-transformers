@@ -61,9 +61,21 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def begin_update(self, ids, drop=None):
         ids = xp2torch(ids)
-        self._model.train()
-        y_var = self._model(ids)
-        output = namedtuple("pytt_outputs", self.out_cols)(*map(torch2xp, y_var))
+        is_training = self._model.training
+        if drop is None:
+            self._model.eval()
+            y_var = self._model(ids)
+        else:
+            self._model.train()
+            y_var = self._model(ids)
+        self._model.training = is_training
+        converted_outputs = []
+        for var in y_var[:len(self.out_cols)]:
+            if isinstance(var, tuple):
+                converted_outputs.append(var)
+            else:
+                converted_outputs.append(torch2xp(var))
+        output = namedtuple("pytt_outputs", self.out_cols)(*converted_outputs)
 
         def backward_pytorch(dy_data, sgd=None):
             y_for_bwd = []
@@ -80,4 +92,5 @@ class PyTT_Wrapper(PyTorchWrapper):
                 self._optimizer.zero_grad()
             return None
         assert output.last_hidden_state is not None
+        self._model.eval()
         return output, backward_pytorch
