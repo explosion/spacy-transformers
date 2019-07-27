@@ -139,7 +139,35 @@ pip install dist/en_bert-base-uncased_xl.tar.gz
 
 ### Tokenization alignment
 
-TODO
+Transformer models are usually trained on text preprocessed with the "word
+piece" algorithm, which limits the number of distinct tokens the model needs to
+consider. Word-piece is convenient for training neural networks, but it doesn't
+produce segmentations that match up to any linguistic notion of a "word". Most
+rare words will map to multiple word-piece tokens, and occassionally the
+alignment will be many-to-many. `spacy_pytorch_transformers` calculates this
+alignment, which you can access at `doc._.pytt_alignment`. It's a list of
+length equal to the number of spaCy tokens. Each value in the list is a list of
+consecutive integers, which are indexes into the word-pieces list.
+
+If you can work on representations that aren't aligned to actual words, it's
+best to use the raw outputs of the transformer, which can be accessed at
+`doc._.pytt_outputs.last_hidden_state`. This variable gives you
+a tensor with one row per word-piece token.
+
+If you're working on token-level tasks such as part-of-speech tagging or
+spelling correction, you'll want to work on the token-aligned features, which
+are stored in the `doc.tensor` variable.
+
+We've taken care to calculate the aligned `doc.tensor` representation as
+faithfully as possible. When one spaCy token aligns against several word-piece
+tokens, the token's vector will be a sum of the relevant slice of the tensor,
+weighted by how many other spaCy tokens are aligned against that row. By using
+a weighted sum, we ensure that the sum of the `doc.tensor` variable corresponds
+to the sum of the raw `doc._.pytt_outputs.last_hidden_state[1:1]` values. The
+only information missing from the `doc.tensor` are the vectors for the boundary
+tokens. However, note that in many tasks, the vectors for the boundary tokens
+are quite important (see e.g. the analysis of BERT's attention by
+Clark et al. (2019), who found that these tokens are very often attended to).
 
 ### Extension attributes
 
