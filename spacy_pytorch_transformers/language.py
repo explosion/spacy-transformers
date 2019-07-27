@@ -23,7 +23,6 @@ class PyTT_Language(Language):
     * doc._.pytt_gradients: Gradients of the pytt_outputs. These get incremented
         during nlp.update(), and then cleared at the end once the update is made.
     """
-
     lang_factory_name = "pytt"
 
     @staticmethod
@@ -46,6 +45,11 @@ class PyTT_Language(Language):
         self.lang = meta.get("lang", "xx")
         self.Defaults = get_defaults(self.lang)
         super().__init__(vocab, make_doc, max_length, meta=meta, **kwargs)
+        if meta.get("name"):
+            pytt_cls = get_pytt_tokenizer(meta["name"])
+            self.pytt_tokenizer = pytt_cls.from_pretrained(pytt_name)
+        else:
+            self.pytt_tokenizer = None
 
     def make_doc(self, text):
         doc = self.tokenizer(text)
