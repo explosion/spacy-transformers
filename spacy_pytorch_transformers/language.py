@@ -1,5 +1,8 @@
 from spacy.language import Language
 from spacy.tokens import Doc, Span, Token
+from spacy.util import get_lang_class
+
+from . import about
 from .util import align_word_pieces
 
 
@@ -21,6 +24,8 @@ class PyTT_Language(Language):
         during nlp.update(), and then cleared at the end once the update is made.
     """
 
+    lang_factory_name = "pytt"
+
     @staticmethod
     def install_extensions():
         for cls in [Doc, Span, Token]:
@@ -29,6 +34,18 @@ class PyTT_Language(Language):
             cls.set_extension("pytt_word_pieces_", default=None)
             cls.set_extension("pytt_outputs", default=None)
             cls.set_extension("pytt_gradients", default=None)
+
+    def __init__(
+        self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
+    ):
+        meta["lang_factory"] = self.lang_factory_name
+        # Add this package to requirements to it will be included in the
+        # install_requires of any model using this language class
+        package = f"{about.__title__}>={about.__version__}"
+        meta.setdefault("requirements", []).append(package)
+        self.lang = meta.get("lang", "xx")
+        self.Defaults = get_defaults(self.lang)
+        super().__init__(vocab, make_doc, max_length, meta=meta, **kwargs)
 
     def make_doc(self, text):
         doc = self.tokenizer(text)
@@ -56,3 +73,12 @@ class PyTT_Language(Language):
                 component_cfg=component_cfg,
             )
         backprop_tok2vec(docs, sgd=sgd)
+
+
+def get_defaults(lang):
+    """Get the language-specific defaults, if available in spaCy."""
+    try:
+        lang_cls = get_lang_class(lang)
+        return lang_cls.Defaults
+    except ImportError:
+        return Language.Defaults

@@ -59,68 +59,93 @@ tokens and the spaCy tokenization, so that we can use the last hidden states
 to set the `doc.tensor` attribute. When multiple word-piece tokens align to
 the same spaCy token, the spaCy token receives the sum of their values.
 
+#### Config
+
+The component can be configured with the following settings, usually passed in
+as the `**cfg`.
+
+| Name              | Type    | Description                                            |
+| ----------------- | ------- | ------------------------------------------------------ |
+| `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
+| `batch_by_length` | bool    |                                                        |
+| `per_sentence`    | bool    |                                                        |
+
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_pretrained`
 
-| Name        | Type                      | Description |
-| ----------- | ------------------------- | ----------- |
-| `name`      |                           |             |
-| `**cfg`     | -                         |             |
-| **RETURNS** | `PyTT_TokenVectorEncoder` |             |
+Create a `PyTT_TokenVectorEncoder` instance using pre-trained weights
+from a PyTorch-Transformers model, even if it's not installed as a spaCy
+package.
+
+```python
+from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
+from spacy.tokens import Vocab
+tok2vec = PyTT_TokenVectorEncoder.from_pretrained(Vocab(), "bert-base-uncased")
+```
+
+| Name        | Type                      | Description                                            |
+| ----------- | ------------------------- | ------------------------------------------------------ |
+| `vocab`     | `spacy.vocab.Vocab`       | The spaCy vocab to use.                                |
+| `name`      | unicode                   | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
+| `**cfg`     | -                         | Optional config parameters.                            |
+| **RETURNS** | `PyTT_TokenVectorEncoder` | The token vector encoder.                              |
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.Model`
 
-| Name        | Type                 | Description |
-| ----------- | -------------------- | ----------- |
-| `name`      |                      |             |
-| `**cfg`     | -                    |             |
-| **RETURNS** | `thinc.neural.Model` |             |
+Create an instance of `PyTT_Wrapper`, which holds the PyTorch-Transformers model.
+
+| Name        | Type                 | Description                 |
+| ----------- | -------------------- | --------------------------- |
+| `**cfg`     | -                    | Optional config parameters. |
+| **RETURNS** | `thinc.neural.Model` | The wrapped model.          |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.__init__`
 
-| Name        | Type                          | Description |
-| ----------- | ----------------------------- | ----------- |
-| `name`      |                               |             |
-| `model`     | `thinc.neural.Model` / `True` |             |
-| `**cfg`     | -                             |             |
-| **RETURNS** | `PyTT_TokenVectorEncoder`     |             |
+Initialize the component.
+
+| Name        | Type                          | Description                                             |
+| ----------- | ----------------------------- | ------------------------------------------------------- |
+| `vocab`     | `spacy.vocab.Vocab`           | The spaCy vocab to use.                                 |
+| `model`     | `thinc.neural.Model` / `True` | The component's model or `True` if not initialized yet. |
+| `**cfg`     | -                             | Optional config parameters.                             |
+| **RETURNS** | `PyTT_TokenVectorEncoder`     | The token vector encoder.                               |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.__call__`
 
-| Name        | Type               | Description |
-| ----------- | ------------------ | ----------- |
-| `doc`       | `spacy.tokens.Doc` |             |
-| **RETURNS** | `spacy.tokens.Doc` |             |
+Process a `Doc` and assign the extracted features.
+
+| Name        | Type               | Description           |
+| ----------- | ------------------ | --------------------- |
+| `doc`       | `spacy.tokens.Doc` | The `Doc` to process. |
+| **RETURNS** | `spacy.tokens.Doc` | The processed `Doc`.  |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.pipe`
 
-| Name         | Type               | Description                                            |
-| ------------ | ------------------ | ------------------------------------------------------ |
-| `stream`     | iterable           | A stream of documents.                                 |
-| `batch_size` | int                | The number of texts to buffer. Defaults to `128`.      |
-| **YIELDS**   | `spacy.tokens.Doc` | Processed documents in the order of the original text. |
+Process `Doc` objects as a stream and assign the extracted features.
 
-#### <kbd>method</kbd> `PyTT_TokenVectorEncoder.begin_update`
-
-| Name        | Type     | Description           |
-| ----------- | -------- | --------------------- |
-| `docs`      | iterable | A batch of documents. |
-| `drop`      | float    | The dropout rate.     |
-| `**cfg`     | -        |                       |
-| **RETURNS** |          |                       |
+| Name         | Type               | Description                                       |
+| ------------ | ------------------ | ------------------------------------------------- |
+| `stream`     | iterable           | A stream of `Doc` objects.                        |
+| `batch_size` | int                | The number of texts to buffer. Defaults to `128`. |
+| **YIELDS**   | `spacy.tokens.Doc` | Processed `Doc`s in order.                        |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.predict`
 
-| Name        | Type     | Description           |
-| ----------- | -------- | --------------------- |
-| `docs`      | iterable | A batch of documents. |
-| **RETURNS** |          |                       |
+Run the transformer model on a batch of docs and return the extracted features.
+
+| Name        | Type         | Description                         |
+| ----------- | ------------ | ----------------------------------- |
+| `docs`      | iterable     | A batch of `Doc`s to process.       |
+| **RETURNS** | `namedtuple` | Named tuple containing the outputs. |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.set_annotations`
 
-| Name      | Type     | Description           |
-| --------- | -------- | --------------------- |
-| `docs`    | iterable | A batch of documents. |
-| `outputs` |          |                       |
+Assign the extracted features to the Doc objects and overwrite the vector and
+similarity hooks.
+
+| Name      | Type     | Description               |
+| --------- | -------- | ------------------------- |
+| `docs`    | iterable | A batch of `Doc` objects. |
+| `outputs` | iterable | A batch of outputs.       |
 
 ### <kbd>class</kbd> `PyTT_Language`
 
@@ -156,6 +181,22 @@ Update the models in the pipeline.
 | `sgd`           | callable | An optimizer.                                                                                                                              |
 | `losses`        | dict     | Dictionary to update with the loss, keyed by pipeline component.                                                                           |
 | `component_cfg` | dict     | Config parameters for specific pipeline components, keyed by component name.                                                               |
+
+### Entry points
+
+This package exposes several [entry points](https://spacy.io/usage/saving-loading#entry-points) that tell spaCy how to initialize its components. If `spacy-pytorch-transformers` and spaCy are installed in the same environment, you'll be able to run the following and it'll work as expected:
+
+```python
+tok2vec = nlp.create_pipe("pytt_tok2vec")
+```
+
+This also means that your custom models can ship a `pytt_tok2vec` component and define `"pytt_tok2vec"` in their pipelines, and spaCy will know how to create those components when you deserialize the model. The following entry points are set:
+
+| Name           | Target                    | Type              | Description                      |
+| -------------- | ------------------------- | ----------------- | -------------------------------- |
+| `pytt_tok2vec` | `PyTT_TokenVectorEncoder` | `spacy_factories` | Factory to create the component. |
+| `pytt_textcat` | `PyTT_TextCategorizer`    | `spacy_factories` | Factory to create the component. |
+| `pytt`         | `PyTT_Language`           | `spacy_languages` | Custom `Language` subclass.      |
 
 ## Transfer learning
 

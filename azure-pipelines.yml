@@ -36,18 +36,11 @@ jobs:
       pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  - script: |
-      python setup.py sdist
+  - script: python setup.py sdist
     displayName: 'Build sdist'
 
   - script: pip install dist/*.tar.gz
-    condition: in( variables['Agent.OS'], 'Linux', 'Darwin')
-    displayName: 'Install from sdist (Linux, Mac)'
+    displayName: 'Install from sdist'
 
-  - script: pip install -e .
-    condition: eq( variables['Agent.OS'], 'Windows_NT')
-    displayName: 'Install with pip (Windows)'
-
-  - script: |
-      python -m pytest tests --cov=spacy_pytorch_transformers
+  - script: python -m pytest tests --cov=spacy_pytorch_transformers
     displayName: 'Run tests'
