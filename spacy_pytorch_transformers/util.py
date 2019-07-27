@@ -1,9 +1,68 @@
 import numpy
+import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
+
 
 SPECIAL_TOKENS = (
     "[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>"
 )
+
+def get_pytt_config(name):
+    """Map a name to the appropriate pytorch_transformers.*Config class."""
+    name = name.lower()
+    if "bert" in name:
+        return pytt.BertConfig
+    elif "xlnet" in name:
+        return pytt.XLNetConfig
+    elif "openai" in name:
+        return pytt.OpenAIGPTConfig
+    elif "transfoxl" in name:
+        return pytt.TransfoXLConfig
+    elif "gpt2" in name:
+        return pytt.GPT2Config
+    elif "xlm" in name:
+        return pytt.XLMConfig
+    else:
+        raise ValueError(f"Unrecognized PyTT config name: {name}")
+
+
+def get_pytt_model(name):
+    """Map a name to the appropriate pytorch_transformers.*Model class."""
+    name = name.lower()
+    if "bert" in name:
+        return pytt.BertModel
+    elif "xlnet" in name:
+        return pytt.XLNetModel
+    elif "openai" in name:
+        return pytt.OpenAIGPTModel
+    elif "transfoxl" in name:
+        return pytt.TransfoXLModel
+    elif "gpt2" in name:
+        return pytt.GPT2Model
+    elif "xlm" in name:
+        return pytt.XLMModel
+    else:
+        raise ValueError(f"Unrecognized PyTT config name: {name}")
+
+
+def get_pytt_tokenizer(name):
+    """Get a pytorch_transformers.*Tokenizer class from a name."""
+    name = name.lower()
+    if "bert" in name:
+        return pytt.BertTokenizer
+    elif "xlnet" in name:
+        return pytt.XLNetTokenizer
+    elif "openai" in name:
+        return pytt.OpenAIGPTTokenizer
+    elif "transfoxl" in name:
+        return pytt.TransfoXLTokenizer
+    elif "gpt2" in name:
+        return pytt.GPT2Tokenizer
+    elif "xlm" in name:
+        return pytt.XLMTokenizer
+    else:
+        raise ValueError(f"Unrecognized PyTT config name: {name}")
+
 
 def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
     """Align tokens against word-piece tokens. The alignment is returned as a
