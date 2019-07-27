@@ -35,6 +35,13 @@ def setup_package():
             "torch>=0.4.1",
         ],
         python_requires=">=3.6",
+        entry_points={
+            "spacy_factories": [
+                "pytt_tok2vec = spacy_pytorch_transformers:PyTT_TokenVectorEncoder",
+                "pytt_textcat = spacy_pytorch_transformers:PyTT_TextCategorizer",
+            ],
+            "spacy_languages": ["pytt = spacy_pytorch_transformers:PyTT_Language"],
+        },
         classifiers=[
             "Development Status :: 4 - Beta",
             "Intended Audience :: Developers",
