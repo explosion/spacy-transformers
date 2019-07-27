@@ -5,10 +5,25 @@ from thinc.api import layerize
 
 
 class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
+    """Subclass of spaCy's built-in TextCategorizer component that supports
+    using the features assigned by the PyTorch-Transformers models via the token
+    vector encoder. It requires the PyTT_TokenVectorEncoder to run before it in
+    the pipeline.
+    """
+
     name = "pytt_textcat"
 
     @classmethod
     def Model(cls, nr_class, width, exclusive_classes=False, **cfg):
+        """Create a text classification model using a PyTorch-Transformers model
+        for token vector encoding.
+
+        nr_class (int): Number of classes.
+        width (int): The width of the tensors being assigned.
+        exclusive_classes (bool): Make categories mutually exclusive.
+        **cfg: Optional config parameters.
+        RETURNS (thinc.neural.Model): The model.
+        """
         tok2vec = layerize(get_pytt_last_hidden)
         tok2vec.nO = cfg["token_vector_width"]
         return build_simple_cnn_text_classifier(
