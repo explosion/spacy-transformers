@@ -6,11 +6,39 @@ from thinc.extra.wrappers import PyTorchWrapper, torch2xp, xp2torch
 
 
 def get_pytt_config(name):
-    return pytt.BertConfig.from_pretrained(name)
+    name = name.lower()
+    if "bert" in name:
+        return pytt.BertConfig.from_pretrained(name)
+    elif "xlnet" in name:
+        return pytt.XLNetConfig.from_pretrained(name)
+    elif "openai" in name:
+        return pytt.OpenAIGPTConfig.from_pretrained(name)
+    elif "transfoxl" in name:
+        return pytt.TransfoXLConfig.from_pretrained(name)
+    elif "gpt2" in name:
+        return pytt.GPT2Config.from_pretrained(name)
+    elif "xlm" in name:
+        return pytt.XLMConfig.from_pretrained(name)
+    else:
+        raise ValueError(f"Unrecognized PyTT config name: {name}")
 
 
 def get_pytt_model(name):
-    return pytt.BertModel(get_pytt_config(name))
+    name = name.lower()
+    if "bert" in name:
+        return pytt.BertModel(get_pytt_config(name))
+    elif "xlnet" in name:
+        return pytt.XLNetModel(get_pytt_config(name))
+    elif "openai" in name:
+        return pytt.OpenAIGPTModel.from_pretrained(name)
+    elif "transfoxl" in name:
+        return pytt.TransfoXLModel.from_pretrained(name)
+    elif "gpt2" in name:
+        return pytt.GPT2Model.from_pretrained(name)
+    elif "xlm" in name:
+        return pytt.XLMModel.from_pretrained(name)
+    else:
+        raise ValueError(f"Unrecognized PyTT config name: {name}")
 
 
 class PyTT_Wrapper(PyTorchWrapper):
