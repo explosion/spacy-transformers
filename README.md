@@ -2,7 +2,8 @@
 
 # spaCy wrapper for PyTorch Transformers
 
-This package provides [spaCy](https://spacy.io) model pipelines that wrap [HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
+This package provides [spaCy](https://spacy.io) model pipelines that wrap
+[HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
 state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 
@@ -16,24 +17,28 @@ state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 -   Aligned tokenization.
 -   Transfer learning, Text classification.
 -   Fine-tuning.
--   Built-in hooks to use the weights as word vectors and for similarity.
+-   Built-in hooks for context-sensitive vectors and similarity.
 -   Out-of-the-box serialization.
 
 ## 🚀 Quickstart
 
-Installing the package from pip will automatically install all dependencies, including PyTorch and spaCy.
+Installing the package from pip will automatically install all dependencies,
+including PyTorch and spaCy.
 
 ```bash
 pip install spacy-pytorch-transformers
 ```
 
-We've also pre-packaged the `bert-base-uncased` model as a spaCy model package (~1gb). You can either use the `spacy download` command, or download the package from the [model releases](#).
+We've also pre-packaged the `bert-base-uncased` model as a spaCy model package
+(~1gb). You can either use the `spacy download` command, or download the package
+from the [model releases](#).
 
 ```bash
 python -m spacy download en_bert-base-uncased_xl
 ```
 
-Once the model is installed, you can load it in spaCy like any other model package.
+Once the model is installed, you can load it in spaCy like any other model
+package.
 
 ```python
 import spacy
@@ -47,7 +52,21 @@ print(doc[0:4].similarity(doc[4:8]))
 
 ### Vectors and similarity
 
-TODO
+The `PyTT_TokenVectorEncoder` component of the model sets custom hooks that
+override the default behaviour of the `.vector` attribute and `.similarity`
+method of the `Token`, `Span` and `Doc` objects. By default, these usually refer
+to the word vectors table at `nlp.vocab.vectors`. Naturally, in the transformer
+models we'd rather use the `doc.tensor` attribute, since it holds a much more
+informative context-sensitive representation.
+
+```python
+doc_company = nlp("Apple shares rose sharply on the news.")
+doc_fruit = nlp("I was in Corsica when I learned this fantastic reciple for apple pie.")
+apple_co = doc_company[0]
+apple_fruit = doc_fruit[-3]
+print(apple_co.similarity(nlp("fruit")))
+print(apple_fruit.similarity(nlp("company")))
+```
 
 ### Transfer learning
 
@@ -55,7 +74,11 @@ The main use case for pretrained transformer models is transfer learning. You
 load in the pretrained weights, and start training on your data. This package
 has custom pipeline components that make this especially easy.
 
-The `pytt_textcat` component is based on spaCy's built-in [`TextCategorizer`](https://spacy.io/api/textcategorizer) and supports using the features assigned by the PyTorch-Transformers models via the token vector encoder. You can use a pre-trained transformer model as the base model, add it on top and train it like any other spaCy text classifier.
+The `pytt_textcat` component is based on spaCy's built-in
+[`TextCategorizer`](https://spacy.io/api/textcategorizer) and supports using the
+features assigned by the PyTorch-Transformers models via the token vector
+encoder. You can use a pre-trained transformer model as the base model, add it
+on top and train it like any other spaCy text classifier.
 
 ```python
 TRAIN_DATA = [
@@ -92,13 +115,20 @@ nlp.to_disk("/bert-textcat")
 
 ### Serialization
 
-Saving and loading pre-trained transformer models and packaging them as spaCy models ✨just works ✨ (at least, it should). The wrapper and components follow spaCy's API, so when you save and load the `nlp` object, it...
+Saving and loading pre-trained transformer models and packaging them as spaCy
+models ✨just works ✨ (at least, it should). The wrapper and components follow
+spaCy's API, so when you save and load the `nlp` object, it...
 
 -   Writes the pre-trained weights to disk / bytes and loads them back in.
--   Adds `"lang_factory": "pytt"` in the `meta.json` so spaCy knows how to initialize the `Language` class when you load the model.
--   Adds this package and its version to the `"requirements"` in the `meta.json`, so when you run [`spacy package`](https://spacy.io/api/cli#package) to create an installable Python package it's automatically added to the setup's `install_requires`.
+-   Adds `"lang_factory": "pytt"` in the `meta.json` so spaCy knows how to
+    initialize the `Language` class when you load the model.
+-   Adds this package and its version to the `"requirements"` in the
+    `meta.json`, so when you run
+    [`spacy package`](https://spacy.io/api/cli#package) to create an installable
+    Python package it's automatically added to the setup's `install_requires`.
 
-For example, if you've trained your own text classifier, you can package it like this:
+For example, if you've trained your own text classifier, you can package it like
+this:
 
 ```bash
 python -m spacy package /bert-textcat /output
@@ -113,7 +143,9 @@ TODO
 
 ### Extension attributes
 
-This wrapper sets the following [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes) on the `Doc`, `Span` and `Token` objects:
+This wrapper sets the following
+[custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
+on the `Doc`, `Span` and `Token` objects:
 
 | Name                   | Type         | Description                                                                                                                    |
 | ---------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -134,20 +166,27 @@ print(doc._.pytt_word_pieces)
 
 ### <kbd>class</kbd> `PyTT_Language`
 
-A subclass of [`spacy.Language`](https://spacy.io/api/language) that holds a
-PyTorch-Transformer (PyTT) pipeline. PyTT pipelines work only slightly differently from spaCy's default pipelines.
-Specifically, we introduce a new pipeline component at the start of the pipeline,
-`PyTT_TokenVectorEncoder`. We then modify the [`nlp.update`](https://spacy.io/api/language#update) function to run
-the `PyTT_TokenVectorEncoder` before the other pipeline components, and
+A subclass of [`Language`](https://spacy.io/api/language) that holds a
+PyTorch-Transformer (PyTT) pipeline. PyTT pipelines work only slightly
+differently from spaCy's default pipelines. Specifically, we introduce a new
+pipeline component at the start of the pipeline, `PyTT_TokenVectorEncoder`. We
+then modify the [`nlp.update`](https://spacy.io/api/language#update) function to
+run the `PyTT_TokenVectorEncoder` before the other pipeline components, and
 backprop it after the other components are done.
 
 #### <kbd>staticmethod</kbd> `PyTT_Language.install_extensions`
 
-Register the [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes) on the `Doc`, `Span` and `Token` objects. If the extensions have already been registered, spaCy will raise an error. The following extensions will be set:
+Register the
+[custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
+on the `Doc`, `Span` and `Token` objects. If the extensions have already been
+registered, spaCy will raise an error. [See here](#extension-attributes) for the
+extension attributes that will be set. You shouldn't have to call this method
+yourself – it already runs when you import the package.
 
 #### <kbd>method</kbd> `PyTT_Language.make_doc`
 
-Create a `Doc` object from text. Applies spaCy's tokenizer and the PyTorch-Transformers tokenizer and aligns the tokens.
+Create a `Doc` object from text. Applies spaCy's tokenizer and the
+PyTorch-Transformers tokenizer and aligns the tokens.
 
 | Name        | Type               | Description          |
 | ----------- | ------------------ | -------------------- |
@@ -169,13 +208,16 @@ Update the models in the pipeline.
 
 ### <kbd>class</kbd> `PyTT_TokenVectorEncoder`
 
-spaCy pipeline component to use PyTorch-Transformers models. The component assigns the output of the transformer to the `doc._.pytt_outputs` extension attribute. We also calculate an alignment between the word-piece
-tokens and the spaCy tokenization, so that we can use the last hidden states
-to set the `doc.tensor` attribute. When multiple word-piece tokens align to
-the same spaCy token, the spaCy token receives the sum of their values.
+spaCy pipeline component to use PyTorch-Transformers models. The component
+assigns the output of the transformer to the `doc._.pytt_outputs` extension
+attribute. We also calculate an alignment between the word-piece tokens and the
+spaCy tokenization, so that we can use the last hidden states to set the
+`doc.tensor` attribute. When multiple word-piece tokens align to the same spaCy
+token, the spaCy token receives the sum of their values.
 
 The component is available as `pytt_tok2vec` and registered via an entry point,
-so it can also be created using [`nlp.create_pipe`](https://spacy.io/api/language#create_pipe):
+so it can also be created using
+[`nlp.create_pipe`](https://spacy.io/api/language#create_pipe):
 
 ```python
 tok2vec = nlp.create_pipe("pytt_tok2vec")
@@ -194,9 +236,8 @@ as the `**cfg`.
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_pretrained`
 
-Create a `PyTT_TokenVectorEncoder` instance using pre-trained weights
-from a PyTorch-Transformers model, even if it's not installed as a spaCy
-package.
+Create a `PyTT_TokenVectorEncoder` instance using pre-trained weights from a
+PyTorch-Transformers model, even if it's not installed as a spaCy package.
 
 ```python
 from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
@@ -213,7 +254,8 @@ tok2vec = PyTT_TokenVectorEncoder.from_pretrained(Vocab(), "bert-base-uncased")
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.Model`
 
-Create an instance of `PyTT_Wrapper`, which holds the PyTorch-Transformers model.
+Create an instance of `PyTT_Wrapper`, which holds the PyTorch-Transformers
+model.
 
 | Name        | Type                 | Description                 |
 | ----------- | -------------------- | --------------------------- |
@@ -271,10 +313,15 @@ similarity hooks.
 
 ### <kbd>class</kbd> `PyTT_TextCategorizer`
 
-Subclass of spaCy's built-in [`TextCategorizer`](https://spacy.io/api/textcategorizer) component that supports using the features assigned by the PyTorch-Transformers models via the token vector encoder. It requires the `PyTT_TokenVectorEncoder` to run before it in the pipeline.
+Subclass of spaCy's built-in
+[`TextCategorizer`](https://spacy.io/api/textcategorizer) component that
+supports using the features assigned by the PyTorch-Transformers models via the
+token vector encoder. It requires the `PyTT_TokenVectorEncoder` to run before it
+in the pipeline.
 
 The component is available as `pytt_textcat` and registered via an entry point,
-so it can also be created using [`nlp.create_pipe`](https://spacy.io/api/language#create_pipe):
+so it can also be created using
+[`nlp.create_pipe`](https://spacy.io/api/language#create_pipe):
 
 ```python
 textcat = nlp.create_pipe("pytt_textcat")
@@ -295,13 +342,20 @@ vector encoding.
 
 ### Entry points
 
-This package exposes several [entry points](https://spacy.io/usage/saving-loading#entry-points) that tell spaCy how to initialize its components. If `spacy-pytorch-transformers` and spaCy are installed in the same environment, you'll be able to run the following and it'll work as expected:
+This package exposes several
+[entry points](https://spacy.io/usage/saving-loading#entry-points) that tell
+spaCy how to initialize its components. If `spacy-pytorch-transformers` and
+spaCy are installed in the same environment, you'll be able to run the following
+and it'll work as expected:
 
 ```python
 tok2vec = nlp.create_pipe("pytt_tok2vec")
 ```
 
-This also means that your custom models can ship a `pytt_tok2vec` component and define `"pytt_tok2vec"` in their pipelines, and spaCy will know how to create those components when you deserialize the model. The following entry points are set:
+This also means that your custom models can ship a `pytt_tok2vec` component and
+define `"pytt_tok2vec"` in their pipelines, and spaCy will know how to create
+those components when you deserialize the model. The following entry points are
+set:
 
 | Name           | Target                    | Type              | Description                      |
 | -------------- | ------------------------- | ----------------- | -------------------------------- |
