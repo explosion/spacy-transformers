@@ -36,13 +36,11 @@ jobs:
       pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  - script: |
-      python setup.py sdist
+  - script: python setup.py sdist
     displayName: 'Build sdist'
 
   - script: pip install dist/*.tar.gz
     displayName: 'Install from sdist'
 
-  - script: |
-      python -m pytest tests --cov=spacy_pytorch_transformers
+  - script: python -m pytest tests --cov=spacy_pytorch_transformers
     displayName: 'Run tests'
