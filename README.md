@@ -190,6 +190,34 @@ tokens. However, note that in many tasks, the vectors for the boundary tokens
 are quite important (see e.g. the analysis of BERT's attention by Clark et al.
 (2019), who found that these tokens are very often attended to).
 
+### Batching, padding and per-sentence processing
+
+Transformer models have cubic runtime and memory complexity with respect to
+sequence length. This means that longer texts need to be divided into sentences
+in order to achieve reasonable efficiency.
+
+`spacy_pytorch_transformers` handles this internally, so long as some sort of
+sentence-boundary detection component has been added to the pipeline. We
+recommend `nlp.add_pipe(nlp.create_pipe("sentencizer"), first=True)`. The
+default rules for the sentencizer component are very simple, but you can
+also create a custom sentence-boundary detection component that works well on
+your data. See spaCy's documentation for details. If a sentencizer is available
+and the `per_sentence=True` configuration option is set, the transformer model
+will predict over sentences, and the resulting tensor features will be
+reconstructed to produce document-level annotations.
+
+In order to further improve efficiency, especially for CPU processing,
+`spacy_pytorch_transformers` also performs length-based subbatching internally.
+The subbatching regroups batches by sequence length, to minimise the amount of
+padding required. The configuration option `batch_by_length` controls this
+behaviour. You can set it to 0 or `None` to disable the subbatching, or set it
+to an integer to require that the subbatches must be at least N sequences long.
+
+The subbatching and per-sentence processing are used instead of input
+truncation, which many transformer implementations otherwise resort to.
+Truncating inputs is usually bad, as it results in the loss of arbitrary
+information.
+
 ## 🎛 API
 
 ### <kbd>class</kbd> `PyTT_Language`
