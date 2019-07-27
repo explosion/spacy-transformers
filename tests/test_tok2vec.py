@@ -19,14 +19,8 @@ def texts():
 
 
 @pytest.fixture
-def pytt_tokenizer(name):
-    return pytt.BertTokenizer.from_pretrained(name)
-
-
-@pytest.fixture
-def nlp(pytt_tokenizer):
-    nlp = PyTT_Language()
-    nlp.pytt_tokenizer = pytt_tokenizer
+def nlp(name):
+    nlp = PyTT_Language(pytt_name=name)
     return nlp
 
 

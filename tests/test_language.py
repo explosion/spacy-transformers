@@ -5,7 +5,7 @@ from spacy.attrs import LANG
 
 def test_language_init():
     meta = {"lang": "en", "name": "test", "pipeline": []}
-    nlp = PyTT_Language(meta=meta)
+    nlp = PyTT_Language(meta=meta, pytt_name="bert-base-uncased")
     assert nlp.lang == "en"
     assert nlp.meta["lang"] == "en"
     assert nlp.meta["lang_factory"] == PyTT_Language.lang_factory_name

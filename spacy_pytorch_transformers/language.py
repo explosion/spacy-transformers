@@ -3,7 +3,7 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 
 from . import about
-from .util import align_word_pieces
+from .util import align_word_pieces, get_pytt_tokenizer
 
 
 class PyTT_Language(Language):
@@ -38,7 +38,14 @@ class PyTT_Language(Language):
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
     ):
+        meta = dict(meta)
         meta["lang_factory"] = self.lang_factory_name
+        pytt_name = kwargs.get("pytt_name", meta.get("pytt_name"))
+        if not pytt_name:
+            raise ValueError("Need pytt_name setting in meta, e.g. 'bert-base-uncased'")
+        meta["pytt_name"] = pytt_name
+        pytt_cls = get_pytt_tokenizer(pytt_name)
+        self.pytt_tokenizer = pytt_cls.from_pretrained(pytt_name)
         # Add this package to requirements to it will be included in the
         # install_requires of any model using this language class
         package = f"{about.__title__}>={about.__version__}"
@@ -46,11 +53,6 @@ class PyTT_Language(Language):
         self.lang = meta.get("lang", "xx")
         self.Defaults = get_defaults(self.lang)
         super().__init__(vocab, make_doc, max_length, meta=meta, **kwargs)
-        if meta.get("name"):
-            pytt_cls = get_pytt_tokenizer(meta["name"])
-            self.pytt_tokenizer = pytt_cls.from_pretrained(pytt_name)
-        else:
-            self.pytt_tokenizer = None
 
     def make_doc(self, text):
         doc = self.tokenizer(text)
