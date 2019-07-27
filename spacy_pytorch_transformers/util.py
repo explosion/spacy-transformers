@@ -1,8 +1,11 @@
 import numpy
 from thinc.neural.ops import get_array_module
 
+SPECIAL_TOKENS = (
+    "[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>"
+)
 
-def align_word_pieces(spacy_tokens, wp_tokens, specials=("[CLS]", "[BOS]", "[SEP]")):
+def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
     """Align tokens against word-piece tokens. The alignment is returned as a
     list of lists. If alignment[3] == [4, 5, 6], that means that spacy_tokens[3]
     aligns against 3 tokens: wp_tokens[4], wp_tokens[5] and wp_tokens[6].
@@ -17,6 +20,8 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=("[CLS]", "[BOS]", "[SEP
     if not spacy_tokens or not wp_tokens:
         return []
     wp_tokens = [wpt.replace("##", "", 1) for wpt in wp_tokens]
+    # XLNet uses this as the control char?? Wtf.
+    wp_tokens = [wpt.replace("\u2581", "", 1) for wpt in wp_tokens]
     assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
     output = _align(spacy_tokens, wp_tokens, offset)
     return output
