@@ -41,12 +41,7 @@ jobs:
     displayName: 'Build sdist'
 
   - script: pip install dist/*.tar.gz
-    condition: in( variables['Agent.OS'], 'Linux', 'Darwin')
-    displayName: 'Install from sdist (Linux, Mac)'
-
-  - script: pip install -e .
-    condition: eq( variables['Agent.OS'], 'Windows_NT')
-    displayName: 'Install with pip (Windows)'
+    displayName: 'Install from sdist'
 
   - script: |
       python -m pytest tests --cov=spacy_pytorch_transformers
