@@ -33,9 +33,9 @@ def nlp(pytt_tokenizer):
 
 @pytest.fixture(scope="session")
 def tok2vec(name):
-    cfg = {"pytt_name": name, "batch_by_length": True}
+    cfg = {"batch_by_length": True}
     vocab = Vocab()
-    return PyTT_TokenVectorEncoder.from_pretrained(vocab, **cfg)
+    return PyTT_TokenVectorEncoder.from_pretrained(vocab, name, **cfg)
 
 
 @pytest.fixture

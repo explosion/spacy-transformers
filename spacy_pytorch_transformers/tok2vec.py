@@ -21,8 +21,9 @@ class PyTT_TokenVectorEncoder(Pipe):
     name = "pytt_tok2vec"
 
     @classmethod
-    def from_pretrained(cls, vocab, **cfg):
+    def from_pretrained(cls, vocab, name, **cfg):
         cfg["from_pretrained"] = True
+        cfg["pytt_name"] = name
         model = cls.Model(**cfg)
         self = cls(vocab, model=model, **cfg)
         return self
