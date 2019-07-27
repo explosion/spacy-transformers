@@ -17,7 +17,7 @@ state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 -   Aligned tokenization.
 -   Transfer learning, Text classification.
 -   Fine-tuning.
--   Built-in hooks to use the weights as word vectors and for similarity.
+-   Built-in hooks for context-sensitive vectors and similarity.
 -   Out-of-the-box serialization.
 
 ## 🚀 Quickstart
@@ -166,7 +166,7 @@ print(doc._.pytt_word_pieces)
 
 ### <kbd>class</kbd> `PyTT_Language`
 
-A subclass of [`spacy.Language`](https://spacy.io/api/language) that holds a
+A subclass of [`Language`](https://spacy.io/api/language) that holds a
 PyTorch-Transformer (PyTT) pipeline. PyTT pipelines work only slightly
 differently from spaCy's default pipelines. Specifically, we introduce a new
 pipeline component at the start of the pipeline, `PyTT_TokenVectorEncoder`. We
