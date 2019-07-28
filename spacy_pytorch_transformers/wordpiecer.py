@@ -21,7 +21,6 @@ class PyTT_WordPiecer(Pipe):
     def from_pretrained(cls, vocab, pytt_name):
         model = get_pytt_tokenizer(pytt_name).from_pretrained(pytt_name)
         return cls(vocab, model=model, pytt_name=pytt_name)
-        
 
     @classmethod
     def Model(cls, pytt_name, **kwargs):
@@ -62,36 +61,3 @@ class PyTT_WordPiecer(Pipe):
             doc._.pytt_word_pieces_ = output
             doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(output)
             doc._.pytt_alignment = align_word_pieces([w.text for w in doc], output)
-
-    def require_model(self):
-        return None
-
-    def update(self, *args, **kwargs):
-        return None
-
-    #def to_bytes(self, exclude=tuple(), **kwargs):
-    #    msg = {
-    #        "cfg": self.cfg,
-    #        "tokenizer": self.pytt_tokenizer.to_bytes()
-    #    }
-    #    return srsly.msgpack_dumps(msg)
-#
-#    def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
-#        msg = srsly.msgpack_loads(byte_data)
-#        self.cfg = msg["cfg"]
-##        PyTT_Tokenizer = get_pytt_tokenizer(self.cfg["pytt_name"])
-#        self.pytt_tokenizer = PyTT_Tokenizer.blank().from_bytes(msg["tokenizer"])
-#        return self
-
-#    def to_disk(self, path, exclude=tuple(), **kwargs):
-#        if not path.exists():
-#            path.mkdir()
-#        srsly.write_json(path / "cfg", self.cfg)
-#        srsly.write_msgpack(path / "tokenizer.msg", self.pytt_tokenizer.to_bytes())
-
-#    def from_disk(self, path, exclude=tuple(), **kwargs):
-#        self.cfg = srsly.read_json(path / "cfg")
-#        msg = srsly.read_msgpack(path / "tokenizer.msg")
-#        PyTT_Tokenizer = get_pytt_tokenizer(self.cfg["pytt_name"])
-#        self.pytt_tokenizer = PyTT_Tokenizer.blank().from_bytes(msg)
-#        return self
