@@ -6,9 +6,11 @@ easily use to_bytes() and from_bytes() with them.
 from collections import OrderedDict
 import spacy
 import ftfy
+import srsly
 
 import pytorch_transformers as pytt
 from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
+from pytorch_transformers.tokenization_bert import BasicTokenizer, WordpieceTokenizer
 
 
 BASE_CLASS_FIELDS = [
@@ -35,6 +37,9 @@ class SerializationMixin:
     * finish_deserializing(): A function to be called after from_bytes(),
         to finish setting up the instance.
     """
+    def prepare_for_serialization(self):
+        pass
+
     def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
         msg = srsly.msgpack_loads(bytes_data)
         for field in self.serialization_fields:
@@ -42,9 +47,10 @@ class SerializationMixin:
         self.finish_deserializing()
 
     def to_bytes(self, exclude=tuple(), **kwargs):
+        self.prepare_for_serialization()
         msg = OrderedDict()
         for field in self.serialization_fields:
-            msg[field] = getattr(self, field)
+            msg[field] = getattr(self, field, None)
         return srsly.msgpack_dumps(msg)
 
     def from_disk(self, path, exclude=tuple(), **kwargs):
@@ -53,6 +59,7 @@ class SerializationMixin:
         return self.from_bytes(data, **kwargs)
 
     def to_disk(self, path, exclude=tuple(), **kwargs):
+        self.prepare_for_serialization()
         data = self.to_bytes(data, **kwargs)
         with (path / "pytt_tokenizer.msg").open("wb") as file_:
             file_.write(data)
@@ -69,12 +76,19 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
 
     @classmethod
     def blank(cls):
-        self = cls.__new__(self)
+        self = cls.__new__(cls)
         for field in self.serialization_fields:
             setattr(self, field, None)
         self.ids_to_tokens = None
         self.basic_tokenizer = None
         self.wordpiece_tokenizer = None
+        return self
+
+    def prepare_for_serialization(self):
+        if self.basic_tokenizer is not None:
+            self.do_lower_case = self.basic_tokenizer.do_lower_case
+            self.never_split = self.basic_tokenizer.never_split
+            self.tokenize_chinese_chars = self.basic_tokenizer.tokenize_chinese_chars
 
     def finish_deserializing(self):
         self.ids_to_tokens = OrderedDict([(ids, tok) for tok, ids in self.vocab.items()])
@@ -99,13 +113,14 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
 
     @classmethod
     def blank(cls):
-        self = cls.__new__(self)
+        self = cls.__new__(cls)
         for field in self.serialization_fields:
             setattr(self, field, None)
         self.byte_encoder = None
         self.byte_decoder = None
         self.cache = None
         self.pat = None
+        return self
 
     def finish_deserializing(self):
         self.decoder = {v:k for k,v in self.encoder.items()}
@@ -123,13 +138,14 @@ class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin
 
     @classmethod
     def blank(cls):
-        self = cls.__new__(self)
+        self = cls.__new__(cls)
         for field in self.serialization_fields:
             setattr(self, field, None)
         self.nlp = None
         self.fix_text = None
         self.cache = None
         self.decoder = {}
+        return self
  
     def finish_deserializing(self):
         self.nlp = spacy.blank("en")
@@ -153,11 +169,11 @@ class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin
 
     @classmethod
     def blank(cls):
-        self = cls.__new__(self)
+        self = cls.__new__(cls)
         for field in self.serialization_fields:
             setattr(self, field, None)
         self.sym2idx = {}
-
+        return self
  
     def finish_deserializing(self):
         self.sym2idx = {sym: i for i, sym in enumerate(idx2sym)} 
@@ -171,13 +187,14 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
 
     @classmethod
     def blank(cls):
-        self = cls.__new__(self)
+        self = cls.__new__(cls)
         for field in self.serialization_fields:
             setattr(self, field, None)
         self.nlp = None
         self.fix_text = None
         self.cache = None
         self.decoder = {}
+        return self
  
     def finish_deserializing(self):
         self.nlp = spacy.blank("en")
@@ -196,13 +213,12 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
 
     @classmethod
     def blank(cls):
-        self = cls.__new__(self)
+        self = cls.__new__(cls)
         for field in self.serialization_fields:
             setattr(self, field, None)
         self.sp_model = None
+        return self
 
     def finish_deserializing(self):
         self.sp_model = spm.SentencePieceProcessor()
         self.sp_model.LoadFromSerializedProto(self.vocab_bytes)
-
-
