@@ -14,7 +14,11 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
     name = "pytt_textcat"
 
     @classmethod
-    def Model(cls, nr_class, width, exclusive_classes=False, **cfg):
+    def from_nlp(cls, nlp, **cfg):
+        return cls(nlp.vocab, **cfg)
+
+    @classmethod
+    def Model(cls, nr_class, exclusive_classes=False, **cfg):
         """Create a text classification model using a PyTorch-Transformers model
         for token vector encoding.
 
@@ -27,7 +31,7 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         tok2vec = layerize(get_pytt_last_hidden)
         tok2vec.nO = cfg["token_vector_width"]
         return build_simple_cnn_text_classifier(
-            tok2vec, nr_class=nr_class, width=width, **cfg
+            tok2vec, nr_class=nr_class, width=tok2vec.nO, **cfg
         )
 
 

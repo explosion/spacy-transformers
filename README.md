@@ -34,7 +34,7 @@ We've also pre-packaged the `bert-base-uncased` model as a spaCy model package
 from the [model releases](#).
 
 ```bash
-python -m spacy download en_bert-base-uncased_xl
+python -m spacy download en_bert_base_uncased_xl
 ```
 
 Once the model is installed, you can load it in spaCy like any other model
@@ -43,7 +43,7 @@ package.
 ```python
 import spacy
 
-nlp = spacy.load("en_bert-base-uncased_xl")
+nlp = spacy.load("en_bert_base_uncased_xl")
 doc = nlp("The dog barked. The puppy barked.")
 print(doc[0:4].similarity(doc[4:8]))
 ```
@@ -94,7 +94,7 @@ import spacy
 from spacy.util import minibatch
 import random
 
-nlp = spacy.load("en_bert-base-uncased_xl")
+nlp = spacy.load("en_bert_base_uncased_xl")
 
 textcat = nlp.create_pipe("pytt_textcat", config={"exclusive_classes": True})
 for label in ("POSITIVE", "NEGATIVE"):
@@ -132,9 +132,9 @@ this:
 
 ```bash
 python -m spacy package /bert-textcat /output
-cd /output/en_bert-base-uncased_xl-0.0.0
+cd /output/en_bert_base_uncased_xl-0.0.0
 python setup.py sdist
-pip install dist/en_bert-base-uncased_xl.tar.gz
+pip install dist/en_bert_base_uncased_xl.tar.gz
 ```
 
 ### Extension attributes
@@ -169,9 +169,9 @@ tokens and the `PyTT_TokenVectorEncoder`, which assigns the token vectors. The
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
 
 name = "bert-base-uncased"
-nlp = PyTT_Language(pytt_name=name)
+nlp = PyTT_Language(pytt_name=name, meta={"lang": "en"})
 wordpiecer = PyTT_WordPiecer(nlp.vocab, pytt_name=name)
-tok2vec = PyTT_TokenVectorEncoder(nlp.vocab, pytt_name=name).from_pretrained(name)
+tok2vec = PyTT_TokenVectorEncoder(nlp.vocab, pytt_name=name).from_pretrained(nlp.vocab, name)
 nlp.add_pipe(wordpiecer)
 nlp.add_pipe(tok2vec)
 print(nlp.pipe_names)  # ['pytt_wordpiecer', 'pytt_tok2vec']

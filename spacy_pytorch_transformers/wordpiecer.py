@@ -13,6 +13,10 @@ class PyTT_WordPiecer(Pipe):
 
     name = "pytt_wordpiecer"
 
+    @classmethod
+    def from_nlp(cls, nlp, **cfg):
+        return cls(nlp.vocab, **cfg)
+
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.
 
@@ -23,7 +27,12 @@ class PyTT_WordPiecer(Pipe):
         self.vocab = vocab
         self.cfg = cfg
         self.model = model
-        name = cfg.get("pytt_name")
+        self.pytt_tokenizer = None
+        if cfg.get("pytt_name"):
+            self.load_tokenizer()
+
+    def load_tokenizer(self):
+        name = self.cfg.get("pytt_name")
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
         pytt_cls = get_pytt_tokenizer(name)
@@ -57,6 +66,9 @@ class PyTT_WordPiecer(Pipe):
     def require_model(self):
         return None
 
+    def update(self, *args, **kwargs):
+        return None
+
     def to_bytes(self, exclude=tuple(), **kwargs):
         serialize = {"cfg": lambda: srsly.json_dumps(self.cfg)}
         return to_bytes(serialize, exclude)
@@ -64,6 +76,7 @@ class PyTT_WordPiecer(Pipe):
     def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
         deserialize = {"cfg": lambda b: self.cfg.update(srsly.json_loads(b))}
         from_bytes(bytes_data, deserialize, exclude)
+        self.load_tokenizer()
 
     def to_disk(self, path, exclude=tuple(), **kwargs):
         serialize = {"cfg": lambda p: srsly.write_json(p, self.cfg)}
@@ -72,4 +85,5 @@ class PyTT_WordPiecer(Pipe):
     def from_disk(self, path, exclude=tuple(), **kwargs):
         _load_cfg = lambda p: srsly.read_json(p) if p.exists() else {}
         deserialize = {"cfg": lambda p: self.cfg.update(_load_cfg(p))}
-        return from_disk(path, deserialize, exclude)
+        from_disk(path, deserialize, exclude)
+        self.load_tokenizer()
