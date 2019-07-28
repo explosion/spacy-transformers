@@ -48,7 +48,8 @@ def get_pytt_last_hidden(docs, drop=0.0):
             if doc._.pytt_gradients is None:
                 col_names = doc._.pytt_outputs._fields
                 Grads = namedtuple("pytt_gradients", col_names)
-                doc._.pytt_gradients = Grads(last_hidden_state=gradient)
+                pytt_gradients = Grads(last_hidden_state=gradient, pooler_output=None)
+                doc._.pytt_gradients = pytt_gradients
             else:
                 doc._.pytt_gradients.last_hidden_state += gradient
         return None

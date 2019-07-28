@@ -62,7 +62,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         if batch_by_length:
             model = with_length_batching(model, batch_by_length)
         model = chain(get_word_pieces, model)
-        if cfg.get("per_sentence"):
+        if cfg.get("per_sentence", False):
             model = foreach_sentence(model)
         model.nO = nO
         return model
@@ -108,10 +108,9 @@ class PyTT_TokenVectorEncoder(Pipe):
         This is only used internally within PyTT_Language.update.
         """
         outputs, backprop = self.model.begin_update(docs, drop=drop)
-        self.set_annotations(docs, outputs)
 
         def finish_update(docs, sgd=None):
-            gradients = [doc._.pytt_gradients for doc in docs]
+            gradients = [doc._.pytt_gradients.last_hidden_state for doc in docs]
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_outputs = None
