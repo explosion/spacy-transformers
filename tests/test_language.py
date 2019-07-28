@@ -3,6 +3,7 @@ from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
 from spacy_pytorch_transformers import PyTT_TokenVectorEncoder, about
 from spacy.attrs import LANG
+from spacy.tokens import Doc
 
 from .util import make_tempdir, is_valid_tensor
 
@@ -73,3 +74,13 @@ def test_language_to_from_disk(nlp, name):
     new_doc = new_nlp("hello world")
     assert is_valid_tensor(new_doc.tensor)
     assert_equal(doc.tensor, new_doc.tensor)
+
+
+def test_extension_attrs(nlp):
+    doc = Doc(nlp.vocab, words=["hello", "world", "test"])
+    doc._.pytt_alignment = [[1, 2], [3, 4], [5, 6]]
+    assert doc[0]._.pytt_alignment == [1, 2]
+    assert doc[1]._.pytt_alignment == [3, 4]
+    assert doc[2]._.pytt_alignment == [5, 6]
+    assert doc[0:2]._.pytt_alignment == [[1, 2], [3, 4]]
+    assert doc[1:3]._.pytt_alignment == [[3, 4], [5, 6]]
