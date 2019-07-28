@@ -158,6 +158,25 @@ doc = nlp("This is a text.")
 print(doc._.pytt_word_pieces)
 ```
 
+### Setting up the pipeline
+
+In order to run, the `nlp` object created using `PyTT_Language` requires two
+components to run in order: the `PyTT_WordPiecer`, which assigns the word piece
+tokens and the `PyTT_TokenVectorEncoder`, which assigns the token vectors. The
+`pytt_name` argument defines the name of the pre-trained model to use.
+
+```python
+from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
+
+name = "bert-base-uncased"
+nlp = PyTT_Language(pytt_name=name)
+wordpiecer = PyTT_WordPiecer(nlp.vocab, pytt_name=name)
+tok2vec = PyTT_TokenVectorEncoder(nlp.vocab, pytt_name=name)
+nlp.add_pipe(wordpiecer)
+nlp.add_pipe(tok2vec)
+print(nlp.pipe_names)  # ['pytt_wordpiecer', 'pytt_tok2vec']
+```
+
 ### Tokenization alignment
 
 Transformer models are usually trained on text preprocessed with the "word
@@ -251,16 +270,6 @@ See [`Language.__init__`](https://spacy.io/api/language#init). Expects either a
 `pytt_name` setting in the `meta` or as a keyword argument, specifying the
 pre-trained model name. This is used to set up the model-specific tokenizer.
 
-#### <kbd>method</kbd> `PyTT_Language.make_doc`
-
-Create a `Doc` object from text. Applies spaCy's tokenizer and the
-PyTorch-Transformers tokenizer and aligns the tokens.
-
-| Name        | Type               | Description          |
-| ----------- | ------------------ | -------------------- |
-| `text`      | unicode            | The text to process. |
-| **RETURNS** | `spacy.tokens.Doc` | The processed `Doc`. |
-
 #### <kbd>method</kbd> `PyTT_Language.update`
 
 Update the models in the pipeline.
@@ -273,6 +282,61 @@ Update the models in the pipeline.
 | `sgd`           | callable | An optimizer.                                                                                                                              |
 | `losses`        | dict     | Dictionary to update with the loss, keyed by pipeline component.                                                                           |
 | `component_cfg` | dict     | Config parameters for specific pipeline components, keyed by component name.                                                               |
+
+### <kbd>class</kbd> `PyTT_WordPiecer`
+
+spaCy pipeline component to assign PyTorch-Transformers word-piece tokenization
+to the Doc, which can then be used by the token vector encoder. Note that this
+component doesn't modify spaCy's tokenization. It only sets extension attributes
+`pytt_word_pieces_`, `pytt_word_pieces` and `pytt_alignment` (alignment between
+word-piece tokens and spaCy tokens).
+
+The component is available as `pytt_wordpiecer` and registered via an entry
+point, so it can also be created using
+[`nlp.create_pipe`](https://spacy.io/api/language#create_pipe):
+
+```python
+wordpiecer = nlp.create_pipe("wordpiecer")
+```
+
+#### Config
+
+The component can be configured with the following settings, usually passed in
+as the `**cfg`.
+
+| Name        | Type    | Description                                            |
+| ----------- | ------- | ------------------------------------------------------ |
+| `pytt_name` | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
+
+#### <kbd>method</kbd> `PyTT_WordPiecer.__init__`
+
+Initialize the component.
+
+| Name        | Type                | Description                                            |
+| ----------- | ------------------- | ------------------------------------------------------ |
+| `vocab`     | `spacy.vocab.Vocab` | The spaCy vocab to use.                                |
+| `name`      | unicode             | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
+| `**cfg`     | -                   | Optional config parameters.                            |
+| **RETURNS** | `PyTT_WordPiecer`   | The word piecer.                                       |
+
+#### <kbd>method</kbd> `PyTT_WordPiecer.predict`
+
+Run the word-piece tokenizer on a batch of docs and return the extracted
+strings.
+
+| Name        | Type     | Description                                                                      |
+| ----------- | -------- | -------------------------------------------------------------------------------- |
+| `docs`      | iterable | A batch of `Doc`s to process.                                                    |
+| **RETURNS** | tuple    | A `(strings, None)` tuple. The strings are lists of strings, one list per `Doc`. |
+
+#### <kbd>method</kbd> `PyTT_WordPiecer.set_annotations`
+
+Assign the extracted tokens and IDs to the `Doc` objects.
+
+| Name      | Type     | Description               |
+| --------- | -------- | ------------------------- |
+| `docs`    | iterable | A batch of `Doc` objects. |
+| `outputs` | iterable | A batch of outputs.       |
 
 ### <kbd>class</kbd> `PyTT_TokenVectorEncoder`
 
@@ -325,10 +389,11 @@ tok2vec = PyTT_TokenVectorEncoder.from_pretrained(Vocab(), "bert-base-uncased")
 Create an instance of `PyTT_Wrapper`, which holds the PyTorch-Transformers
 model.
 
-| Name        | Type                 | Description                 |
-| ----------- | -------------------- | --------------------------- |
-| `**cfg`     | -                    | Optional config parameters. |
-| **RETURNS** | `thinc.neural.Model` | The wrapped model.          |
+| Name        | Type                 | Description                                            |
+| ----------- | -------------------- | ------------------------------------------------------ |
+| `name`      | unicode              | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
+| `**cfg`     | -                    | Optional config parameters.                            |
+| **RETURNS** | `thinc.neural.Model` | The wrapped model.                                     |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.__init__`
 
@@ -425,8 +490,9 @@ define `"pytt_tok2vec"` in their pipelines, and spaCy will know how to create
 those components when you deserialize the model. The following entry points are
 set:
 
-| Name           | Target                    | Type              | Description                      |
-| -------------- | ------------------------- | ----------------- | -------------------------------- |
-| `pytt_tok2vec` | `PyTT_TokenVectorEncoder` | `spacy_factories` | Factory to create the component. |
-| `pytt_textcat` | `PyTT_TextCategorizer`    | `spacy_factories` | Factory to create the component. |
-| `pytt`         | `PyTT_Language`           | `spacy_languages` | Custom `Language` subclass.      |
+| Name              | Target                    | Type              | Description                      |
+| ----------------- | ------------------------- | ----------------- | -------------------------------- |
+| `pytt_wordpiecer` | `PyTT_WordPiecer`         | `spacy_factories` | Factory to create the component. |
+| `pytt_tok2vec`    | `PyTT_TokenVectorEncoder` | `spacy_factories` | Factory to create the component. |
+| `pytt_textcat`    | `PyTT_TextCategorizer`    | `spacy_factories` | Factory to create the component. |
+| `pytt`            | `PyTT_Language`           | `spacy_languages` | Custom `Language` subclass.      |

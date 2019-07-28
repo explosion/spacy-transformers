@@ -3,7 +3,6 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 
 from . import about
-from .util import align_word_pieces, get_pytt_tokenizer
 
 
 class PyTT_Language(Language):
@@ -44,12 +43,6 @@ class PyTT_Language(Language):
         """
         meta = dict(meta)
         meta["lang_factory"] = self.lang_factory_name
-        pytt_name = kwargs.get("pytt_name", meta.get("pytt_name"))
-        if not pytt_name:
-            raise ValueError("Need pytt_name setting in meta, e.g. 'bert-base-uncased'")
-        meta["pytt_name"] = pytt_name
-        pytt_cls = get_pytt_tokenizer(pytt_name)
-        self.pytt_tokenizer = pytt_cls.from_pretrained(pytt_name)
         # Add this package to requirements to it will be included in the
         # install_requires of any model using this language class
         package = f"{about.__title__}>={about.__version__}"
@@ -57,16 +50,6 @@ class PyTT_Language(Language):
         self.lang = meta.get("lang", "xx")
         self.Defaults = get_defaults(self.lang)
         super().__init__(vocab, make_doc, max_length, meta=meta, **kwargs)
-
-    def make_doc(self, text):
-        doc = self.tokenizer(text)
-        bos = self.pytt_tokenizer.cls_token
-        sep = self.pytt_tokenizer.sep_token
-        strings = [bos] + self.pytt_tokenizer.tokenize(text) + [sep]
-        doc._.pytt_word_pieces_ = strings
-        doc._.pytt_word_pieces = self.pytt_tokenizer.convert_tokens_to_ids(strings)
-        doc._.pytt_alignment = align_word_pieces([w.text for w in doc], strings)
-        return doc
 
     def update(self, docs, golds, drop=0.0, sgd=None, losses=None, component_cfg=None):
         tok2vec = self.get_pipe("pytt_tok2vec")

@@ -2,6 +2,7 @@ import pytest
 import numpy
 from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_TokenVectorEncoder
+from spacy_pytorch_transformers import PyTT_WordPiecer
 from spacy.vocab import Vocab
 import pickle
 
@@ -21,6 +22,8 @@ def texts():
 @pytest.fixture
 def nlp(name):
     nlp = PyTT_Language(pytt_name=name)
+    wordpiecer = PyTT_WordPiecer(nlp.vocab, pytt_name=name)
+    nlp.add_pipe(wordpiecer, first=True)
     return nlp
 
 
@@ -33,7 +36,7 @@ def tok2vec(name):
 
 @pytest.fixture
 def docs(nlp, texts):
-    return [nlp.make_doc(text) for text in texts]
+    return [nlp(text) for text in texts]
 
 
 def test_from_pretrained(tok2vec, docs):
