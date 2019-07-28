@@ -1,6 +1,7 @@
 import numpy
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
+from . import _pytt_tokenizer_subclasses as _tokenizers
 
 
 SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>")
@@ -48,17 +49,17 @@ def get_pytt_tokenizer(name):
     """Get a pytorch_transformers.*Tokenizer class from a name."""
     name = name.lower()
     if "bert" in name:
-        return pytt.BertTokenizer
+        return _tokenizers.SerializableBertTokenizer
     elif "xlnet" in name:
-        return pytt.XLNetTokenizer
+        return _tokenizers.SerializableXLNetTokenizer
     elif "openai" in name:
-        return pytt.OpenAIGPTTokenizer
+        return _tokenizers.SerializableOpenAIGPTTokenizer
     elif "transfoxl" in name:
-        return pytt.TransfoXLTokenizer
+        return _tokenizers.SerializableTransfoXLTokenizer
     elif "gpt2" in name:
-        return pytt.GPT2Tokenizer
+        return _tokenizers.SerializableGPT2Tokenizer
     elif "xlm" in name:
-        return pytt.XLMTokenizer
+        return _tokenizers.SerializableXLMTokenizer
     else:
         raise ValueError(f"Unrecognized PyTT config name: {name}")
 
