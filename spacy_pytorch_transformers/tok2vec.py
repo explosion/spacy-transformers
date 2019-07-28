@@ -56,8 +56,10 @@ class PyTT_TokenVectorEncoder(Pipe):
         else:
             model = PyTT_Wrapper(name)
         nO = model.nO
-        if cfg.get("batch_by_length"):
-            model = with_length_batching(model, cfg["batch_by_length"])
+        # TODO: Fix tensor if batch_by_length=0
+        batch_by_length = cfg.get("batch_by_length", 1)
+        if batch_by_length:
+            model = with_length_batching(model, batch_by_length)
         model = chain(get_word_pieces, model)
         if cfg.get("per_sentence"):
             model = foreach_sentence(model)

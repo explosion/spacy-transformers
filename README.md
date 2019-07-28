@@ -235,8 +235,8 @@ In order to further improve efficiency, especially for CPU processing,
 `spacy-pytorch-transformers` also performs length-based subbatching internally.
 The subbatching regroups batches by sequence length, to minimise the amount of
 padding required. The configuration option `batch_by_length` controls this
-behaviour. You can set it to 0 or `None` to disable the subbatching, or set it
-to an integer to require that the subbatches must be at least N sequences long.
+behaviour. You can set it to 0 to disable the subbatching, or set it to an
+integer to require that the subbatches must be at least N sequences long.
 
 The subbatching and per-sentence processing are used instead of input
 truncation, which many transformer implementations otherwise resort to.
@@ -360,11 +360,11 @@ tok2vec = nlp.create_pipe("pytt_tok2vec")
 The component can be configured with the following settings, usually passed in
 as the `**cfg`.
 
-| Name              | Type    | Description                                                          |
-| ----------------- | ------- | -------------------------------------------------------------------- |
-| `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`.               |
-| `batch_by_length` | bool    | Group texts into subbatches based on their length to reduce padding. |
-| `per_sentence`    | bool    | Apply the model over sentences using the `doc.sents` attribute.      |
+| Name              | Type    | Description                                                                                                                            |
+| ----------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`.                                                                                 |
+| `batch_by_length` | int     | Minimum batch size for grouping texts into subbatches based on their length to reduce padding. Set to `0` to disable. Defaults to `1`. |
+| `per_sentence`    | bool    | Apply the model over sentences using the `doc.sents` attribute.                                                                        |
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_pretrained`
 
