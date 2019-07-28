@@ -1,4 +1,6 @@
 from spacy.pipeline import Pipe
+from spacy.util import to_bytes, from_bytes, to_disk, from_disk
+import srsly
 
 from .util import get_pytt_tokenizer, align_word_pieces
 
@@ -18,11 +20,14 @@ class PyTT_WordPiecer(Pipe):
         model: Not used here.
         **cfg: Optional config parameters.
         """
+        self.vocab = vocab
+        self.cfg = cfg
+        self.model = model
         name = cfg.get("pytt_name")
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
         pytt_cls = get_pytt_tokenizer(name)
-        self.model = pytt_cls.from_pretrained(name)
+        self.pytt_tokenizer = pytt_cls.from_pretrained(name)
 
     def predict(self, docs):
         """Run the word-piece tokenizer on a batch of docs and return the
@@ -31,11 +36,11 @@ class PyTT_WordPiecer(Pipe):
         docs (iterable): A batch of Docs to process.
         RETURNS (tuple): A (strings, None) tuple.
         """
-        bos = self.model.cls_token
-        sep = self.model.sep_token
+        bos = self.pytt_tokenizer.cls_token
+        sep = self.pytt_tokenizer.sep_token
         strings = []
         for doc in docs:
-            strings.append([bos] + self.model.tokenize(doc.text) + [sep])
+            strings.append([bos] + self.pytt_tokenizer.tokenize(doc.text) + [sep])
         return strings, None
 
     def set_annotations(self, docs, outputs, tensors=None):
@@ -46,5 +51,25 @@ class PyTT_WordPiecer(Pipe):
         """
         for doc, output in zip(docs, outputs):
             doc._.pytt_word_pieces_ = output
-            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(output)
+            doc._.pytt_word_pieces = self.pytt_tokenizer.convert_tokens_to_ids(output)
             doc._.pytt_alignment = align_word_pieces([w.text for w in doc], output)
+
+    def require_model(self):
+        return None
+
+    def to_bytes(self, exclude=tuple(), **kwargs):
+        serialize = {"cfg": lambda: srsly.json_dumps(self.cfg)}
+        return to_bytes(serialize, exclude)
+
+    def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
+        deserialize = {"cfg": lambda b: self.cfg.update(srsly.json_loads(b))}
+        from_bytes(bytes_data, deserialize, exclude)
+
+    def to_disk(self, path, exclude=tuple(), **kwargs):
+        serialize = {"cfg": lambda p: srsly.write_json(p, self.cfg)}
+        return to_disk(path, serialize, exclude)
+
+    def from_disk(self, path, exclude=tuple(), **kwargs):
+        _load_cfg = lambda p: srsly.read_json(p) if p.exists() else {}
+        deserialize = {"cfg": lambda p: self.cfg.update(_load_cfg(p))}
+        return from_disk(path, deserialize, exclude)

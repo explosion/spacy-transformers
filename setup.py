@@ -33,6 +33,7 @@ def setup_package():
             "spacy>=2.1.6,<2.2.0",
             "pytorch_transformers>=1.0.0,<1.1.0",
             "torch>=0.4.1",
+            "srsly>=0.0.7,<1.1.0",
         ],
         python_requires=">=3.6",
         entry_points={
