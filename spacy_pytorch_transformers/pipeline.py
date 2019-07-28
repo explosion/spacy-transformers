@@ -15,6 +15,7 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):
+        """Factory to add to Language.factories via entry point."""
         return cls(nlp.vocab, **cfg)
 
     @classmethod

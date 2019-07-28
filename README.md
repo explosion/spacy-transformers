@@ -308,6 +308,16 @@ as the `**cfg`.
 | ----------- | ------- | ------------------------------------------------------ |
 | `pytt_name` | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
 
+#### <kbd>classmethod</kbd> `PyTT_WordPiecer.from_nlp`
+
+Factory to add to `Language.factories` via entry point.
+
+| Name        | Type                      | Description                                     |
+| ----------- | ------------------------- | ----------------------------------------------- |
+| `nlp`       | `spacy.language.Language` | The `nlp` object the component is created with. |
+| `**cfg`     | -                         | Optional config parameters.                     |
+| **RETURNS** | `PyTT_WordPiecer`         | The word piecer.                                |
+
 #### <kbd>method</kbd> `PyTT_WordPiecer.__init__`
 
 Initialize the component.
@@ -365,6 +375,16 @@ as the `**cfg`.
 | `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`.                                                                                 |
 | `batch_by_length` | int     | Minimum batch size for grouping texts into subbatches based on their length to reduce padding. Set to `0` to disable. Defaults to `1`. |
 | `per_sentence`    | bool    | Apply the model over sentences using the `doc.sents` attribute.                                                                        |
+
+#### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_nlp`
+
+Factory to add to `Language.factories` via entry point.
+
+| Name        | Type                      | Description                                     |
+| ----------- | ------------------------- | ----------------------------------------------- |
+| `nlp`       | `spacy.language.Language` | The `nlp` object the component is created with. |
+| `**cfg`     | -                         | Optional config parameters.                     |
+| **RETURNS** | `PyTT_TokenVectorEncoder` | The token vector encoder.                       |
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_pretrained`
 
@@ -459,6 +479,16 @@ so it can also be created using
 ```python
 textcat = nlp.create_pipe("pytt_textcat")
 ```
+
+#### <kbd>classmethod</kbd> `PyTT_TextCategorizer.from_nlp`
+
+Factory to add to `Language.factories` via entry point.
+
+| Name        | Type                      | Description                                     |
+| ----------- | ------------------------- | ----------------------------------------------- |
+| `nlp`       | `spacy.language.Language` | The `nlp` object the component is created with. |
+| `**cfg`     | -                         | Optional config parameters.                     |
+| **RETURNS** | `PyTT_TextCategorizer`    | The text categorizer.                           |
 
 #### <kbd>classmethod</kbd> `PyTT_TextCategorizer.Model`
 

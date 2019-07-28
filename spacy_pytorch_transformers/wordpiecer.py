@@ -15,6 +15,7 @@ class PyTT_WordPiecer(Pipe):
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):
+        """Factory to add to Language.factories via entry point."""
         return cls(nlp.vocab, **cfg)
 
     def __init__(self, vocab, model=True, **cfg):
