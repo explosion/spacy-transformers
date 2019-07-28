@@ -15,7 +15,6 @@ def name():
 
 @pytest.fixture(scope="session")
 def nlp(name):
-    cfg = {"batch_by_length": True}
     pytt_nlp = PyTT_Language(pytt_name=name)
     wordpiecer = PyTT_WordPiecer.from_pretrained(pytt_nlp.vocab, pytt_name=name)
     tok2vec = PyTT_TokenVectorEncoder.from_pretrained(pytt_nlp.vocab, name=name)

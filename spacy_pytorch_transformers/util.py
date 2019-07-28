@@ -1,7 +1,8 @@
 import numpy
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
-from . import _pytt_tokenizer_subclasses as _tokenizers
+
+from . import _tokenizers
 
 
 SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>")

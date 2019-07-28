@@ -34,6 +34,7 @@ def setup_package():
             "pytorch_transformers>=1.0.0,<1.1.0",
             "torch>=0.4.1",
             "srsly>=0.0.7,<1.1.0",
+            "ftfy>=5.0.0,<6.0.0",
         ],
         python_requires=">=3.6",
         entry_points={

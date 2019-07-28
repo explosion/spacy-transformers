@@ -244,12 +244,13 @@ def foreach_sentence(layer, drop_factor=1.0):
         assert len(docs) == len(outputs)
         for doc, doc_out in zip(docs, outputs):
             assert len(doc._.pytt_word_pieces) == doc_out.last_hidden_state.shape[0]
-        
+
         def sentence_bwd(d_output, sgd=None):
             d_flat = bp_flat(layer.ops.flatten(d_output), sgd=sgd)
             if d_flat is None:
-                return d_sents
+                return d_flat
             return _unflatten_ntuple_batch(layer.ops, d_flat, lengths)
+
         return outputs, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
