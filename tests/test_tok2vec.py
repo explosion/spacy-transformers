@@ -1,12 +1,11 @@
 import pytest
-import numpy
 from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_TokenVectorEncoder
 from spacy_pytorch_transformers import PyTT_WordPiecer
 from spacy.vocab import Vocab
 import pickle
 
-from .util import make_tempdir
+from .util import make_tempdir, is_valid_tensor
 
 
 @pytest.fixture(scope="session")
@@ -68,35 +67,35 @@ def test_similarity(nlp, tok2vec, text1, text2, is_similar, threshold):
 
 def test_tok2vec_to_from_bytes(tok2vec, docs):
     doc = tok2vec(docs[0])
-    assert doc.tensor is not None and numpy.nonzero(doc.tensor)
+    assert is_valid_tensor(doc.tensor)
     bytes_data = tok2vec.to_bytes()
     new_tok2vec = PyTT_TokenVectorEncoder(Vocab(), **tok2vec.cfg)
     with pytest.raises(ValueError):
         new_doc = new_tok2vec(docs[0])
     new_tok2vec.from_bytes(bytes_data)
     new_doc = new_tok2vec(docs[0])
-    assert new_doc.tensor is not None and numpy.nonzero(new_doc.tensor)
+    assert is_valid_tensor(new_doc.tensor)
     assert_equal(doc.tensor, new_doc.tensor)
 
 
 def test_tok2vec_to_from_disk(tok2vec, docs):
     doc = tok2vec(docs[0])
-    assert doc.tensor is not None and numpy.nonzero(doc.tensor)
+    assert is_valid_tensor(doc.tensor)
     with make_tempdir() as tempdir:
         file_path = tempdir / "tok2vec"
         tok2vec.to_disk(file_path)
         new_tok2vec = PyTT_TokenVectorEncoder(Vocab())
         new_tok2vec.from_disk(file_path)
     new_doc = new_tok2vec(docs[0])
-    assert new_doc.tensor is not None and numpy.nonzero(new_doc.tensor)
+    assert is_valid_tensor(new_doc.tensor)
     assert_equal(doc.tensor, new_doc.tensor)
 
 
 def test_tok2vec_pickle_dumps_loads(tok2vec, docs):
     doc = tok2vec(docs[0])
-    assert doc.tensor is not None and numpy.nonzero(doc.tensor)
+    assert is_valid_tensor(doc.tensor)
     pkl_data = pickle.dumps(tok2vec)
     new_tok2vec = pickle.loads(pkl_data)
     new_doc = new_tok2vec(docs[0])
-    assert new_doc.tensor is not None and numpy.nonzero(new_doc.tensor)
+    assert is_valid_tensor(new_doc.tensor)
     assert_equal(doc.tensor, new_doc.tensor)
