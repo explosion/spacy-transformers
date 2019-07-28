@@ -3,6 +3,7 @@ from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
 from spacy_pytorch_transformers import PyTT_TokenVectorEncoder, about
 from spacy.attrs import LANG
+from spacy.tokens import Doc
 
 from .util import make_tempdir, is_valid_tensor
 
@@ -18,7 +19,7 @@ def nlp(name):
     pytt_nlp = PyTT_Language(pytt_name=name)
     wordpiecer = PyTT_WordPiecer.from_pretrained(pytt_nlp.vocab, pytt_name=name)
     tok2vec = PyTT_TokenVectorEncoder.from_pretrained(pytt_nlp.vocab, name=name)
-    pytt_nlp.add_pipe(pytt_nlp.create_pipe("sentencizer"))
+    #pytt_nlp.add_pipe(pytt_nlp.create_pipe("sentencizer"))
     pytt_nlp.add_pipe(wordpiecer)
     pytt_nlp.add_pipe(tok2vec)
     return pytt_nlp
@@ -46,7 +47,7 @@ def test_language_run(nlp):
 def test_language_wordpiece_to_from_bytes(name):
     nlp = PyTT_Language()
     wordpiecer = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
-    nlp.add_pipe(nlp.create_pipe("sentencizer"))
+    #nlp.add_pipe(nlp.create_pipe("sentencizer"))
     nlp.add_pipe(wordpiecer)
     doc = nlp("hello world")
     assert doc._.pytt_word_pieces is not None
@@ -62,7 +63,7 @@ def test_language_wordpiece_tok2vec_to_from_bytes(nlp, name):
     doc = nlp("hello world")
     assert is_valid_tensor(doc.tensor)
     nlp2 = PyTT_Language()
-    nlp2.add_pipe(nlp2.create_pipe("sentencizer"))
+    #nlp2.add_pipe(nlp2.create_pipe("sentencizer"))
     nlp2.add_pipe(PyTT_WordPiecer(nlp.vocab))
     nlp2.add_pipe(PyTT_TokenVectorEncoder(nlp.vocab))
     with pytest.raises(ValueError):
@@ -79,13 +80,22 @@ def test_language_to_from_disk(nlp, name):
     with make_tempdir() as tempdir:
         nlp.to_disk(tempdir)
         new_nlp = PyTT_Language()
-        new_nlp.add_pipe(nlp2.create_pipe("sentencizer"))
-        #wordpiecer = PyTT_WordPiecer(new_nlp.vocab, pytt_name=name)
-        tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab, name)
-        #new_nlp.add_pipe(wordpiecer)
+        wordpiecer = PyTT_WordPiecer(new_nlp.vocab, pytt_name=name)
+        tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab, pytt_name=name)
+        new_nlp.add_pipe(wordpiecer)
         new_nlp.add_pipe(tok2vec)
         new_nlp.from_disk(tempdir)
     assert new_nlp.pipe_names == nlp.pipe_names
     new_doc = new_nlp("hello world")
-    #assert is_valid_tensor(new_doc.tensor)
-    #assert_equal(doc.tensor, new_doc.tensor)
+    assert is_valid_tensor(new_doc.tensor)
+    assert_equal(doc.tensor, new_doc.tensor)
+
+
+def test_extension_attrs(nlp):
+    doc = Doc(nlp.vocab, words=["hello", "world", "test"])
+    doc._.pytt_alignment = [[1, 2], [3, 4], [5, 6]]
+    assert doc[0]._.pytt_alignment == [1, 2]
+    assert doc[1]._.pytt_alignment == [3, 4]
+    assert doc[2]._.pytt_alignment == [5, 6]
+    assert doc[0:2]._.pytt_alignment == [[1, 2], [3, 4]]
+    assert doc[1:3]._.pytt_alignment == [[3, 4], [5, 6]]

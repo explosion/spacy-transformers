@@ -27,12 +27,12 @@ class PyTT_Language(Language):
 
     @staticmethod
     def install_extensions():
-        for cls in [Doc, Span, Token]:
-            cls.set_extension("pytt_alignment", default=None)
-            cls.set_extension("pytt_word_pieces", default=None)
-            cls.set_extension("pytt_word_pieces_", default=None)
-            cls.set_extension("pytt_outputs", default=None)
-            cls.set_extension("pytt_gradients", default=None)
+        Doc.set_extension("pytt_outputs", default=None)
+        Doc.set_extension("pytt_gradients", default=None)
+        for attr in ["pytt_alignment", "pytt_word_pieces", "pytt_word_pieces_"]:
+            Doc.set_extension(attr, default=None)
+            Token.set_extension(attr, getter=get_token_getter(attr))
+            Span.set_extension(attr, getter=get_span_getter(attr))
 
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
@@ -83,3 +83,11 @@ def get_defaults(lang):
         return lang_cls.Defaults
     except ImportError:
         return Language.Defaults
+
+
+def get_token_getter(attr):
+    return lambda token: token.doc._.get(attr)[token.i]
+
+
+def get_span_getter(attr):
+    return lambda span: span.doc._.get(attr)[span.start : span.end]

@@ -143,13 +143,19 @@ This wrapper sets the following
 [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
 on the `Doc`, `Span` and `Token` objects:
 
-| Name                   | Type         | Description                                                                                                                    |
-| ---------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `._.pytt_alignment`    | list         | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token).              |
-| `._.pytt_word_pieces`  | list         | The word-piece IDs.                                                                                                            |
-| `._.pytt_word_pieces_` | list         | The string forms of the word-piece IDs.                                                                                        |
-| `._.pytt_outputs`      | `namedtuple` | All outputs produced by the PyTorch Transformer model.                                                                         |
-| `._.pytt_gradients`    | `namedtuple` | Gradients of the pytt_outputs. These get incremented during `nlp.update`, and then cleared at the end once the update is made. |
+| Name                        | Type         | Description                                                                                                                    |
+| --------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `Doc._.pytt_outputs`        | `namedtuple` | All outputs produced by the PyTorch Transformer model.                                                                         |
+| `Doc._.pytt_gradients`      | `namedtuple` | Gradients of the pytt_outputs. These get incremented during `nlp.update`, and then cleared at the end once the update is made. |
+| `Doc._.pytt_alignment`      | list         | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token).              |
+| `Doc._.pytt_word_pieces`    | list         | The word-piece IDs.                                                                                                            |
+| `Doc._.pytt_word_pieces_`   | list         | The string forms of the word-piece IDs.                                                                                        |
+| `Token._.pytt_alignment`    | list         | Alignment between word-pieces and the current token. Returns a list of word-piece token indices.                               |
+| `Token._.pytt_word_pieces`  | list         | The word-piece IDs.                                                                                                            |
+| `Token._.pytt_word_pieces_` | list         | The string forms of the word-piece IDs.                                                                                        |
+| `Span._.pytt_alignment`     | list         | Alignment between word-pieces and the tokens in the span. Returns a list of word-piece token indices.                          |
+| `Span._.pytt_word_pieces`   | list         | The word-piece IDs.                                                                                                            |
+| `Span._.pytt_word_pieces_`  | list         | The string forms of the word-piece IDs.                                                                                        |
 
 The values can be accessed via the `._` attribute. For example:
 

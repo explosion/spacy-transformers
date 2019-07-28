@@ -67,7 +67,6 @@ class PyTT_TokenVectorEncoder(Pipe):
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.
 
-        vocab (spacy.vocab.Vocab): The spaCy vocab to use.
         model (thinc.neural.Model / True): The component's model or `True` if
             not initialized yet.
         **cfg: Optional config parameters.
@@ -242,6 +241,9 @@ def foreach_sentence(layer, drop_factor=1.0):
             lengths.append(len(doc_sents))
         flat, bp_flat = layer.begin_update(sents, drop=drop)
         outputs = _unflatten_ntuple_batch(layer.ops, flat, lengths)
+        assert len(docs) == len(outputs)
+        for doc, doc_out in zip(docs, outputs):
+            assert len(doc._.pytt_word_pieces) == doc_out.last_hidden_state.shape[0]
         
         def sentence_bwd(d_output, sgd=None):
             d_flat = bp_flat(layer.ops.flatten(d_output), sgd=sgd)
