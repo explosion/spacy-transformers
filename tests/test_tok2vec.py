@@ -21,7 +21,7 @@ def texts():
 @pytest.fixture
 def nlp(name):
     nlp = PyTT_Language(pytt_name=name)
-    wordpiecer = PyTT_WordPiecer(nlp.vocab, pytt_name=name)
+    wordpiecer = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
     nlp.add_pipe(wordpiecer, first=True)
     return nlp
 

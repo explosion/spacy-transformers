@@ -16,9 +16,8 @@ def name():
 def nlp(name):
     cfg = {"batch_by_length": True}
     pytt_nlp = PyTT_Language(pytt_name=name)
-    wordpiecer = PyTT_WordPiecer(pytt_nlp.vocab, pytt_name=name)
-    tok2vec = PyTT_TokenVectorEncoder(pytt_nlp.vocab, pytt_name=name)
-    tok2vec = tok2vec.from_pretrained(pytt_nlp.vocab, name, **cfg)
+    wordpiecer = PyTT_WordPiecer.from_pretrained(pytt_nlp.vocab, pytt_name=name)
+    tok2vec = PyTT_TokenVectorEncoder.from_pretrained(pytt_nlp.vocab, name=name)
     pytt_nlp.add_pipe(wordpiecer)
     pytt_nlp.add_pipe(tok2vec)
     return pytt_nlp
@@ -49,7 +48,7 @@ def test_language_to_from_bytes(nlp, name):
     bytes_data = nlp.to_bytes()
     new_nlp = PyTT_Language()
     wordpiecer = PyTT_WordPiecer(new_nlp.vocab, pytt_name=name)
-    tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab)
+    tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab, name)
     new_nlp.add_pipe(wordpiecer)
     new_nlp.add_pipe(tok2vec)
     new_nlp.from_bytes(bytes_data)
@@ -65,7 +64,7 @@ def test_language_to_from_disk(nlp, name):
         nlp.to_disk(tempdir)
         new_nlp = PyTT_Language()
         wordpiecer = PyTT_WordPiecer(new_nlp.vocab, pytt_name=name)
-        tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab)
+        tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab, name)
         new_nlp.add_pipe(wordpiecer)
         new_nlp.add_pipe(tok2vec)
         new_nlp.from_disk(tempdir)
