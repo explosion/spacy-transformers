@@ -17,6 +17,16 @@ class PyTT_WordPiecer(Pipe):
     def from_nlp(cls, nlp, **cfg):
         return cls(nlp.vocab, **cfg)
 
+    @classmethod
+    def from_pretrained(cls, vocab, pytt_name):
+        model = get_pytt_tokenizer(pytt_name).from_pretrained(pytt_name)
+        return cls(vocab, model=model, pytt_name=pytt_name)
+        
+
+    @classmethod
+    def Model(cls, pytt_name, **kwargs):
+        return get_pytt_tokenizer(pytt_name).blank()
+
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.
 
@@ -27,16 +37,6 @@ class PyTT_WordPiecer(Pipe):
         self.vocab = vocab
         self.cfg = cfg
         self.model = model
-        self.pytt_tokenizer = None
-        if cfg.get("pytt_name"):
-            self.load_tokenizer()
-
-    def load_tokenizer(self):
-        name = self.cfg.get("pytt_name")
-        if not name:
-            raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
-        pytt_cls = get_pytt_tokenizer(name)
-        self.pytt_tokenizer = pytt_cls.from_pretrained(name)
 
     def predict(self, docs):
         """Run the word-piece tokenizer on a batch of docs and return the
@@ -45,11 +45,11 @@ class PyTT_WordPiecer(Pipe):
         docs (iterable): A batch of Docs to process.
         RETURNS (tuple): A (strings, None) tuple.
         """
-        bos = self.pytt_tokenizer.cls_token
-        sep = self.pytt_tokenizer.sep_token
+        bos = self.model.cls_token
+        sep = self.model.sep_token
         strings = []
         for doc in docs:
-            strings.append([bos] + self.pytt_tokenizer.tokenize(doc.text) + [sep])
+            strings.append([bos] + self.model.tokenize(doc.text) + [sep])
         return strings, None
 
     def set_annotations(self, docs, outputs, tensors=None):
@@ -60,7 +60,7 @@ class PyTT_WordPiecer(Pipe):
         """
         for doc, output in zip(docs, outputs):
             doc._.pytt_word_pieces_ = output
-            doc._.pytt_word_pieces = self.pytt_tokenizer.convert_tokens_to_ids(output)
+            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(output)
             doc._.pytt_alignment = align_word_pieces([w.text for w in doc], output)
 
     def require_model(self):
@@ -69,21 +69,29 @@ class PyTT_WordPiecer(Pipe):
     def update(self, *args, **kwargs):
         return None
 
-    def to_bytes(self, exclude=tuple(), **kwargs):
-        serialize = {"cfg": lambda: srsly.json_dumps(self.cfg)}
-        return to_bytes(serialize, exclude)
+    #def to_bytes(self, exclude=tuple(), **kwargs):
+    #    msg = {
+    #        "cfg": self.cfg,
+    #        "tokenizer": self.pytt_tokenizer.to_bytes()
+    #    }
+    #    return srsly.msgpack_dumps(msg)
+#
+#    def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
+#        msg = srsly.msgpack_loads(byte_data)
+#        self.cfg = msg["cfg"]
+##        PyTT_Tokenizer = get_pytt_tokenizer(self.cfg["pytt_name"])
+#        self.pytt_tokenizer = PyTT_Tokenizer.blank().from_bytes(msg["tokenizer"])
+#        return self
 
-    def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
-        deserialize = {"cfg": lambda b: self.cfg.update(srsly.json_loads(b))}
-        from_bytes(bytes_data, deserialize, exclude)
-        self.load_tokenizer()
+#    def to_disk(self, path, exclude=tuple(), **kwargs):
+#        if not path.exists():
+#            path.mkdir()
+#        srsly.write_json(path / "cfg", self.cfg)
+#        srsly.write_msgpack(path / "tokenizer.msg", self.pytt_tokenizer.to_bytes())
 
-    def to_disk(self, path, exclude=tuple(), **kwargs):
-        serialize = {"cfg": lambda p: srsly.write_json(p, self.cfg)}
-        return to_disk(path, serialize, exclude)
-
-    def from_disk(self, path, exclude=tuple(), **kwargs):
-        _load_cfg = lambda p: srsly.read_json(p) if p.exists() else {}
-        deserialize = {"cfg": lambda p: self.cfg.update(_load_cfg(p))}
-        from_disk(path, deserialize, exclude)
-        self.load_tokenizer()
+#    def from_disk(self, path, exclude=tuple(), **kwargs):
+#        self.cfg = srsly.read_json(path / "cfg")
+#        msg = srsly.read_msgpack(path / "tokenizer.msg")
+#        PyTT_Tokenizer = get_pytt_tokenizer(self.cfg["pytt_name"])
+#        self.pytt_tokenizer = PyTT_Tokenizer.blank().from_bytes(msg)
+#        return self
