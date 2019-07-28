@@ -21,6 +21,10 @@ class PyTT_TokenVectorEncoder(Pipe):
     name = "pytt_tok2vec"
 
     @classmethod
+    def from_nlp(cls, nlp, **cfg):
+        return cls(nlp.vocab, **cfg)
+
+    @classmethod
     def from_pretrained(cls, vocab, name, **cfg):
         """Create a PyTT_TokenVectorEncoder instance using pre-trained weights
         from a PyTorch Transformer model, even if it's not installed as a
