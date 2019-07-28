@@ -28,7 +28,6 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
             "token_vector_width": nlp.get_pipe("pytt_tok2vec").model.nO,
         },
     )
-    # textcat.model = textcat.Model(2, )
     # add label to text classifier
     textcat.add_label("POSITIVE")
     textcat.add_label("NEGATIVE")
