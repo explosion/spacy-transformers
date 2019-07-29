@@ -5,3 +5,4 @@ srsly>=0.0.7,<1.1.0
 ftfy>=5.0.0,<6.0.0
 pytest>=5.0.1,<5.1.0
 pytest-cov>=2.7.0,<2.8.0
+dataclasses>=0.6,<0.7; python_version < "3.7"
