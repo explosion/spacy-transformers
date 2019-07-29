@@ -111,15 +111,16 @@ class PyTT_TokenVectorEncoder(Pipe):
         def finish_update(docs, sgd=None):
             gradients = []
             for doc in docs:
-                gradients.append(
-                    Activations(
-                        doc._.pytt_d_last_hidden_state,
-                        doc._.pytt_d_pooler_output,
-                        doc._.pytt_d_all_hidden_states,
-                        doc._.pytt_d_all_attentions,
-                        is_grad=True,
-                    )
-                )
+                gradients.append(doc._.pytt_d_last_hidden_state)
+                #gradients.append(
+                #    Activations(
+                #        doc._.pytt_d_last_hidden_state,
+                #        doc._.pytt_d_pooler_output,
+                #        doc._.pytt_d_all_hidden_states,
+                #        doc._.pytt_d_all_attentions,
+                #        is_grad=True,
+                #    )
+                #)
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_outputs = None
@@ -208,7 +209,7 @@ def get_word_pieces(sents, drop=0.0):
 @layerize
 def get_last_hidden_state(activations, drop=0.):
     def backprop_last_hidden_state(d_last_hidden_state, sgd=None):
-        return Activations(d_last_hidden_state, is_grad=True)
+        return d_last_hidden_state
     return activations.last_hidden_state, backprop_last_hidden_state
 
 
