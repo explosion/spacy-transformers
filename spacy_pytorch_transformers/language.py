@@ -100,7 +100,7 @@ def get_doc_getter(attr):
 
 def get_token_getter(attr):
     def token_getter(token):
-        span = token.sent if token.doc.is_sentenced else token.doc[0:-1]
+        span = token.sent if token.doc.is_sentenced else token.doc[0:]
         values = span._.get(attr)
         if values is None:
             return None
