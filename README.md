@@ -2,7 +2,8 @@
 
 # spaCy wrapper for PyTorch Transformers
 
-This package provides [spaCy](https://spacy.io) model pipelines that wrap
+This package provides [spaCy](https://github.com/explosion/spaCy) model
+pipelines that wrap
 [HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
 state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
