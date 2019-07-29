@@ -13,14 +13,6 @@ class PyTT_Language(Language):
     PyTT_TokenVectorEncoder. We then modify the nlp.update() function to run
     the PyTT_TokenVectorEncoder before the other pipeline components, and
     backprop it after the other components are done.
-
-    The PyTT_Language class expects the following extension attributes:
-
-    * doc._.pytt_word_pieces: A Torch tensor of word-piece IDs.
-    * doc._.pytt_word_pieces_: The string forms of the word-piece IDs.
-    * doc._.pytt_outputs: All outputs produced by the PyTorch Transformer model.
-    * doc._.pytt_gradients: Gradients of the pytt_outputs. These get incremented
-        during nlp.update(), and then cleared at the end once the update is made.
     """
 
     lang_factory_name = "pytt"
