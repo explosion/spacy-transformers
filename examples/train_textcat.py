@@ -6,6 +6,7 @@ from pathlib import Path
 import thinc.extra.datasets
 import spacy
 from spacy.util import minibatch, compounding
+import tqdm
 
 
 @plac.annotations(
@@ -44,6 +45,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     print(
         f"Using {n_texts} examples ({len(train_texts)} training, {len(dev_texts)} evaluation)"
     )
+    total_chars = sum(len(text) for text in train_texts)
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
 
     optimizer = nlp.resume_training()
@@ -55,10 +57,11 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
         # batch up the examples using spaCy's minibatch
         random.shuffle(train_data)
         batches = minibatch(train_data, size=batch_sizes)
-        for batch in batches:
-            texts, annotations = zip(*batch)
-            texts = (text[:50] for text in texts)
-            nlp.update(texts, annotations, sgd=optimizer, drop=0.2, losses=losses)
+        with tqdm(total=total_chars, leave=False) as pbar:
+            for batch in batches:
+                texts, annotations = zip(*batch)
+                nlp.update(texts, annotations, sgd=optimizer, drop=0.2, losses=losses)
+                pbar.update(sum(len(text) for text in texts))
         # evaluate on the dev data split off in load_data()
         scores = evaluate(nlp, dev_texts, dev_cats)
         print(
@@ -93,7 +96,7 @@ def load_data(limit=0, split=0.8):
     random.shuffle(train_data)
     train_data = train_data[-limit:]
     texts, labels = zip(*train_data)
-    texts = [white_re.sub(" ", text) for text in texts]
+    texts = [white_re.sub(" ", text).strip() for text in texts]
     cats = [{"POSITIVE": bool(y), "NEGATIVE": not bool(y)} for y in labels]
     split = int(len(train_data) * split)
     return (texts[:split], cats[:split]), (texts[split:], cats[split:])
