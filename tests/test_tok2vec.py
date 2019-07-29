@@ -2,6 +2,7 @@ import pytest
 from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_TokenVectorEncoder
 from spacy_pytorch_transformers import PyTT_WordPiecer
+from spacy_pytorch_transformers.util import get_sents
 from spacy.vocab import Vocab
 import pickle
 
@@ -42,8 +43,10 @@ def test_from_pretrained(tok2vec, docs):
     docs_out = list(tok2vec.pipe(docs))
     assert len(docs_out) == len(docs)
     for doc in docs_out:
-        assert doc.tensor.shape == (len(doc), tok2vec.model.nO)
-        assert doc.tensor.sum() == doc._.pytt_outputs.last_hidden_state[1:-1].sum()
+        for sent in get_sents(doc):
+            sent_tensor = doc.tensor[sent.start:sent.end]
+            assert sent_tensor.shape == (len(sent), tok2vec.model.nO)
+            assert sent_tensor.sum() == sent._.pytt_outputs.last_hidden_state[1:-1].sum()
 
 
 @pytest.mark.parametrize(
