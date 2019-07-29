@@ -28,14 +28,20 @@ class PyTT_Language(Language):
 
     @staticmethod
     def install_extensions():
-        attrs = ["pytt_alignment", "pytt_word_pieces", "pytt_word_pieces_"]
-        for attr in attrs:
-            Span.set_extension(attr, default=None)
-            Doc.set_extension(attr, getter=get_doc_getter(attr))
-            Token.set_extension(attr, getter=get_token_getter(attr))
-        for attr in ["pytt_outputs", "pytt_gradients"]:
-            Span.set_extension(attr, default=None)
-            Doc.set_extension(attr, getter=get_doc_getter(attr))
+        tok2vec_attrs = [
+            "pytt_last_hidden_state", "pytt_pooler_output", "pytt_all_hidden_states",
+            "pytt_all_attentions", "pytt_d_last_hidden_state", "pytt_d_pooler_output",
+            "pytt_d_all_hidden_states", "pytt_d_all_attentions"
+        ]
+        for attr in tok2vec_attrs:
+            Doc.set_extension(attr, default=None)
+            Span.set_extension(attr, getter=get_span_tok2vec_getter(attr))
+            Token.set_extension(attr, getter=get_token_tok2vec_getter(attr))
+        wp_attrs = ["pytt_alignment", "pytt_word_pieces", "pytt_word_pieces_"]
+        for attr in wp_attrs:
+            Doc.set_extension(attr, default=None)
+            Span.set_extension(attr, getter=get_span_wp_getter(attr))
+            Token.set_extension(attr, getter=get_token_wp_getter(attr))
 
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
@@ -88,24 +94,31 @@ def get_defaults(lang):
         return Language.Defaults
 
 
-def get_doc_getter(attr):
-    def doc_getter(doc):
-        values = [sent._.get(attr) for sent in get_sents(doc)]
-        if all(v is None for v in values):
-            return None
-        else:
-            return values
-
-    return doc_getter
+def get_span_wp_getter(attr):
+    def span_getter(span):
+        return [token._.get(attr) for token in span]
+    return span_getter
 
 
-def get_token_getter(attr):
+def get_token_wp_getter(attr):
     def token_getter(token):
-        span = token.sent if token.doc.is_sentenced else token.doc[0:]
-        values = span._.get(attr)
-        if values is None:
-            return None
-        else:
-            return values[token.i - span.start]
+        doc_values = token.doc._.get(attr)
+        return doc_values[token.i] if doc_values is not None else None
+    return token_getter
 
+
+def get_span_tok2vec_getter(attr):
+    def span_getter(span):
+        doc_activations = span.doc._.get(attr)
+        if doc_activations is None:
+            return None
+        wp_start = span[0]._.pytt_alignment[0]
+        wp_end = span[-1]._.pytt_alignment[-1]
+        return doc_activations[wp_start : wp_end]
+    return span_getter
+
+
+def get_token_tok2vec_getter(attr):
+    def token_getter(token):
+        return token.doc[token.i : token.i+1]._.get(attr)
     return token_getter
