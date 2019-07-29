@@ -218,11 +218,6 @@ def batch_by_length(seqs, min_batch):
     return batches
 
 
-def get_sents(doc):
-    return list(doc.sents)
-    #return doc.sents if doc.is_sentenced else [doc[0:]]
-
-
 def unflatten_list(flat, lengths):
     """Unflatten a list into nested sublists, where each sublist i should have
     length lengths[i]."""

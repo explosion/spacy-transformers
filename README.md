@@ -144,25 +144,25 @@ This wrapper sets the following
 [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
 on the `Doc`, `Span` and `Token` objects:
 
-| Name                        | Type         | Description                                                                                                                    |
-| --------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `Doc._.pytt_outputs`        | `namedtuple` | All outputs produced by the PyTorch Transformer model.                                                                         |
-| `Doc._.pytt_gradients`      | `namedtuple` | Gradients of the pytt_outputs. These get incremented during `nlp.update`, and then cleared at the end once the update is made. |
-| `Doc._.pytt_alignment`      | list         | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token).              |
-| `Doc._.pytt_word_pieces`    | list         | The word-piece IDs.                                                                                                            |
-| `Doc._.pytt_word_pieces_`   | list         | The string forms of the word-piece IDs.                                                                                        |
-| `Token._.pytt_alignment`    | list         | Alignment between word-pieces and the current token. Returns a list of word-piece token indices.                               |
-| `Token._.pytt_word_pieces`  | list         | The word-piece IDs.                                                                                                            |
-| `Token._.pytt_word_pieces_` | list         | The string forms of the word-piece IDs.                                                                                        |
-| `Span._.pytt_alignment`     | list         | Alignment between word-pieces and the tokens in the span. Returns a list of word-piece token indices.                          |
-| `Span._.pytt_word_pieces`   | list         | The word-piece IDs.                                                                                                            |
-| `Span._.pytt_word_pieces_`  | list         | The string forms of the word-piece IDs.                                                                                        |
+| Name                          | Type                 | Description                                                                                                                                                     |
+| ----------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `._.pytt_alignment`           | list                 | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token) or a list of indices (if called on a `Token`). |
+| `._.pytt_word_pieces`         | list                 | The word-piece IDs.                                                                                                                                             |
+| `._.pytt_word_pieces_`        | list                 | The string forms of the word-piece IDs.                                                                                                                         |
+| `._.pytt_last_hidden_state`   | `numpy`/`cupy` array | The `last_hidden_state` output from the PyTorch-Transformers model.                                                                                             |
+| `._.pytt_pooler_output`       | `numpy`/`cupy` array | The `pooler_output` output from the PyTorch-Transformers model.                                                                                                 |
+| `._.pytt_all_hidden_states`   | `numpy`/`cupy` array | The `all_hidden_states` output from the PyTorch-Transformers model.                                                                                             |
+| `._.all_attentions`           | `numpy`/`cupy` array | The `all_attentions` output from the PyTorch-Transformers model.                                                                                                |
+| `._.pytt_d_last_hidden_state` | `numpy`/`cupy` array | The gradient of the `last_hidden_state` output from the PyTorch-Transformers model.                                                                             |
+| `._.pytt_d_pooler_output`     | `numpy`/`cupy` array | The gradient of the `pooler_output` output from the PyTorch-Transformers model.                                                                                 |
+| `._.pytt_d_all_hidden_states` | `numpy`/`cupy` array | The gradient of the `all_hidden_states` output from the PyTorch-Transformers model.                                                                             |
+| `._.pytt_d_all_attentions`    | `numpy`/`cupy` array | The gradient of the `all_attentions` output from the PyTorch-Transformers model.                                                                                |
 
 The values can be accessed via the `._` attribute. For example:
 
 ```python
 doc = nlp("This is a text.")
-print(doc._.pytt_word_pieces)
+print(doc._.pytt_word_pieces_)
 ```
 
 ### Setting up the pipeline

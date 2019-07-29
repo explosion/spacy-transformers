@@ -1,6 +1,6 @@
 from spacy.pipeline import Pipe
 
-from .util import get_pytt_tokenizer, align_word_pieces, get_sents
+from .util import get_pytt_tokenizer, align_word_pieces
 
 
 class PyTT_WordPiecer(Pipe):
@@ -48,7 +48,7 @@ class PyTT_WordPiecer(Pipe):
         output = []
         for doc in docs:
             output.append([])
-            for sent in get_sents(doc):
+            for sent in doc.sents:
                 output[-1].append([bos] + self.model.tokenize(sent.text) + [sep])
         return output, None
 

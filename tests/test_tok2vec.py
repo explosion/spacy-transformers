@@ -2,7 +2,6 @@ import pytest
 from numpy.testing import assert_equal
 from spacy_pytorch_transformers import PyTT_Language, PyTT_TokenVectorEncoder
 from spacy_pytorch_transformers import PyTT_WordPiecer
-from spacy_pytorch_transformers.util import get_sents
 from spacy.vocab import Vocab
 import pickle
 
