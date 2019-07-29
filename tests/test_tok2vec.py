@@ -22,8 +22,9 @@ def texts():
 @pytest.fixture
 def nlp(name):
     nlp = PyTT_Language(pytt_name=name)
+    nlp.add_pipe(nlp.create_pipe("sentencizer"))
     wordpiecer = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
-    nlp.add_pipe(wordpiecer, first=True)
+    nlp.add_pipe(wordpiecer)
     return nlp
 
 
@@ -43,10 +44,8 @@ def test_from_pretrained(tok2vec, docs):
     docs_out = list(tok2vec.pipe(docs))
     assert len(docs_out) == len(docs)
     for doc in docs_out:
-        for sent in get_sents(doc):
-            sent_tensor = doc.tensor[sent.start:sent.end]
-            assert sent_tensor.shape == (len(sent), tok2vec.model.nO)
-            assert sent_tensor.sum() == sent._.pytt_outputs.last_hidden_state[1:-1].sum()
+        diff = doc.tensor.sum() - doc._.pytt_last_hidden_state.sum()
+        assert abs(diff) <= 1e-2
 
 
 @pytest.mark.parametrize(
