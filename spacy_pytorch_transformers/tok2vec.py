@@ -141,7 +141,6 @@ class PyTT_TokenVectorEncoder(Pipe):
             for i, (sent, sent_acts) in enumerate(zip(sents, sent_acts)):
                 sent._.pytt_outputs = sent_acts
                 wp_tensor = sent_acts.last_hidden_state
-                print(wp_tensor.shape)
                 # Count how often each word-piece token is represented. This allows
                 # a weighted sum, so that we can make sure doc.tensor.sum()
                 # equals wp_tensor[1:-1].sum().
