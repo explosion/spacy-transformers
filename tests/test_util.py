@@ -1,6 +1,8 @@
 import pytest
 import numpy
 from numpy.testing import assert_equal
+from spacy.tokens import Doc
+from spacy.vocab import Vocab
 from spacy_pytorch_transformers.util import align_word_pieces, pad_batch
 from spacy_pytorch_transformers.util import batch_by_length
 
@@ -56,3 +58,16 @@ def test_pad_batch(lengths, expected_shape):
         assert padded[i].sum() == seq.sum()
         assert_equal(padded[i, : len(seq)], seq)
     assert padded.shape == expected_shape
+
+
+@pytest.mark.parametrize(
+    "wp_tokens,span,expected_start", [
+    (["[CLS]", "hello", "world", "[SEP]"], slice(0, 1), 0),
+    (["[CLS]", "hello", "world", "[SEP]"], slice(1, 2), 2),
+])
+def test_wp_start(wp_tokens, span, expected_start):
+    doc = Doc(Vocab(), words=wp_tokens[1:-1])
+    doc._.pytt_word_pieces_ = wp_tokens
+    doc._.pytt_alignment = align_word_pieces([w.text for w in doc], wp_tokens)
+    print(doc[span]._.pytt_start)
+    assert doc[span]._.pytt_start == expected_start
