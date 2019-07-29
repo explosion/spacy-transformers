@@ -1,6 +1,6 @@
 from spacy.pipeline import Pipe
 
-from .util import get_pytt_tokenizer, align_word_pieces
+from .util import get_pytt_tokenizer, align_word_pieces, get_sents
 
 
 class PyTT_WordPiecer(Pipe):
@@ -45,10 +45,12 @@ class PyTT_WordPiecer(Pipe):
         """
         bos = self.model.cls_token
         sep = self.model.sep_token
-        strings = []
+        output = []
         for doc in docs:
-            strings.append([bos] + self.model.tokenize(doc.text) + [sep])
-        return strings, None
+            output.append([])
+            for sent in get_sents(doc):
+                output[-1].append([bos] + self.model.tokenize(sent.text) + [sep])
+        return output, None
 
     def set_annotations(self, docs, outputs, tensors=None):
         """Assign the extracted tokens and IDs to the Doc objects.
@@ -57,6 +59,7 @@ class PyTT_WordPiecer(Pipe):
         outputs (iterable): A batch of outputs.
         """
         for doc, output in zip(docs, outputs):
-            doc._.pytt_word_pieces_ = output
-            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(output)
-            doc._.pytt_alignment = align_word_pieces([w.text for w in doc], output)
+            for sent, sent_output in zip(get_sents(doc), output):
+                sent._.pytt_word_pieces_ = output
+                sent._.pytt_word_pieces = self.model.convert_tokens_to_ids(sent_output)
+                sent._.pytt_alignment = align_word_pieces([w.text for w in sent], sent_output)
