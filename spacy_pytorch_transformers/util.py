@@ -34,6 +34,18 @@ class Activations:
             self.has_all_hidden_states,
             self.has_all_attentions))
 
+    def get_slice(self, x, y):
+        output = Activations(None, None, None, None, is_grad=self.is_grad)
+        if self.has_last_hidden_state:
+            output.last_hidden_state = self.last_hidden_state[x, y]
+        if self.has_pooler_output:
+            output.pooler_output = self.pooler_output[x, y]
+        if self.has_all_hidden_states:
+            raise NotImplementedError
+        if self.has_all_attentions:
+            raise NotImplementedError
+        return output
+
     @property
     def has_last_hidden_state(self):
         return self.last_hidden_state is not None
@@ -198,3 +210,26 @@ def batch_by_length(seqs, min_batch):
     assert len(seen) == len(seqs)
     batches = [list(sorted(batch)) for batch in batches]
     return batches
+
+
+def get_sents(doc):
+    return doc.sents if doc.is_sentenced else [doc[0:]]
+
+
+def unflatten_list(flat, lengths):
+    """Unflatten a list into nested sublists, where each sublist i should have
+    length lengths[i]."""
+    nested = []
+    offset = 0
+    for length in lengths:
+        nested.append(flat[offset : offset + length])
+        offset += length
+    return nested
+
+
+def flatten_list(nested):
+    """Flatten a nested list."""
+    flat = []
+    for x in nested:
+        flat.extend(x)
+    return flat
