@@ -3,7 +3,6 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 
 from . import about
-from .util import get_sents
 
 
 class PyTT_Language(Language):
@@ -29,9 +28,14 @@ class PyTT_Language(Language):
     @staticmethod
     def install_extensions():
         tok2vec_attrs = [
-            "pytt_last_hidden_state", "pytt_pooler_output", "pytt_all_hidden_states",
-            "pytt_all_attentions", "pytt_d_last_hidden_state", "pytt_d_pooler_output",
-            "pytt_d_all_hidden_states", "pytt_d_all_attentions"
+            "pytt_last_hidden_state",
+            "pytt_pooler_output",
+            "pytt_all_hidden_states",
+            "pytt_all_attentions",
+            "pytt_d_last_hidden_state",
+            "pytt_d_pooler_output",
+            "pytt_d_all_hidden_states",
+            "pytt_d_all_attentions",
         ]
         for attr in tok2vec_attrs:
             Doc.set_extension(attr, default=None)
@@ -97,6 +101,7 @@ def get_defaults(lang):
 def get_span_wp_getter(attr):
     def span_getter(span):
         return [token._.get(attr) for token in span]
+
     return span_getter
 
 
@@ -104,6 +109,7 @@ def get_token_wp_getter(attr):
     def token_getter(token):
         doc_values = token.doc._.get(attr)
         return doc_values[token.i] if doc_values is not None else None
+
     return token_getter
 
 
@@ -114,11 +120,13 @@ def get_span_tok2vec_getter(attr):
             return None
         wp_start = span[0]._.pytt_alignment[0]
         wp_end = span[-1]._.pytt_alignment[-1]
-        return doc_activations[wp_start : wp_end]
+        return doc_activations[wp_start:wp_end]
+
     return span_getter
 
 
 def get_token_tok2vec_getter(attr):
     def token_getter(token):
-        return token.doc[token.i : token.i+1]._.get(attr)
+        return token.doc[token.i : token.i + 1]._.get(attr)
+
     return token_getter

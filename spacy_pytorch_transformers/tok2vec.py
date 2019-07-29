@@ -5,7 +5,7 @@ from spacy.util import minibatch
 from spacy.tokens import Span
 
 from .wrapper import PyTT_Wrapper
-from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, get_sents
+from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -136,15 +136,20 @@ class PyTT_TokenVectorEncoder(Pipe):
         """
         for doc, sent_acts in zip(docs, activations):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
-            doc._.pytt_last_hidden_state = self.model.ops.flatten([
-                sa.last_hidden_state for sa in sent_acts])
+            doc._.pytt_last_hidden_state = self.model.ops.flatten(
+                [sa.last_hidden_state for sa in sent_acts]
+            )
             if sent_acts[0].has_pooler_output:
-                doc._.pytt_pooler_output = self.model.ops.flatten([
-                    sa.last_hidden_state for sa in sent_acts])
-            sents = get_sents(doc)
+                doc._.pytt_pooler_output = self.model.ops.flatten(
+                    [sa.last_hidden_state for sa in sent_acts]
+                )
+            sents = list(doc.sents)
             assert len(sents) == len(sent_acts)
             wp_tensor = doc._.pytt_last_hidden_state
-            assert wp_tensor.shape == (len(doc._.pytt_word_pieces), self.model.nO), wp_tensor.shape
+            assert wp_tensor.shape == (
+                len(doc._.pytt_word_pieces),
+                self.model.nO,
+            ), wp_tensor.shape
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
@@ -155,13 +160,13 @@ class PyTT_TokenVectorEncoder(Pipe):
             for i, word_piece_slice in enumerate(doc._.pytt_alignment):
                 for j in word_piece_slice:
                     doc.tensor[i] += wp_tensor[j] / align_sizes[j]
-            # To make this weighting work, we "align" the boundary tokens against 
+            # To make this weighting work, we "align" the boundary tokens against
             # every token in their sentence.
             for sent in doc.sents:
-                cls_vector = wp_tensor[sent._.pytt_alignment[0][0]-1]
-                sep_vector = wp_tensor[sent._.pytt_alignment[-1][-1]+1]
-                doc.tensor[sent.start : sent.end+1] += cls_vector / len(sent)
-                doc.tensor[sent.start : sent.end+1] += sep_vector / len(sent)
+                cls_vector = wp_tensor[sent._.pytt_alignment[0][0] - 1]
+                sep_vector = wp_tensor[sent._.pytt_alignment[-1][-1] + 1]
+                doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
+                doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
@@ -194,9 +199,9 @@ def get_word_pieces(sents, drop=0.0):
     assert isinstance(sents[0], Span)
     outputs = []
     for sent in sents:
-        wp_start = sent[0]._.pytt_alignment[0]-1
-        wp_end = sent[-1]._.pytt_alignment[-1]+2
-        outputs.append(sent.doc._.pytt_word_pieces[wp_start : wp_end])
+        wp_start = sent[0]._.pytt_alignment[0] - 1
+        wp_end = sent[-1]._.pytt_alignment[-1] + 2
+        outputs.append(sent.doc._.pytt_word_pieces[wp_start:wp_end])
     return outputs, None
 
 
@@ -244,7 +249,7 @@ def foreach_sentence(layer, drop_factor=1.0):
         sents = []
         lengths = []
         for doc in docs:
-            doc_sents = get_sents(doc)
+            doc_sents = list(doc.sents)
             sents.extend(doc_sents)
             lengths.append(len(doc_sents))
         flat, bp_flat = layer.begin_update(sents, drop=drop)
