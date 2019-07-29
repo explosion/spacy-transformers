@@ -168,9 +168,13 @@ print(doc._.pytt_word_pieces_)
 ### Setting up the pipeline
 
 In order to run, the `nlp` object created using `PyTT_Language` requires two
-components to run in order: the `PyTT_WordPiecer`, which assigns the word piece
-tokens and the `PyTT_TokenVectorEncoder`, which assigns the token vectors. The
-`pytt_name` argument defines the name of the pre-trained model to use.
+components to run in order: a component that assigns sentence boundaries (e.g.
+spaCy's built-in
+[`Sentencizer`](https://spacy.io/usage/linguistic-features#sbd-component)), the
+`PyTT_WordPiecer`, which assigns the word-piece tokens and the
+`PyTT_TokenVectorEncoder`, which assigns the token vectors. The `pytt_name`
+argument defines the name of the pre-trained model to use. The `from_pretrained`
+methods load the pre-trained model via `pytorch-transformers`.
 
 ```python
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
