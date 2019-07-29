@@ -16,6 +16,7 @@ def name():
 @pytest.fixture(scope="session")
 def nlp(name):
     pytt_nlp = PyTT_Language(pytt_name=name)
+    pytt_nlp.add_pipe(pytt_nlp.create_pipe("sentencizer"))
     wordpiecer = PyTT_WordPiecer.from_pretrained(pytt_nlp.vocab, pytt_name=name)
     tok2vec = PyTT_TokenVectorEncoder.from_pretrained(pytt_nlp.vocab, name=name)
     pytt_nlp.add_pipe(wordpiecer)
@@ -44,6 +45,7 @@ def test_language_run(nlp):
 
 def test_language_wordpiece_to_from_bytes(name):
     nlp = PyTT_Language()
+    nlp.add_pipe(nlp.create_pipe("sentencizer"))
     wordpiecer = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
     nlp.add_pipe(wordpiecer)
     doc = nlp("hello world")
@@ -61,6 +63,7 @@ def test_language_wordpiece_tok2vec_to_from_bytes(nlp, name):
     doc = nlp("hello world")
     assert is_valid_tensor(doc.tensor)
     nlp2 = PyTT_Language()
+    nlp2.add_pipe(nlp2.create_pipe("sentencizer"))
     nlp2.add_pipe(PyTT_WordPiecer(nlp.vocab))
     nlp2.add_pipe(PyTT_TokenVectorEncoder(nlp.vocab))
     with pytest.raises(ValueError):
