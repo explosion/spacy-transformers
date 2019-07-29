@@ -235,7 +235,6 @@ def with_length_batching(model, min_batch):
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
-                assert isinstance(d_outputs[0], Activations)
                 dY = pad_batch([d_outputs[i] for i in indices])
                 dX = get_dX(dY, sgd=sgd)
                 if dX is not None:
