@@ -1,4 +1,3 @@
-from collections import namedtuple
 import spacy.pipeline
 from spacy._ml import build_simple_cnn_text_classifier
 from thinc.api import layerize
