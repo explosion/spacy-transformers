@@ -42,6 +42,8 @@ def get_pytt_last_hidden(docs, drop=0.0):
     doc._.pytt_d_last_hidden_state.
     """
     outputs = [doc._.pytt_last_hidden_state for doc in docs]
+    for out in outputs:
+        assert out is not None
 
     def backprop_pytt_last_hidden(d_outputs, sgd=None):
         for doc, d_last_hidden_state in zip(docs, d_outputs):

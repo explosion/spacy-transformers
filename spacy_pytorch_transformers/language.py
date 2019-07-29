@@ -62,14 +62,17 @@ class PyTT_Language(Language):
 
     def update(self, docs, golds, drop=0.0, sgd=None, losses=None, component_cfg={}):
         component_cfg = dict(component_cfg)
-        components = ["pytt_wordpiecer", "sentencizer"]
+        components = ["sentencizer", "pytt_wordpiecer"]
         with self.disable_pipes(*[p for p in self.pipe_names if p not in components]):
             docs = [self(doc) if isinstance(doc, str) else doc for doc in docs]
         tok2vec = self.get_pipe("pytt_tok2vec")
         pytt_outputs, backprop_tok2vec = tok2vec.begin_update(
             docs, drop=drop, **component_cfg.get("pytt_tok2vec", {})
         )
+        assert len(docs) == len(pytt_outputs)
         tok2vec.set_annotations(docs, pytt_outputs)
+        for doc in docs:
+            assert doc._.pytt_last_hidden_state is not None
         components = [p for p in components if p in self.pipe_names]
         with self.disable_pipes("pytt_tok2vec", *components):
             super().update(
