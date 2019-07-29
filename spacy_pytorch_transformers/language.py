@@ -66,8 +66,6 @@ class PyTT_Language(Language):
             docs, drop=drop, **component_cfg.get("pytt_tok2vec", {})
         )
         tok2vec.set_annotations(docs, pytt_outputs)
-        for doc in docs:
-            assert doc._.pytt_outputs
         components = [p for p in components if p in self.pipe_names]
         with self.disable_pipes("pytt_tok2vec", *components):
             super().update(
