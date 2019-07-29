@@ -1,4 +1,5 @@
 from spacy.pipeline import Pipe
+from thinc.v2v import Model
 from thinc.api import chain, layerize, wrap
 from thinc.neural.ops import get_array_module
 from spacy.util import minibatch
@@ -58,10 +59,11 @@ class PyTT_TokenVectorEncoder(Pipe):
             model = PyTT_Wrapper(name)
         nO = model.nO
         batch_by_length = cfg.get("batch_by_length", 1)
-        model = foreach_sentence(
-            chain(
-                get_word_pieces,
-                with_length_batching(model, batch_by_length)))
+        with Model.define_operators({">>": chain}):
+            model = foreach_sentence(
+                get_word_pieces
+                >> with_length_batching(
+                    model >> get_last_hidden_state, batch_by_length))
         model.nO = nO
         return model
 
@@ -141,13 +143,9 @@ class PyTT_TokenVectorEncoder(Pipe):
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        for doc, doc_acts in zip(docs, activations):
+        for doc, wp_tensor in zip(docs, activations):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
-            doc._.pytt_last_hidden_state = doc_acts.last_hidden_state
-            doc._.pytt_pooler_output = doc_acts.pooler_output
-            doc._.pytt_all_hidden_states = doc_acts.all_hidden_states
-            doc._.pytt_all_attentions = doc_acts.all_attentions
-            wp_tensor = doc._.pytt_last_hidden_state
+            doc._.pytt_last_hidden_state = wp_tensor
             assert wp_tensor.shape == (
                 len(doc._.pytt_word_pieces),
                 self.model.nO,
@@ -165,8 +163,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             # To make this weighting work, we "align" the boundary tokens against
             # every token in their sentence.
             for sent in doc.sents:
-                cls_vector = wp_tensor[sent._.pytt_alignment[0][0] - 1]
-                sep_vector = wp_tensor[sent._.pytt_alignment[-1][-1] + 1]
+                cls_vector = wp_tensor[sent._.pytt_start]
+                sep_vector = wp_tensor[sent._.pytt_end]
                 doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
                 doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
@@ -207,6 +205,13 @@ def get_word_pieces(sents, drop=0.0):
     return outputs, None
 
 
+@layerize
+def get_last_hidden_state(activations, drop=0.):
+    def backprop_last_hidden_state(d_last_hidden_state, sgd=None):
+        return Activations(d_last_hidden_state, is_grad=True)
+    return activations.last_hidden_state, backprop_last_hidden_state
+
+
 def with_length_batching(model, min_batch):
     """Wrapper that applies a model to variable-length sequences by first batching
     and padding the sequences. This allows us to group similarly-lengthed sequences
@@ -224,18 +229,17 @@ def with_length_batching(model, min_batch):
             Y, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
             for i, j in enumerate(indices):
-                outputs[j] = Y.get_slice(i, slice(0, len(inputs[j])))
+                outputs[j] = Y[i, :len(inputs[j])]
 
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
+                assert isinstance(d_outputs[0], Activations)
                 dY = pad_batch([d_outputs[i] for i in indices])
                 dX = get_dX(dY, sgd=sgd)
                 if dX is not None:
                     for i, j in enumerate(indices):
                         # As above, put things back in order, unpad.
-                        # Note that there's no fields to deal with here, as
-                        # the input doesn't have any.
                         d_inputs[j] = dX[i, : len(d_outputs[j])]
             return d_inputs
 
@@ -249,23 +253,32 @@ def foreach_sentence(layer, drop_factor=1.0):
     ops = layer.ops
 
     def sentence_fwd(docs, drop=0.0):
-        sents = []
-        lengths = []
-        for doc in docs:
-            doc_sents = list(doc.sents)
-            sents.extend(doc_sents)
-            lengths.append(len(doc_sents))
+        sents = flatten_list(doc.sents for doc in docs)
         sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
-        sent_shapes = [sa.shapes for sa in sent_acts]
-        outputs = list(map(Activations.join, unflatten_list(sent_acts, lengths)))
-        assert len(docs) == len(outputs)
-        def sentence_bwd(d_output, sgd=None):
-            d_sent_acts = [x.split(ops, sent_shapes) for x in d_output]
+        # sent_acts is List[array], one per sent. Go to List[List[array]],
+        # then List[array] (one per doc).
+        nested = unflatten_list(sent_acts, [len(list(doc.sents)) for doc in docs])
+        # Need this for the callback.
+        doc_sent_lengths = [[len(sa) for sa in doc_sa] for doc_sa in nested]
+        doc_acts = [ops.flatten(doc_sa) for doc_sa in nested]
+        assert len(docs) == len(doc_acts)
+
+        def sentence_bwd(d_doc_acts, sgd=None):
+            d_nested = [ops.unflatten(d_doc_acts[i], doc_sent_lengths[i])
+                        for i in range(len(d_doc_acts))]
+            d_sent_acts = flatten_list(d_nested)
             d_sents = bp_sent_acts(d_sent_acts, sgd=sgd)
             if d_sents is None:
                 return d_sents
-            return unflatten_list(d_sents, lengths)
-        return outputs, sentence_bwd
+            # Finally we have List[array], one per sentence, where each row is
+            # the gradient wrt the token.
+            # We want List[array], one per document.
+            # First get List[List[array]], grouped by doc, then just flatten
+            # the lists.
+            n_sents = [len(L) for L in doc_sent_lengths]
+            return [ops.flatten(ds) for ds in unflatten_list(d_sents, n_sents)]
+
+        return doc_acts, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
     return model
