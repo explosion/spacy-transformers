@@ -39,7 +39,8 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
 def get_pytt_last_hidden(docs, drop=0.0):
     """Function that can be wrapped as a Thinc model, that gets the
     pytt_last_hidden extension attribute from a batch of Doc objects. During
-    the backward pass, we accumulate the gradients into doc._.pytt_gradients.
+    the backward pass, we accumulate the gradients into
+    doc._.pytt_d_last_hidden_state.
     """
     outputs = [doc._.pytt_last_hidden_state for doc in docs]
 

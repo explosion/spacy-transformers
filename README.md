@@ -168,21 +168,22 @@ print(doc._.pytt_word_pieces_)
 ### Setting up the pipeline
 
 In order to run, the `nlp` object created using `PyTT_Language` requires two
-components to run in order: the `PyTT_WordPiecer`, which assigns the word piece
-tokens and the `PyTT_TokenVectorEncoder`, which assigns the token vectors. The
-`pytt_name` argument defines the name of the pre-trained model to use.
+components to run in order: a component that assigns sentence boundaries (e.g.
+spaCy's built-in
+[`Sentencizer`](https://spacy.io/usage/linguistic-features#sbd-component)), the
+`PyTT_WordPiecer`, which assigns the word-piece tokens and the
+`PyTT_TokenVectorEncoder`, which assigns the token vectors. The `pytt_name`
+argument defines the name of the pre-trained model to use. The `from_pretrained`
+methods load the pre-trained model via `pytorch-transformers`.
 
 ```python
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
 
 name = "bert-base-uncased"
 nlp = PyTT_Language(pytt_name=name, meta={"lang": "en"})
-sentencizer = nlp.create_pipe("sentencizer")
-wordpiecer = PyTT_WordPiecer(nlp.vocab, pytt_name=name)
-tok2vec = PyTT_TokenVectorEncoder(nlp.vocab, pytt_name=name).from_pretrained(nlp.vocab, name)
-nlp.add_pipe(sentencizer)
-nlp.add_pipe(wordpiecer)
-nlp.add_pipe(tok2vec)
+nlp.add_pipe(nlp.create_pipe("sentencizer"))
+nlp.add_pipe(PyTT_WordPiecer.from_pretrained(nlp.vocab, name))
+nlp.add_pipe(PyTT_TokenVectorEncoder.from_pretrained(nlp.vocab, name))
 print(nlp.pipe_names)  # ['sentencizer', 'pytt_wordpiecer', 'pytt_tok2vec']
 ```
 
@@ -200,8 +201,8 @@ consecutive integers, which are indexes into the word-pieces list.
 
 If you can work on representations that aren't aligned to actual words, it's
 best to use the raw outputs of the transformer, which can be accessed at
-`doc._.pytt_outputs.last_hidden_state`. This variable gives you a tensor with
-one row per word-piece token.
+`doc._.last_hidden_state`. This variable gives you a tensor with one row per
+word-piece token.
 
 If you're working on token-level tasks such as part-of-speech tagging or
 spelling correction, you'll want to work on the token-aligned features, which
@@ -212,11 +213,11 @@ faithfully as possible. When one spaCy token aligns against several word-piece
 tokens, the token's vector will be a sum of the relevant slice of the tensor,
 weighted by how many other spaCy tokens are aligned against that row. By using a
 weighted sum, we ensure that the sum of the `doc.tensor` variable corresponds to
-the sum of the raw `doc._.pytt_outputs.last_hidden_state[1:1]` values. The only
-information missing from the `doc.tensor` are the vectors for the boundary
-tokens. However, note that in many tasks, the vectors for the boundary tokens
-are quite important (see e.g. the analysis of BERT's attention by Clark et al.
-(2019), who found that these tokens are very often attended to).
+the sum of the raw `doc._.last_hidden_state[1:1]` values. The only information
+missing from the `doc.tensor` are the vectors for the boundary tokens. However,
+note that in many tasks, the vectors for the boundary tokens are quite important
+(see e.g. the analysis of BERT's attention by Clark et al. (2019), who found
+that these tokens are very often attended to).
 
 ### Batching, padding and per-sentence processing
 
@@ -360,11 +361,11 @@ Assign the extracted tokens and IDs to the `Doc` objects.
 ### <kbd>class</kbd> `PyTT_TokenVectorEncoder`
 
 spaCy pipeline component to use PyTorch-Transformers models. The component
-assigns the output of the transformer to the `doc._.pytt_outputs` extension
-attribute. We also calculate an alignment between the word-piece tokens and the
-spaCy tokenization, so that we can use the last hidden states to set the
-`doc.tensor` attribute. When multiple word-piece tokens align to the same spaCy
-token, the spaCy token receives the sum of their values.
+assigns the output of the transformer to extension attributes. We also calculate
+an alignment between the word-piece tokens and the spaCy tokenization, so that
+we can use the last hidden states to set the `doc.tensor` attribute. When
+multiple word-piece tokens align to the same spaCy token, the spaCy token
+receives the sum of their values.
 
 The component is available as `pytt_tok2vec` and registered via an entry point,
 so it can also be created using
