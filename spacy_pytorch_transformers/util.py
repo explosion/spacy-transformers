@@ -297,3 +297,7 @@ def flatten_list(nested):
     for x in nested:
         flat.extend(x)
     return flat
+
+
+def is_special_token(text):
+    return text in SPECIAL_TOKENS
