@@ -136,23 +136,32 @@ class PyTT_TokenVectorEncoder(Pipe):
         """
         for doc, sent_acts in zip(docs, activations):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
+            doc._.pytt_last_hidden_state = self.model.ops.flatten([
+                sa.last_hidden_state for sa in sent_acts])
+            if sent_acts[0].has_pooler_output:
+                doc._.pytt_pooler_output = self.model.ops.flatten([
+                    sa.last_hidden_state for sa in sent_acts])
             sents = get_sents(doc)
             assert len(sents) == len(sent_acts)
-            for i, (sent, sent_acts) in enumerate(zip(sents, sent_acts)):
-                sent._.pytt_outputs = sent_acts
-                wp_tensor = sent_acts.last_hidden_state
-                # Count how often each word-piece token is represented. This allows
-                # a weighted sum, so that we can make sure doc.tensor.sum()
-                # equals wp_tensor[1:-1].sum().
-                align_sizes = [0 for _ in range(len(sent._.pytt_word_pieces))]
-                for word_piece_slice in sent._.pytt_alignment:
-                    for i in word_piece_slice:
-                        align_sizes[i] += 1
-                for i, word_piece_slice in enumerate(sent._.pytt_alignment):
-                    for j in word_piece_slice:
-                        doc.tensor[sent.start + i] += wp_tensor[j] / max(
-                            1, align_sizes[j]
-                        )
+            wp_tensor = doc._.pytt_last_hidden_state
+            assert wp_tensor.shape == (len(doc._.pytt_word_pieces), self.model.nO), wp_tensor.shape
+            # Count how often each word-piece token is represented. This allows
+            # a weighted sum, so that we can make sure doc.tensor.sum()
+            # equals wp_tensor.sum().
+            align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
+            for word_piece_slice in doc._.pytt_alignment:
+                for i in word_piece_slice:
+                    align_sizes[i] += 1
+            for i, word_piece_slice in enumerate(doc._.pytt_alignment):
+                for j in word_piece_slice:
+                    doc.tensor[i] += wp_tensor[j] / align_sizes[j]
+            # To make this weighting work, we "align" the boundary tokens against 
+            # every token in their sentence.
+            for sent in doc.sents:
+                cls_vector = wp_tensor[sent._.pytt_alignment[0][0]-1]
+                sep_vector = wp_tensor[sent._.pytt_alignment[-1][-1]+1]
+                doc.tensor[sent.start : sent.end+1] += cls_vector / len(sent)
+                doc.tensor[sent.start : sent.end+1] += sep_vector / len(sent)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
@@ -183,7 +192,12 @@ def get_similarity_via_tensor(doc1, doc2):
 @layerize
 def get_word_pieces(sents, drop=0.0):
     assert isinstance(sents[0], Span)
-    return [sent._.pytt_word_pieces for sent in sents], None
+    outputs = []
+    for sent in sents:
+        wp_start = sent[0]._.pytt_alignment[0]-1
+        wp_end = sent[-1]._.pytt_alignment[-1]+2
+        outputs.append(sent.doc._.pytt_word_pieces[wp_start : wp_end])
+    return outputs, None
 
 
 def with_length_batching(model, min_batch):
