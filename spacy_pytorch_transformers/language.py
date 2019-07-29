@@ -2,6 +2,7 @@ from spacy.language import Language
 from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 
+from .util import is_special_token
 from . import about
 
 
@@ -38,6 +39,9 @@ class PyTT_Language(Language):
             Doc.set_extension(attr, default=None)
             Span.set_extension(attr, getter=get_span_wp_getter(attr))
             Token.set_extension(attr, getter=get_token_wp_getter(attr))
+        for cls in [Token, Span, Doc]:
+            cls.set_extension("pytt_start", getter=get_wp_start)
+            cls.set_extension("pytt_end", getter=get_wp_end)
 
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
@@ -88,10 +92,27 @@ def get_defaults(lang):
         return Language.Defaults
 
 
+def get_wp_start(span):
+    wp_start = span[0]._.pytt_alignment[0]
+    wordpieces = span.doc._.pytt_word_pieces_
+    if wp_start >= 1 and is_special_token(wordpieces[wp_start-1]):
+        return wp_start - 1
+    else:
+        return wp_start
+
+
+def get_wp_end(span):
+    wp_end = span[-1]._.pytt_alignment[-1]
+    wordpieces = span.doc._.pytt_word_pieces_
+    if wp_end < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
+        return wp_end+1
+    else:
+        return wp_end
+
+
 def get_span_wp_getter(attr):
     def span_getter(span):
         return [token._.get(attr) for token in span]
-
     return span_getter
 
 
