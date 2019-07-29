@@ -512,6 +512,18 @@ vector encoding.
 | `**cfg`             | -                    | Optional config parameters.                              |
 | **RETURNS**         | `thinc.neural.Model` | The model.                                               |
 
+### <kbd>dataclass</kbd> `Activations`
+
+Dataclass to hold the features produced by PyTorch-Transformers.
+
+| Attribute           | Type   | Description |
+| ------------------- | ------ | ----------- |
+| `last_hidden_state` | object |             |
+| `pooler_output`     | object |             |
+| `all_hidden_states` | object |             |
+| `all_attentions`    | object |             |
+| `is_grad`           | bool   |             |
+
 ### Entry points
 
 This package exposes several
