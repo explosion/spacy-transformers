@@ -130,6 +130,8 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
     aligns against 3 tokens: wp_tokens[4], wp_tokens[5] and wp_tokens[6].
     All spaCy tokens must align against at least one element of wp_tokens.
     """
+    spacy_tokens = list(spacy_tokens)
+    wp_tokens = list(wp_tokens)
     offset = 0
     while wp_tokens and wp_tokens[0] in specials:
         wp_tokens.pop(0)
@@ -217,7 +219,8 @@ def batch_by_length(seqs, min_batch):
 
 
 def get_sents(doc):
-    return doc.sents if doc.is_sentenced else [doc[0:]]
+    return list(doc.sents)
+    #return doc.sents if doc.is_sentenced else [doc[0:]]
 
 
 def unflatten_list(flat, lengths):
