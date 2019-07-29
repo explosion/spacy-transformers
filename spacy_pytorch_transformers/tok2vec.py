@@ -122,8 +122,6 @@ class PyTT_TokenVectorEncoder(Pipe):
                 #    )
                 #)
             backprop(gradients, sgd=sgd)
-            for doc in docs:
-                doc._.pytt_outputs = None
             return None
 
         return outputs, finish_update
@@ -236,6 +234,7 @@ def with_length_batching(model, min_batch):
             d_inputs = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
                 dY = pad_batch([d_outputs[i] for i in indices])
+                dY = dY.reshape(len(indices), -1, dY.shape[-1])
                 dX = get_dX(dY, sgd=sgd)
                 if dX is not None:
                     for i, j in enumerate(indices):
@@ -270,8 +269,8 @@ def foreach_sentence(layer, drop_factor=1.0):
             ]
             d_sent_acts = flatten_list(d_nested)
             d_sents = bp_sent_acts(d_sent_acts, sgd=sgd)
-            if d_sents is None:
-                return d_sents
+            if d_sents is None or all(ds is None for ds in d_sents):
+                return None
             # Finally we have List[array], one per sentence, where each row is
             # the gradient wrt the token.
             # We want List[array], one per document.
