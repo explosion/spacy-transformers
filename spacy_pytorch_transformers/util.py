@@ -2,20 +2,21 @@ import numpy
 from dataclasses import dataclass
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
-from thinc.extra.wrappers import torch2xp, xp2torch
+from thinc.extra.wrappers import torch2xp
 
 from . import _tokenizers
 
 
 SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>")
 
+
 @dataclass
 class Activations:
     last_hidden_state: object
     pooler_output: object
-    all_hidden_states: object=None
-    all_attentions: object=None
-    is_grad: bool=False
+    all_hidden_states: object = None
+    all_attentions: object = None
+    is_grad: bool = False
 
     @classmethod
     def from_pytt(cls, fields, *, is_grad=False):
@@ -28,11 +29,14 @@ class Activations:
         return cls(*fields, is_grad=is_grad)
 
     def __len__(self):
-        return sum((
-            self.has_last_hidden_state,
-            self.has_pooler_output,
-            self.has_all_hidden_states,
-            self.has_all_attentions))
+        return sum(
+            (
+                self.has_last_hidden_state,
+                self.has_pooler_output,
+                self.has_all_hidden_states,
+                self.has_all_attentions,
+            )
+        )
 
     def get_slice(self, x, y):
         output = Activations(None, None, None, None, is_grad=self.is_grad)

@@ -95,6 +95,7 @@ def get_doc_getter(attr):
             return None
         else:
             return values
+
     return doc_getter
 
 
@@ -106,4 +107,5 @@ def get_token_getter(attr):
             return None
         else:
             return values[token.i - span.start]
+
     return token_getter
