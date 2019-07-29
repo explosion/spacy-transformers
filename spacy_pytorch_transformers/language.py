@@ -3,6 +3,7 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 
 from . import about
+from .util import get_sents
 
 
 class PyTT_Language(Language):
@@ -27,12 +28,14 @@ class PyTT_Language(Language):
 
     @staticmethod
     def install_extensions():
-        Doc.set_extension("pytt_outputs", default=None)
-        Doc.set_extension("pytt_gradients", default=None)
-        for attr in ["pytt_alignment", "pytt_word_pieces", "pytt_word_pieces_"]:
-            Doc.set_extension(attr, default=None)
+        attrs = ["pytt_alignment", "pytt_word_pieces", "pytt_word_pieces_"]
+        for attr in attrs:
+            Span.set_extension(attr, default=None)
+            Doc.set_extension(attr, getter=get_doc_getter(attr))
             Token.set_extension(attr, getter=get_token_getter(attr))
-            Span.set_extension(attr, getter=get_span_getter(attr))
+        for attr in ["pytt_outputs", "pytt_gradients"]:
+            Span.set_extension(attr, default=None)
+            Doc.set_extension(attr, getter=get_doc_getter(attr))
 
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
@@ -85,9 +88,22 @@ def get_defaults(lang):
         return Language.Defaults
 
 
+def get_doc_getter(attr):
+    def doc_getter(doc):
+        values = [sent._.get(attr) for sent in get_sents(doc)]
+        if all(v is None for v in values):
+            return None
+        else:
+            return values
+    return doc_getter
+
+
 def get_token_getter(attr):
-    return lambda token: token.doc._.get(attr)[token.i]
-
-
-def get_span_getter(attr):
-    return lambda span: span.doc._.get(attr)[span.start : span.end]
+    def token_getter(token):
+        span = token.sent if token.doc.is_sentenced else token.doc[0:-1]
+        values = span._.get(attr)
+        if values is None:
+            return None
+        else:
+            return values[token.i - span.start]
+    return token_getter
