@@ -177,11 +177,13 @@ from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_Toke
 
 name = "bert-base-uncased"
 nlp = PyTT_Language(pytt_name=name, meta={"lang": "en"})
+sentencizer = nlp.create_pipe("sentencizer")
 wordpiecer = PyTT_WordPiecer(nlp.vocab, pytt_name=name)
 tok2vec = PyTT_TokenVectorEncoder(nlp.vocab, pytt_name=name).from_pretrained(nlp.vocab, name)
+nlp.add_pipe(sentencizer)
 nlp.add_pipe(wordpiecer)
 nlp.add_pipe(tok2vec)
-print(nlp.pipe_names)  # ['pytt_wordpiecer', 'pytt_tok2vec']
+print(nlp.pipe_names)  # ['sentencizer', 'pytt_wordpiecer', 'pytt_tok2vec']
 ```
 
 ### Tokenization alignment
