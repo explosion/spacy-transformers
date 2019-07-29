@@ -5,7 +5,7 @@ from spacy.util import minibatch
 from spacy.tokens import Span
 
 from .wrapper import PyTT_Wrapper
-from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
+from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -126,13 +126,9 @@ class PyTT_TokenVectorEncoder(Pipe):
         extracted features.
 
         docs (iterable): A batch of Docs to process.
-        RETURNS (namedtuple): Named tuple containing the outputs.
+        RETURNS (list): A list of Activations objects, one per doc.
         """
-        outputs = self.model.predict(docs)
-        for sent_outs in outputs:
-            for out in sent_outs:
-                assert out.has_last_hidden_state is not None
-        return outputs
+        return self.model.predict(docs)
 
     def set_annotations(self, docs, activations):
         """Assign the extracted features to the Doc objects and overwrite the
@@ -141,17 +137,12 @@ class PyTT_TokenVectorEncoder(Pipe):
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        for doc, sent_acts in zip(docs, activations):
+        for doc, doc_acts in zip(docs, activations):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
-            doc._.pytt_last_hidden_state = self.model.ops.flatten(
-                [sa.last_hidden_state for sa in sent_acts]
-            )
-            if sent_acts[0].has_pooler_output:
-                doc._.pytt_pooler_output = self.model.ops.flatten(
-                    [sa.last_hidden_state for sa in sent_acts]
-                )
-            sents = list(doc.sents)
-            assert len(sents) == len(sent_acts)
+            doc._.pytt_last_hidden_state = doc_acts.last_hidden_state
+            doc._.pytt_pooler_output = doc_acts.pooler_output
+            doc._.pytt_all_hidden_states = doc_acts.all_hidden_states
+            doc._.pytt_all_attentions = doc_acts.all_attentions
             wp_tensor = doc._.pytt_last_hidden_state
             assert wp_tensor.shape == (
                 len(doc._.pytt_word_pieces),
@@ -259,16 +250,17 @@ def foreach_sentence(layer, drop_factor=1.0):
             doc_sents = list(doc.sents)
             sents.extend(doc_sents)
             lengths.append(len(doc_sents))
-        flat, bp_flat = layer.begin_update(sents, drop=drop)
-        outputs = unflatten_list(flat, lengths)
+        sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
+        sent_shapes = [sa.shapes for sa in sent_acts]
+        outputs = list(map(Activations.join, unflatten_list(sent_acts, lengths)))
         assert len(docs) == len(outputs)
 
         def sentence_bwd(d_output, sgd=None):
-            d_flat = bp_flat(flatten_list(d_output), sgd=sgd)
-            if d_flat is None:
-                return d_flat
-            return unflatten_list(d_flat, lengths)
-
+            d_sent_acts = [x.split(model.ops, sent_shapes) for x in d_output]
+            d_sents = bp_sent_acts(d_sent_acts, sgd=sgd)
+            if d_sents is None:
+                return d_sents
+            return unflatten_list(d_sents, lengths)
         return outputs, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
