@@ -245,6 +245,7 @@ def with_length_batching(model, min_batch):
 
 def foreach_sentence(layer, drop_factor=1.0):
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
+    ops = layer.ops
 
     def sentence_fwd(docs, drop=0.0):
         sents = []
@@ -257,9 +258,8 @@ def foreach_sentence(layer, drop_factor=1.0):
         sent_shapes = [sa.shapes for sa in sent_acts]
         outputs = list(map(Activations.join, unflatten_list(sent_acts, lengths)))
         assert len(docs) == len(outputs)
-
         def sentence_bwd(d_output, sgd=None):
-            d_sent_acts = [x.split(model.ops, sent_shapes) for x in d_output]
+            d_sent_acts = [x.split(ops, sent_shapes) for x in d_output]
             d_sents = bp_sent_acts(d_sent_acts, sgd=sgd)
             if d_sents is None:
                 return d_sents
