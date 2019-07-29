@@ -62,6 +62,7 @@ class PyTT_WordPiecer(Pipe):
             offset = 0
             doc_word_pieces = []
             doc_alignment = []
+            doc_word_piece_ids = []
             for sent, wp_tokens in zip(doc.sents, output):
                 spacy_tokens = [w.text for w in sent]
                 sent_align = align_word_pieces(spacy_tokens, wp_tokens)
@@ -73,9 +74,10 @@ class PyTT_WordPiecer(Pipe):
                 offset += len(wp_tokens)
                 doc_alignment.extend(sent_align)
                 doc_word_pieces.extend(wp_tokens)
+                doc_word_piece_ids.extend(self.model.convert_tokens_to_ids(wp_tokens))
             assert len(doc_alignment) == len(doc)
             max_aligned = max(max(token_align) for token_align in doc_alignment)
             assert max_aligned <= len(doc_word_pieces)
-            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(doc_word_pieces)
+            doc._.pytt_word_pieces = doc_word_piece_ids
             doc._.pytt_word_pieces_ = doc_word_pieces
             doc._.pytt_alignment = doc_alignment
