@@ -1,11 +1,54 @@
 import numpy
+from dataclasses import dataclass
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
+from thinc.extra.wrappers import torch2xp, xp2torch
 
 from . import _tokenizers
 
 
 SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>")
+
+@dataclass
+class Activations:
+    last_hidden_state: object
+    pooler_output: object
+    all_hidden_states: object=None
+    all_attentions: object=None
+    is_grad: bool=False
+
+    @classmethod
+    def from_pytt(cls, fields, *, is_grad=False):
+        """Create Activations from the output tuples produced by PyTorch Transformers.
+        Includes converting torch tensors to xp, and handling missing values.
+        """
+        fields = list(fields)
+        fields[0] = torch2xp(fields[0])
+        fields[1] = torch2xp(fields[1])
+        return cls(*fields, is_grad=is_grad)
+
+    def __len__(self):
+        return sum((
+            self.has_last_hidden_state,
+            self.has_pooler_output,
+            self.has_all_hidden_states,
+            self.has_all_attentions))
+
+    @property
+    def has_last_hidden_state(self):
+        return self.last_hidden_state is not None
+
+    @property
+    def has_pooler_output(self):
+        return self.pooler_output is not None
+
+    @property
+    def has_all_hidden_states(self):
+        return self.all_hidden_states is not None
+
+    @property
+    def has_all_attentions(self):
+        return self.all_attentions is not None
 
 
 def get_pytt_config(name):
