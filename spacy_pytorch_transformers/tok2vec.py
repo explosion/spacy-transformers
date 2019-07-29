@@ -5,7 +5,7 @@ from spacy.util import minibatch
 from spacy.tokens import Span
 
 from .wrapper import PyTT_Wrapper
-from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
+from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -108,12 +108,15 @@ class PyTT_TokenVectorEncoder(Pipe):
         def finish_update(docs, sgd=None):
             gradients = []
             for doc in docs:
-                gradients.append(Activations(
-                    doc._.pytt_d_last_hidden_state,
-                    doc._.pytt_d_pooler_output,
-                    doc._.pytt_d_all_hidden_states,
-                    doc._.pytt_d_all_attentions,
-                    is_grad=True))
+                gradients.append(
+                    Activations(
+                        doc._.pytt_d_last_hidden_state,
+                        doc._.pytt_d_pooler_output,
+                        doc._.pytt_d_all_hidden_states,
+                        doc._.pytt_d_all_attentions,
+                        is_grad=True,
+                    )
+                )
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_outputs = None
