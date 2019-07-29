@@ -187,6 +187,9 @@ nlp.add_pipe(PyTT_TokenVectorEncoder.from_pretrained(nlp.vocab, name))
 print(nlp.pipe_names)  # ['sentencizer', 'pytt_wordpiecer', 'pytt_tok2vec']
 ```
 
+You can also use the [`init_model.py`](examples/init_model.py) script in the
+examples.
+
 ### Tokenization alignment
 
 Transformer models are usually trained on text preprocessed with the "word

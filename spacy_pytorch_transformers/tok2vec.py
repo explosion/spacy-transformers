@@ -62,8 +62,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         with Model.define_operators({">>": chain}):
             model = foreach_sentence(
                 get_word_pieces
-                >> with_length_batching(
-                    model >> get_last_hidden_state, batch_by_length))
+                >> with_length_batching(model >> get_last_hidden_state, batch_by_length)
+            )
         model.nO = nO
         return model
 
@@ -207,7 +207,7 @@ def get_word_pieces(sents, drop=0.0):
 
 
 @layerize
-def get_last_hidden_state(activations, drop=0.):
+def get_last_hidden_state(activations, drop=0.0):
     def backprop_last_hidden_state(d_last_hidden_state, sgd=None):
         return d_last_hidden_state
     return activations.last_hidden_state, backprop_last_hidden_state
@@ -230,7 +230,7 @@ def with_length_batching(model, min_batch):
             Y, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
             for i, j in enumerate(indices):
-                outputs[j] = Y[i, :len(inputs[j])]
+                outputs[j] = Y[i, : len(inputs[j])]
 
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
@@ -265,8 +265,10 @@ def foreach_sentence(layer, drop_factor=1.0):
         assert len(docs) == len(doc_acts)
 
         def sentence_bwd(d_doc_acts, sgd=None):
-            d_nested = [ops.unflatten(d_doc_acts[i], doc_sent_lengths[i])
-                        for i in range(len(d_doc_acts))]
+            d_nested = [
+                ops.unflatten(d_doc_acts[i], doc_sent_lengths[i])
+                for i in range(len(d_doc_acts))
+            ]
             d_sent_acts = flatten_list(d_nested)
             d_sents = bp_sent_acts(d_sent_acts, sgd=sgd)
             if d_sents is None:
