@@ -51,7 +51,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     optimizer = nlp.resume_training()
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
-    batch_sizes = compounding(4.0, 32.0, 1.001)
+    batch_sizes = compounding(2.0, 2.0, 1.001)
     for i in range(n_iter):
         losses = {}
         # batch up the examples using spaCy's minibatch
@@ -96,7 +96,7 @@ def load_data(limit=0, split=0.8):
     random.shuffle(train_data)
     train_data = train_data[-limit:]
     texts, labels = zip(*train_data)
-    texts = [white_re.sub(" ", text).strip() for text in texts]
+    texts = [white_re.sub(" ", text).strip()[:300] for text in texts]
     cats = [{"POSITIVE": bool(y), "NEGATIVE": not bool(y)} for y in labels]
     split = int(len(train_data) * split)
     return (texts[:split], cats[:split]), (texts[split:], cats[split:])
