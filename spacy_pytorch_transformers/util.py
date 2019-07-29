@@ -242,8 +242,13 @@ def pad_batch(batch):
     xp = get_array_module(batch[0])
     for seq in batch:
         # Ugh, numpy.pad sucks.
-        pad_desc = (0, max_len - len(seq))
-        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
+        if isinstance(seq, list):
+            pad_desc = [[0, 0]]
+        else:
+            pad_desc = [[0, 0] for _ in seq.shape]
+        pad_desc[0][1] = max_len - len(seq)
+        padded.append(
+            xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
     return xp.vstack(padded)
 
 
