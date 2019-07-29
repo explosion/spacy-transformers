@@ -62,7 +62,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         with Model.define_operators({">>": chain}):
             model = foreach_sentence(
                 get_word_pieces
-                >> with_length_batching(model >> get_last_hidden_state, batch_by_length)
+                >> without_length_batching(model >> get_last_hidden_state, batch_by_length)
             )
         model.nO = nO
         return model
@@ -209,6 +209,27 @@ def get_last_hidden_state(activations, drop=0.0):
     def backprop_last_hidden_state(d_last_hidden_state, sgd=None):
         return d_last_hidden_state
     return activations.last_hidden_state, backprop_last_hidden_state
+
+
+def without_length_batching(model, _):
+    def apply_model_padded(inputs, drop=0.0):
+        X = pad_batch(inputs)
+        Y, get_dX = model.begin_update(X, drop=drop)
+        outputs = [Y[i, :len(seq)] for i, seq in enumerate(inputs)]
+
+        def backprop_batched(d_outputs, sgd=None):
+            dY = pad_batch(d_outputs)
+            dY = dY.reshape(len(indices), -1, dY.shape[-1])
+            dX = get_dX(dY, sgd=sgd)
+            if dX is not None:
+                d_inputs = [dX[i, :len(seq)] for i, seq in enumerate(d_outputs)]
+            else:
+                d_inputs = None
+            return d_inputs
+
+        return outputs, d_inputs
+
+    return wrap(apply_model_padded, model)
 
 
 def with_length_batching(model, min_batch):
