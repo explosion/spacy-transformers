@@ -60,7 +60,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
             texts = (text[:50] for text in texts)
             nlp.update(texts, annotations, sgd=optimizer, drop=0.2, losses=losses)
         # evaluate on the dev data split off in load_data()
-        scores = evaluate(nlp.tokenizer, textcat, dev_texts, dev_cats)
+        scores = evaluate(nlp, dev_texts, dev_cats)
         print(
             "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
                 losses["textcat"],
@@ -99,13 +99,12 @@ def load_data(limit=0, split=0.8):
     return (texts[:split], cats[:split]), (texts[split:], cats[split:])
 
 
-def evaluate(tokenizer, textcat, texts, cats):
-    docs = (tokenizer(text) for text in texts)
+def evaluate(nlp, textcat, texts, cats):
     tp = 0.0  # True positives
     fp = 1e-8  # False positives
     fn = 1e-8  # False negatives
     tn = 0.0  # True negatives
-    for i, doc in enumerate(textcat.pipe(docs)):
+    for i, doc in nlp.pipe(texts):
         gold = cats[i]
         for label, score in doc.cats.items():
             if label not in gold:
