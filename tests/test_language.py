@@ -51,6 +51,7 @@ def test_language_wordpiece_to_from_bytes(name):
     doc = nlp("hello world")
     assert doc._.pytt_word_pieces is not None
     nlp2 = PyTT_Language()
+    nlp2.add_pipe(nlp.create_pipe("sentencizer"))
     nlp2.add_pipe(PyTT_WordPiecer(nlp2.vocab))
     with pytest.raises(ValueError):
         new_doc = nlp2("hello world")
@@ -80,6 +81,7 @@ def test_language_to_from_disk(nlp, name):
     with make_tempdir() as tempdir:
         nlp.to_disk(tempdir)
         new_nlp = PyTT_Language()
+        new_nlp.add_pipe(new_nlp.create_pipe("sentencizer"))
         wordpiecer = PyTT_WordPiecer(new_nlp.vocab, pytt_name=name)
         tok2vec = PyTT_TokenVectorEncoder(new_nlp.vocab, pytt_name=name)
         new_nlp.add_pipe(wordpiecer)
