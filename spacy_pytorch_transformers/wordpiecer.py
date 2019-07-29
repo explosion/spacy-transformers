@@ -59,9 +59,23 @@ class PyTT_WordPiecer(Pipe):
         outputs (iterable): A batch of outputs.
         """
         for doc, output in zip(docs, outputs):
-            for sent, sent_output in zip(get_sents(doc), output):
-                sent._.pytt_word_pieces_ = output
-                sent._.pytt_word_pieces = self.model.convert_tokens_to_ids(sent_output)
-                sent._.pytt_alignment = align_word_pieces(
-                    [w.text for w in sent], sent_output
-                )
+            offset = 0
+            doc_word_pieces = []
+            doc_alignment = []
+            for sent, wp_tokens in zip(doc.sents, output):
+                spacy_tokens = [w.text for w in sent]
+                sent_align = align_word_pieces(spacy_tokens, wp_tokens)
+                # We need to align into the flattened document list, instead
+                # of just into this sentence. So offset by number of wp tokens.
+                for token_align in sent_align:
+                    for i in range(len(token_align)):
+                        token_align[i] += offset
+                offset += len(wp_tokens)
+                doc_alignment.extend(sent_align)
+                doc_word_pieces.extend(wp_tokens)
+            assert len(doc_alignment) == len(doc)
+            max_aligned = max(max(token_align) for token_align in doc_alignment)
+            assert max_aligned <= len(doc_word_pieces)
+            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(doc_word_pieces)
+            doc._.pytt_word_pieces_ = doc_word_pieces
+            doc._.pytt_alignment = doc_alignment
