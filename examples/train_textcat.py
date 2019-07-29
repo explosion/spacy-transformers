@@ -57,7 +57,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
         # batch up the examples using spaCy's minibatch
         random.shuffle(train_data)
         batches = minibatch(train_data, size=batch_sizes)
-        with tqdm(total=total_chars, leave=False) as pbar:
+        with tqdm.tqdm(total=total_chars, leave=False) as pbar:
             for batch in batches:
                 texts, annotations = zip(*batch)
                 nlp.update(texts, annotations, sgd=optimizer, drop=0.2, losses=losses)
