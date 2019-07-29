@@ -1,11 +1,11 @@
-from collections import namedtuple
 from spacy.pipeline import Pipe
 from thinc.api import chain, layerize, wrap
 from thinc.neural.ops import get_array_module
 from spacy.util import minibatch
+from spacy.tokens import Span
 
 from .wrapper import PyTT_Wrapper
-from .util import batch_by_length, pad_batch
+from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, get_sents
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -122,31 +122,36 @@ class PyTT_TokenVectorEncoder(Pipe):
         RETURNS (namedtuple): Named tuple containing the outputs.
         """
         outputs = self.model.predict(docs)
-        for out in outputs:
-            assert out.last_hidden_state is not None
+        for sent_outs in outputs:
+            for out in sent_outs:
+                assert out.has_last_hidden_state is not None
         return outputs
 
-    def set_annotations(self, docs, outputs):
+    def set_annotations(self, docs, activations):
         """Assign the extracted features to the Doc objects and overwrite the
         vector and similarity hooks.
 
         docs (iterable): A batch of `Doc` objects.
-        outputs (iterable): A batch of outputs.
+        activations (iterable): A batch of activations.
         """
-        for doc, output in zip(docs, outputs):
-            doc._.pytt_outputs = output
+        for doc, sent_acts in zip(docs, activations):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
-            wp_tensor = output.last_hidden_state
-            # Count how often each word-piece token is represented. This allows
-            # a weighted sum, so that we can make sure doc.tensor.sum()
-            # equals wp_tensor[1:-1].sum().
-            align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
-            for word_piece_slice in doc._.pytt_alignment:
-                for i in word_piece_slice:
-                    align_sizes[i] += 1
-            for i, word_piece_slice in enumerate(doc._.pytt_alignment):
-                for j in word_piece_slice:
-                    doc.tensor[i] += wp_tensor[j] / max(1, align_sizes[j])
+            sents = get_sents(doc)
+            assert len(sents) == len(sent_acts)
+            for i, (sent, sent_acts) in enumerate(zip(sents, sent_acts)):
+                sent._.pytt_outputs = sent_acts
+                wp_tensor = sent_acts.last_hidden_state
+                print(wp_tensor.shape)
+                # Count how often each word-piece token is represented. This allows
+                # a weighted sum, so that we can make sure doc.tensor.sum()
+                # equals wp_tensor[1:-1].sum().
+                align_sizes = [0 for _ in range(len(sent._.pytt_word_pieces))]
+                for word_piece_slice in sent._.pytt_alignment:
+                    for i in word_piece_slice:
+                        align_sizes[i] += 1
+                for i, word_piece_slice in enumerate(sent._.pytt_alignment):
+                    for j in word_piece_slice:
+                        doc.tensor[sent.start+i] += wp_tensor[j] / max(1, align_sizes[j])
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
@@ -175,8 +180,9 @@ def get_similarity_via_tensor(doc1, doc2):
 
 
 @layerize
-def get_word_pieces(docs, drop=0.0):
-    return [doc._.pytt_word_pieces for doc in docs], None
+def get_word_pieces(sents, drop=0.0):
+    assert isinstance(sents[0], Span)
+    return [sent._.pytt_word_pieces for sent in sents], None
 
 
 def with_length_batching(model, min_batch):
@@ -185,23 +191,17 @@ def with_length_batching(model, min_batch):
     together, making the padding less wasteful. If min_batch==1, no padding will
     be necessary.
     """
-    col_names = getattr(model, "out_cols", [None])
-
     def apply_model_to_batches(inputs, drop=0.0):
         backprops = []
         batches = batch_by_length(inputs, min_batch)
         # Initialize this, so we can place the outputs back in order.
-        outputs = [[None for _ in col_names] for _ in inputs]
+        outputs = [None for _ in inputs]
         for indices in batches:
             X = pad_batch([inputs[i] for i in indices])
             Y, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
-            for col in range(len(col_names)):
-                for i, j in enumerate(indices):
-                    if Y[col][i] is not None:
-                        # The index j tells us where the row was.
-                        # We also need to remember to unpad.
-                        outputs[j][col] = Y[col][i, : len(inputs[j])]
+            for i, j in enumerate(indices):
+                outputs[j] = Y.get_slice(i, slice(0, len(inputs[j])))
 
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
@@ -211,16 +211,11 @@ def with_length_batching(model, min_batch):
                 if dX is not None:
                     for i, j in enumerate(indices):
                         # As above, put things back in order, unpad.
-                        # Note that there's no columns to deal with here, as
+                        # Note that there's no fields to deal with here, as
                         # the input doesn't have any.
                         d_inputs[j] = dX[i, : len(d_outputs[j])]
             return d_inputs
 
-        if col_names == [None]:
-            outputs = [o[0] for o in outputs]
-        else:
-            MakeOutput = namedtuple("pytt_outputs", col_names)
-            outputs = [MakeOutput(*o) for o in outputs]
         return outputs, backprop_batched
 
     return wrap(apply_model_to_batches, model)
@@ -233,46 +228,20 @@ def foreach_sentence(layer, drop_factor=1.0):
         sents = []
         lengths = []
         for doc in docs:
-            if doc.is_sentenced:
-                doc_sents = [sent for sent in doc.sents if len(sent)]
-            else:
-                doc_sents = [doc]
+            doc_sents = get_sents(doc)
             sents.extend(doc_sents)
             lengths.append(len(doc_sents))
         flat, bp_flat = layer.begin_update(sents, drop=drop)
-        outputs = _unflatten_ntuple_batch(layer.ops, flat, lengths)
+        outputs = unflatten_list(flat, lengths)
         assert len(docs) == len(outputs)
-        for doc, doc_out in zip(docs, outputs):
-            assert len(doc._.pytt_word_pieces) == doc_out.last_hidden_state.shape[0]
 
         def sentence_bwd(d_output, sgd=None):
-            d_flat = bp_flat(layer.ops.flatten(d_output), sgd=sgd)
+            d_flat = bp_flat(flatten_list(d_output), sgd=sgd)
             if d_flat is None:
                 return d_flat
-            return _unflatten_ntuple_batch(layer.ops, d_flat, lengths)
+            return unflatten_list(d_flat, lengths)
 
         return outputs, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
     return model
-
-
-def _unflatten_ntuple_batch(ops, sent_outputs, lengths):
-    doc_outputs = []
-    offset = 0
-    for length in lengths:
-        doc_sents = sent_outputs[offset : offset + length]
-        # Transpose the nested list, from by-sentence to by-column.
-        doc_cols = []
-        for col_values in zip(*doc_sents):
-            # Merge the column values if possible
-            if len(col_values) and isinstance(col_values[0], ops.xp.ndarray):
-                doc_cols.append(ops.xp.vstack(col_values))
-            else:
-                doc_cols.append([])
-                for value in col_values:
-                    doc_cols.extend(value)
-        # Now we can finally make the namedtuple
-        doc_outputs.append(sent_outputs[0]._make(doc_cols))
-        offset += length
-    return doc_outputs
