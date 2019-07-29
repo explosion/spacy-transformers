@@ -58,9 +58,10 @@ class PyTT_TokenVectorEncoder(Pipe):
             model = PyTT_Wrapper(name)
         nO = model.nO
         batch_by_length = cfg.get("batch_by_length", 1)
-        model = with_length_batching(model, batch_by_length)
-        model = chain(get_word_pieces, model)
-        model = foreach_sentence(model)
+        model = foreach_sentence(
+            chain(
+                get_word_pieces,
+                with_length_batching(model, batch_by_length)))
         model.nO = nO
         return model
 
