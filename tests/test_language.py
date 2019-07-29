@@ -90,7 +90,7 @@ def test_language_to_from_disk(nlp, name):
 
 def test_extension_attrs(nlp):
     doc = Doc(nlp.vocab, words=["hello", "world", "test"])
-    doc._.pytt_alignment = [[1, 2], [3, 4], [5, 6]]
+    doc[0:]._.pytt_alignment = [[1, 2], [3, 4], [5, 6]]
     assert doc[0]._.pytt_alignment == [1, 2]
     assert doc[1]._.pytt_alignment == [3, 4]
     assert doc[2]._.pytt_alignment == [5, 6]
