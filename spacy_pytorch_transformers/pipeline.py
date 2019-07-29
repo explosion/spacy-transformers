@@ -37,21 +37,18 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
 
 
 def get_pytt_last_hidden(docs, drop=0.0):
-    """Function that can be wrapped as a pipeline component, that gets the
+    """Function that can be wrapped as a Thinc model, that gets the
     pytt_last_hidden extension attribute from a batch of Doc objects. During
     the backward pass, we accumulate the gradients into doc._.pytt_gradients.
     """
-    outputs = [doc._.pytt_outputs.last_hidden_state for doc in docs]
+    outputs = [doc._.pytt_last_hidden_state for doc in docs]
 
     def backprop_pytt_last_hidden(d_outputs, sgd=None):
-        for doc, gradient in zip(docs, d_outputs):
-            if doc._.pytt_gradients is None:
-                col_names = doc._.pytt_outputs._fields
-                Grads = namedtuple("pytt_gradients", col_names)
-                pytt_gradients = Grads(last_hidden_state=gradient, pooler_output=None)
-                doc._.pytt_gradients = pytt_gradients
+        for doc, d_last_hidden_state in zip(docs, d_outputs):
+            if doc._.pytt_d_last_hidden_state is None:
+                doc._.pytt_d_last_hidden_state = d_last_hidden_state
             else:
-                doc._.pytt_gradients.last_hidden_state += gradient
+                doc._.pytt_d_last_hidden_state += d_last_hidden_state
         return None
 
     return outputs, backprop_pytt_last_hidden
