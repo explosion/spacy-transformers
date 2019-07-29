@@ -106,7 +106,14 @@ class PyTT_TokenVectorEncoder(Pipe):
         outputs, backprop = self.model.begin_update(docs, drop=drop)
 
         def finish_update(docs, sgd=None):
-            gradients = [doc._.pytt_gradients.last_hidden_state for doc in docs]
+            gradients = []
+            for doc in docs:
+                gradients.append(Activations(
+                    doc._.pytt_d_last_hidden_state,
+                    doc._.pytt_d_pooler_output,
+                    doc._.pytt_d_all_hidden_states,
+                    doc._.pytt_d_all_attentions,
+                    is_grad=True))
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_outputs = None
