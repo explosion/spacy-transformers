@@ -219,7 +219,7 @@ def without_length_batching(model, _):
 
         def backprop_batched(d_outputs, sgd=None):
             dY = pad_batch(d_outputs)
-            dY = dY.reshape(len(indices), -1, dY.shape[-1])
+            dY = dY.reshape(len(d_outputs), -1, dY.shape[-1])
             dX = get_dX(dY, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, :len(seq)] for i, seq in enumerate(d_outputs)]
@@ -227,7 +227,7 @@ def without_length_batching(model, _):
                 d_inputs = None
             return d_inputs
 
-        return outputs, d_inputs
+        return outputs, backprop_batched
 
     return wrap(apply_model_padded, model)
 
