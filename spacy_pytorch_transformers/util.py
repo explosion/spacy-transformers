@@ -36,16 +36,16 @@ class Activations:
             return cls(*fields, None, is_grad=is_grad)
         if sub_acts[0].has_last_hidden_state:
             xp = get_array_module(sub_acts[0].last_hidden_state)
-            fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts]) 
+            fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts])
         if sub_acts[0].has_pooler_output:
             xp = get_array_module(sub_acts[0].pooler_output)
-            #fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts]) 
+            # fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts])
         if sub_acts[0].has_all_hidden_states:
             xp = get_array_module(sub_acts[0].all_hidden_states)
-            #fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts]) 
+            # fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts])
         if sub_acts[0].has_all_attentions:
             xp = get_array_module(sub_acts[0].all_hidden_states)
-            #fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts]) 
+            # fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts])
         return cls(*fields, is_grad=is_grad)
 
     def __len__(self):
@@ -69,7 +69,7 @@ class Activations:
         if self.has_all_attentions:
             raise NotImplementedError
         return output
-   
+
     def split(self, ops, shapes):
         """Split into a list of Activation objects."""
         lh_values = [None] * len(shapes)
@@ -82,13 +82,13 @@ class Activations:
             lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
         if self.has_pooler_output:
             po_lengths = [shape[0] for shape in po_shapes]
-            #po_values = ops.unflatten(self.pooler_output, po_lengths)
+            # po_values = ops.unflatten(self.pooler_output, po_lengths)
         if self.has_all_hidden_states:
             ah_lengths = [shape[0] for shape in ah_shapes]
-            #ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
+            # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
         if self.has_all_attentions:
             aa_lengths = [shape[0] for shape in aa_shapes]
-            #aa_values = ops.unflatten(self.all_attentions, aa_lengths)
+            # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
         outputs = []
         for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
             outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
@@ -106,7 +106,7 @@ class Activations:
         if self.has_all_attentions:
             output[3] = self.all_attentions.shape
         return output
- 
+
     @property
     def has_last_hidden_state(self):
         return self.last_hidden_state is not None

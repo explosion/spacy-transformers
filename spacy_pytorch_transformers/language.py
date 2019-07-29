@@ -95,7 +95,7 @@ def get_defaults(lang):
 def get_wp_start(span):
     wp_start = span[0]._.pytt_alignment[0]
     wordpieces = span.doc._.pytt_word_pieces_
-    if wp_start >= 1 and is_special_token(wordpieces[wp_start-1]):
+    if wp_start >= 1 and is_special_token(wordpieces[wp_start - 1]):
         return wp_start - 1
     else:
         return wp_start
@@ -104,8 +104,8 @@ def get_wp_start(span):
 def get_wp_end(span):
     wp_end = span[-1]._.pytt_alignment[-1]
     wordpieces = span.doc._.pytt_word_pieces_
-    if wp_end < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
-        return wp_end+1
+    if wp_end < len(wordpieces) and is_special_token(wordpieces[wp_end + 1]):
+        return wp_end + 1
     else:
         return wp_end
 
@@ -113,6 +113,7 @@ def get_wp_end(span):
 def get_span_wp_getter(attr):
     def span_getter(span):
         return [token._.get(attr) for token in span]
+
     return span_getter
 
 
