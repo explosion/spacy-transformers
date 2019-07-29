@@ -39,13 +39,13 @@ class Activations:
             fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts]) 
         if sub_acts[0].has_pooler_output:
             xp = get_array_module(sub_acts[0].pooler_output)
-            fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts]) 
+            #fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts]) 
         if sub_acts[0].has_all_hidden_states:
             xp = get_array_module(sub_acts[0].all_hidden_states)
-            fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts]) 
+            #fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts]) 
         if sub_acts[0].has_all_attentions:
             xp = get_array_module(sub_acts[0].all_hidden_states)
-            fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts]) 
+            #fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts]) 
         return cls(*fields, is_grad=is_grad)
 
     def __len__(self):
@@ -72,23 +72,23 @@ class Activations:
    
     def split(self, ops, shapes):
         """Split into a list of Activation objects."""
-        lh_values = None
-        po_values = None
-        ah_values = None
-        aa_values = None
+        lh_values = [None] * len(shapes)
+        po_values = [None] * len(shapes)
+        ah_values = [None] * len(shapes)
+        aa_values = [None] * len(shapes)
         lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
         if self.has_last_hidden_state:
             lh_lengths = [shape[0] for shape in lh_shapes]
-            lh_values = ops.unflatten(self.last_hidden_states, lh_lengths)
+            lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
         if self.has_pooler_output:
             po_lengths = [shape[0] for shape in po_shapes]
-            po_values = ops.unflatten(self.pooler_output, po_lengths)
-        if self.has_all_hiddens:
+            #po_values = ops.unflatten(self.pooler_output, po_lengths)
+        if self.has_all_hidden_states:
             ah_lengths = [shape[0] for shape in ah_shapes]
-            ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
+            #ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
         if self.has_all_attentions:
             aa_lengths = [shape[0] for shape in aa_shapes]
-            aa_values = ops.unflatten(self.all_attentions, aa_lengths)
+            #aa_values = ops.unflatten(self.all_attentions, aa_lengths)
         outputs = []
         for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
             outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
@@ -200,7 +200,12 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
     wp_tokens = [wpt.replace("##", "", 1) for wpt in wp_tokens]
     # XLNet uses this as the control char?? Wtf.
     wp_tokens = [wpt.replace("\u2581", "", 1) for wpt in wp_tokens]
-    assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
+    try:
+        assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
+    except:
+        print(repr("".join(spacy_tokens).lower()))
+        print(repr("".join(wp_tokens).lower()))
+        raise
     output = _align(spacy_tokens, wp_tokens, offset)
     return output
 
