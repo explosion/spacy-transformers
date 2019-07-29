@@ -1,6 +1,5 @@
-from collections import namedtuple
 import torch
-from thinc.extra.wrappers import PyTorchWrapper, torch2xp, xp2torch
+from thinc.extra.wrappers import PyTorchWrapper, xp2torch
 
 from .util import get_pytt_model, Activations
 
@@ -45,11 +44,9 @@ class PyTT_Wrapper(PyTorchWrapper):
                 dy_for_bwd.append(xp2torch(dy_data.pooler_output))
                 y_for_bwd.append(y_var[1])
             if dy_data.has_all_hidden_states:
-                raise ValueError(
-                    "Gradients on all hidden states not supported yet.")
+                raise ValueError("Gradients on all hidden states not supported yet.")
             if dy_data.has_all_attentions:
-                raise ValueError(
-                    "Gradients on all attentions not supported yet.")
+                raise ValueError("Gradients on all attentions not supported yet.")
             torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
             if sgd is not None:
                 if self._optimizer is None:

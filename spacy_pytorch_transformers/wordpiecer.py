@@ -62,4 +62,6 @@ class PyTT_WordPiecer(Pipe):
             for sent, sent_output in zip(get_sents(doc), output):
                 sent._.pytt_word_pieces_ = output
                 sent._.pytt_word_pieces = self.model.convert_tokens_to_ids(sent_output)
-                sent._.pytt_alignment = align_word_pieces([w.text for w in sent], sent_output)
+                sent._.pytt_alignment = align_word_pieces(
+                    [w.text for w in sent], sent_output
+                )

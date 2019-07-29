@@ -150,7 +150,9 @@ class PyTT_TokenVectorEncoder(Pipe):
                         align_sizes[i] += 1
                 for i, word_piece_slice in enumerate(sent._.pytt_alignment):
                     for j in word_piece_slice:
-                        doc.tensor[sent.start+i] += wp_tensor[j] / max(1, align_sizes[j])
+                        doc.tensor[sent.start + i] += wp_tensor[j] / max(
+                            1, align_sizes[j]
+                        )
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
@@ -190,6 +192,7 @@ def with_length_batching(model, min_batch):
     together, making the padding less wasteful. If min_batch==1, no padding will
     be necessary.
     """
+
     def apply_model_to_batches(inputs, drop=0.0):
         backprops = []
         batches = batch_by_length(inputs, min_batch)
