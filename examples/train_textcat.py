@@ -99,7 +99,7 @@ def load_data(limit=0, split=0.8):
     return (texts[:split], cats[:split]), (texts[split:], cats[split:])
 
 
-def evaluate(nlp, textcat, texts, cats):
+def evaluate(nlp, texts, cats):
     tp = 0.0  # True positives
     fp = 1e-8  # False positives
     fn = 1e-8  # False negatives
