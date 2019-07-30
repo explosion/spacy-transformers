@@ -3,6 +3,7 @@ from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
 from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
 
 MODEL_NAMES = ["bert-base-uncased"]
+ALL_MODEL_NAMES = ["bert-base-uncased", "openai-gpt", "gpt2", "xlnet-base-cased"]
 
 
 @pytest.fixture(scope="session", params=MODEL_NAMES)

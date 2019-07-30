@@ -91,8 +91,9 @@ class PyTT_WordPiecer(Pipe):
             doc_word_piece_ids = []
             for sent, wp_tokens in zip(doc.sents, output):
                 spacy_tokens = [self.model.clean_token(w.text) for w in sent]
-                wp_tokens = self.model.clean_wp_tokens(wp_tokens)
-                sent_align = align_word_pieces(spacy_tokens, wp_tokens)
+                new_wp_tokens = self.model.clean_wp_tokens(wp_tokens)
+                assert len(wp_tokens) == len(new_wp_tokens)
+                sent_align = align_word_pieces(spacy_tokens, new_wp_tokens)
                 # We need to align into the flattened document list, instead
                 # of just into this sentence. So offset by number of wp tokens.
                 for token_align in sent_align:
