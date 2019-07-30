@@ -2,6 +2,9 @@
 tokenizers, so that they work more nicely with spaCy. Specifically, the PyTT
 classes take file paths as arguments to their __init__, which means we can't
 easily use to_bytes() and from_bytes() with them.
+
+Additionally, provide a .clean_text() method that is used to match the preprocessing,
+so that we can get the alignment working.
 """
 from collections import OrderedDict
 import spacy
@@ -107,6 +110,12 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
             vocab=self.vocab, unk_token=self.unk_token
         )
 
+    def clean_token(self, text):
+        if self.do_basic_tokenize:
+            return self.basic_tokenizer._clean_text(text)
+        else:
+            return text.strip()
+
 
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
@@ -134,6 +143,9 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         self.cache = {}
         self.pat = re.compile(self._regex_pattern)
 
+    def clean_token(self, text):
+        return text.strip()
+
 
 class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "bpe_ranks"]
@@ -154,6 +166,9 @@ class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin
         self.fix_text = ftfy.fix_text
         self.cache = {}
         self.decoder = {v: k for k, v in self.encoder.items()}
+
+    def clean_token(self, text):
+        return text.strip()
 
 
 class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin):
@@ -180,6 +195,9 @@ class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin
     def finish_deserializing(self):
         self.sym2idx = {sym: i for i, sym in enumerate(self.idx2sym)}
 
+    def clean_token(self, text):
+        return text.strip()
+
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "bpe_ranks"]
@@ -201,6 +219,9 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         self.cache = {}
         self.decoder = {v: k for k, v in self.encoder.items()}
 
+    def clean_token(self, text):
+        return text.strip()
+
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
@@ -221,3 +242,6 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
     def finish_deserializing(self):
         self.sp_model = sentencepiece.SentencePieceProcessor()
         self.sp_model.LoadFromSerializedProto(self.vocab_bytes)
+
+    def clean_token(self, text):
+        return text.strip()
