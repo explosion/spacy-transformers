@@ -32,11 +32,13 @@ class PyTT_Wrapper(PyTorchWrapper):
         ids = xp2torch(self.ops.asarray(ids))
         is_training = self._model.training
         if drop is None:
-            self._model.eval()
-            y_var = self._model(ids)
+            with torch.autograd.set_grad_enabled(False):
+                self._model.eval()
+                y_var = self._model(ids)
         else:
-            self._model.train()
-            y_var = self._model(ids)
+            with torch.autograd.set_grad_enabled(True):
+                self._model.train()
+                y_var = self._model(ids)
         self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.has_last_hidden_state
