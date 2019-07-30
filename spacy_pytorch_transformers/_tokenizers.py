@@ -164,7 +164,7 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         return [t.replace("\u0120", "", 1).strip() for t in tokens]
 
     def add_special_tokens(self, tokens):
-        return tokens
+        return [self.bos_token] + tokens + [self.eos_token]
 
 
 class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin):
@@ -268,7 +268,7 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         return [t.replace("</w>", "").strip() for t in tokens]
 
     def add_special_tokens(self, tokens):
-        return tokens
+        return [self.bos_token] + tokens + [self.cls_token]
 
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
@@ -303,7 +303,7 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         return [t.replace("\u2581", "", 1).strip() for t in tokens]
 
     def add_special_tokens(self, tokens):
-        return tokens
+        return [self.cls_token] + tokens + [self.sep_token]
 
 
 def serialize_bpe_ranks(data):
