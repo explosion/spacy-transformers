@@ -87,8 +87,7 @@ class PyTT_Language(Language):
         tok2vec.set_annotations(docs, pytt_outputs)
         for doc in docs:
             assert doc._.pytt_last_hidden_state is not None
-        components = [p for p in components if p in self.pipe_names]
-        with self.disable_pipes("pytt_tok2vec", *components):
+        with self.disable_pipes("pytt_tok2vec"):
             super().update(
                 docs,
                 golds,
