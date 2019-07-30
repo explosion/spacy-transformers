@@ -36,7 +36,8 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
             get_pytt_class_tokens,
             flatten_add_lengths,
             Pooling(mean_pool),
-            Softmax(nr_class, cfg["token_vector_width"]))
+            Softmax(nr_class, cfg["token_vector_width"]),
+        )
 
 
 @layerize
@@ -56,11 +57,12 @@ def get_pytt_class_tokens(docs, drop=0.0):
         for doc, dY in zip(docs, d_outputs):
             if doc._.pytt_d_last_hidden_state is None:
                 xp = get_array_module(doc._.pytt_last_hidden_state)
-                grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype='f')
+                grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype="f")
                 doc._.pytt_d_last_hidden_state = grads
             for i, sent in enumerate(doc.sents):
                 doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
         return None
+
     return outputs, backprop_pytt_class_tokens
 
 

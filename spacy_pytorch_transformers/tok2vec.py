@@ -113,7 +113,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             gradients = []
             for doc in docs:
                 gradients.append(doc._.pytt_d_last_hidden_state)
-                #gradients.append(
+                # gradients.append(
                 #    Activations(
                 #        doc._.pytt_d_last_hidden_state,
                 #        doc._.pytt_d_pooler_output,
@@ -121,7 +121,7 @@ class PyTT_TokenVectorEncoder(Pipe):
                 #        doc._.pytt_d_all_attentions,
                 #        is_grad=True,
                 #    )
-                #)
+                # )
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
@@ -205,7 +205,7 @@ def get_word_pieces(sents, drop=0.0):
         wp_start = sent._.pytt_start
         wp_end = sent._.pytt_end
         if wp_start is not None and wp_end is not None:
-            outputs.append(sent.doc._.pytt_word_pieces[wp_start:wp_end+1])
+            outputs.append(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
         else:
             # Empty slice.
             outputs.append(sent.doc._.pytt_word_pieces[0:0])
@@ -216,6 +216,7 @@ def get_word_pieces(sents, drop=0.0):
 def get_last_hidden_state(activations, drop=0.0):
     def backprop_last_hidden_state(d_last_hidden_state, sgd=None):
         return d_last_hidden_state
+
     return activations.last_hidden_state, backprop_last_hidden_state
 
 
@@ -223,14 +224,14 @@ def without_length_batching(model, _):
     def apply_model_padded(inputs, drop=0.0):
         X = pad_batch(inputs)
         Y, get_dX = model.begin_update(X, drop=drop)
-        outputs = [Y[i, :len(seq)] for i, seq in enumerate(inputs)]
+        outputs = [Y[i, : len(seq)] for i, seq in enumerate(inputs)]
 
         def backprop_batched(d_outputs, sgd=None):
             dY = pad_batch(d_outputs)
             dY = dY.reshape(len(d_outputs), -1, dY.shape[-1])
             dX = get_dX(dY, sgd=sgd)
             if dX is not None:
-                d_inputs = [dX[i, :len(seq)] for i, seq in enumerate(d_outputs)]
+                d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]
             else:
                 d_inputs = None
             return d_inputs

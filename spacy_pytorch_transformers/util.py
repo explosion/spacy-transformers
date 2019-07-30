@@ -8,8 +8,16 @@ import torch
 from . import _tokenizers
 
 
-SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>", "<|endoftext|>",
-                  "<s>", "</s>")
+SPECIAL_TOKENS = (
+    "[CLS]",
+    "[BOS]",
+    "[SEP]",
+    "<cls>",
+    "<sep>",
+    "<|endoftext|>",
+    "<s>",
+    "</s>",
+)
 
 
 @dataclass
