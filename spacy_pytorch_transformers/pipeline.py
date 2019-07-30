@@ -50,10 +50,10 @@ def get_pytt_class_tokens(docs, drop=0.0):
     for doc in docs:
         wp_tensor = doc._.pytt_last_hidden_state
         Y = xp.vstack([wp_tensor[sent._.pytt_start] for sent in doc.sents])
-        outputs.append(xp.vstack(Y))
+        outputs.append(Y)
 
     def backprop_pytt_class_tokens(d_outputs, sgd=None):
-        for doc, dY in docs:
+        for doc, dY in zip(docs, d_outputs):
             if doc._.pytt_d_last_hidden_state is None:
                 xp = get_array_module(doc._.pytt_last_hidden_state)
                 grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype='f')
@@ -61,7 +61,7 @@ def get_pytt_class_tokens(docs, drop=0.0):
             for i, sent in enumerate(doc.sents):
                 doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
         return None
-    return Y, backprop_pytt_class_tokens
+    return outputs, backprop_pytt_class_tokens
 
 
 @layerize
