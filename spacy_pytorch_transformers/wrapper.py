@@ -8,6 +8,7 @@ from .util import get_pytt_model, Activations
 
 GRAD_CLIP_FACTOR = 10
 LEARN_RATE_FACTOR = 10
+CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 
 class PyTT_Wrapper(PyTorchWrapper):
@@ -16,7 +17,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     @classmethod
     def from_pretrained(cls, name):
         self = cls(name)
-        self._model = self._model.from_pretrained(name)
+        self._model = self._model.from_pretrained(name, **CONFIG)
         return self
 
     def __init__(self, name):
@@ -43,15 +44,15 @@ class PyTT_Wrapper(PyTorchWrapper):
         def backward_pytorch(dy_data, sgd=None):
             y_for_bwd = [y_var[0]]
             dy_for_bwd = [xp2torch(dy_data)]
-            #if dy_data.has_last_hidden_state:
+            # if dy_data.has_last_hidden_state:
             #    dy_for_bwd.append(xp2torch(dy_data.last_hidden_state))
             #    y_for_bwd.append(y_var[0])
-            #if dy_data.has_pooler_output:
+            # if dy_data.has_pooler_output:
             #    dy_for_bwd.append(xp2torch(dy_data.pooler_output))
             #    y_for_bwd.append(y_var[1])
-            #if dy_data.has_all_hidden_states:
+            # if dy_data.has_all_hidden_states:
             #    raise ValueError("Gradients on all hidden states not supported yet.")
-            #if dy_data.has_all_attentions:
+            # if dy_data.has_all_attentions:
             #    raise ValueError("Gradients on all attentions not supported yet.")
             torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
             if sgd is not None:
@@ -59,8 +60,8 @@ class PyTT_Wrapper(PyTorchWrapper):
                     self._optimizer = self._create_optimizer(sgd)
                 if sgd.max_grad_norm:
                     torch.nn.utils.clip_grad_norm_(
-                        self._model.parameters(),
-                        sgd.max_grad_norm / GRAD_CLIP_FACTOR)
+                        self._model.parameters(), sgd.max_grad_norm / GRAD_CLIP_FACTOR
+                    )
                 self._optimizer.step()
                 self._optimizer.zero_grad()
             return None
@@ -69,6 +70,9 @@ class PyTT_Wrapper(PyTorchWrapper):
         return output, backward_pytorch
 
     def _create_optimizer(self, sgd):
-        optimizer = AdamW(self._model.parameters(), lr=sgd.alpha / LEARN_RATE_FACTOR,
-            betas=(sgd.b1, sgd.b2))
+        optimizer = AdamW(
+            self._model.parameters(),
+            lr=sgd.alpha / LEARN_RATE_FACTOR,
+            betas=(sgd.b1, sgd.b2),
+        )
         return optimizer

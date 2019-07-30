@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
 from thinc.extra.wrappers import torch2xp
+import torch
 
 from . import _tokenizers
 
@@ -26,7 +27,13 @@ class Activations:
         fields = list(fields)
         fields[0] = torch2xp(fields[0])
         if len(fields) >= 2:
-            fields[1] = torch2xp(fields[1])
+            po = fields[1]  # pooler output
+            if isinstance(po, tuple) and all(x is None for x in po):
+                fields[1] = None
+            elif isinstance(po, tuple) and all(isinstance(x, torch.Tensor) for x in po):
+                fields[1] = [torch2xp(x) for x in po]
+            else:
+                fields[1] = torch2xp(fields[1])
         else:
             fields.append(None)
         return cls(*fields, is_grad=is_grad)
