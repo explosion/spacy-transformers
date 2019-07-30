@@ -146,7 +146,10 @@ class PyTT_TokenVectorEncoder(Pipe):
         activations (iterable): A batch of activations.
         """
         for doc, wp_tensor in zip(docs, activations):
-            doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
+            if doc.tensor is None:
+                doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
+            else:
+                doc.tensor.fill(0)
             doc._.pytt_last_hidden_state = wp_tensor
             assert wp_tensor.shape == (
                 len(doc._.pytt_word_pieces),
