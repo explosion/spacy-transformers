@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 import thinc.extra.datasets
 import spacy
+import torch
 from spacy.util import minibatch, compounding
 import tqdm
 import unicodedata
@@ -18,6 +19,9 @@ import unicodedata
 )
 def main(model, output_dir=None, n_iter=20, n_texts=100):
     random.seed(0)
+    is_using_gpu = spacy.prefer_gpu()
+    if is_using_gpu:
+        torch.set_default_tensor_type("torch.cuda.FloatTensor")
     if output_dir is not None:
         output_dir = Path(output_dir)
         if not output_dir.exists():
