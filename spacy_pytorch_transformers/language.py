@@ -62,28 +62,37 @@ class PyTT_Language(Language):
 
     def update(self, docs, golds, drop=0.0, sgd=None, losses=None, component_cfg={}):
         component_cfg = dict(component_cfg)
-        components = ["sentencizer", "pytt_wordpiecer"]
-        with self.disable_pipes(*[p for p in self.pipe_names if p not in components]):
-            docs = [self(doc) if isinstance(doc, str) else doc for doc in docs]
+        sentencizer = self.get_pipe("sentencizer")
+        wp = self.get_pipe("pytt_wordpiecer")
         tok2vec = self.get_pipe("pytt_tok2vec")
+        textcat = self.get_pipe("pytt_textcat")
+        new_docs = []
+        for doc in docs:
+            if isinstance(doc, str):
+                doc = self.make_doc(doc)
+            doc = sentencizer(doc)
+            doc = wp(doc)
+            new_docs.append(doc)
+        docs = new_docs
         pytt_outputs, backprop_tok2vec = tok2vec.begin_update(
             docs, drop=drop, **component_cfg.get("pytt_tok2vec", {})
         )
         assert len(docs) == len(pytt_outputs)
         tok2vec.set_annotations(docs, pytt_outputs)
-        for doc in docs:
-            assert doc._.pytt_last_hidden_state is not None
-        components = [p for p in components if p in self.pipe_names]
-        with self.disable_pipes("pytt_tok2vec", *components):
-            super().update(
-                docs,
-                golds,
-                drop=0.0,
-                sgd=sgd,
-                losses=losses,
-                component_cfg=component_cfg,
-            )
+        textcat.update(docs, golds, drop=drop, sgd=sgd, losses=losses, component_cfg=component_cfg)
         backprop_tok2vec(docs, sgd=sgd)
+        #for doc in docs:
+        #    assert doc._.pytt_last_hidden_state is not None
+        #components = [p for p in components if p in self.pipe_names]
+        #with self.disable_pipes("pytt_tok2vec", *components):
+        #    super().update(
+        #        docs,
+        #        golds,
+        #        drop=0.0,
+        #        sgd=sgd,
+        #        losses=losses,
+        #        component_cfg=component_cfg,
+        #    )
 
 
 def get_defaults(lang):
