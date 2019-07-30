@@ -201,9 +201,13 @@ def get_word_pieces(sents, drop=0.0):
     assert isinstance(sents[0], Span)
     outputs = []
     for sent in sents:
-        wp_start = sent[0]._.pytt_alignment[0] - 1
-        wp_end = sent[-1]._.pytt_alignment[-1] + 2
-        outputs.append(sent.doc._.pytt_word_pieces[wp_start:wp_end])
+        wp_start = sent._.pytt_start
+        wp_end = sent._.pytt_end
+        if wp_start is not None and wp_end is not None:
+            outputs.append(sent.doc._.pytt_word_pieces[wp_start:wp_end+1])
+        else:
+            # Empty slice.
+            outputs.append(sent.doc._.pytt_word_pieces[0:0])
     return outputs, None
 
 

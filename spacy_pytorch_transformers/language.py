@@ -96,7 +96,12 @@ def get_defaults(lang):
 
 
 def get_wp_start(span):
-    wp_start = span[0]._.pytt_alignment[0]
+    for token in span:
+        if token._.pytt_alignment:
+            wp_start = token._.pytt_alignment[0]
+            break
+    else:
+        return None
     wordpieces = span.doc._.pytt_word_pieces_
     if wp_start >= 1 and is_special_token(wordpieces[wp_start - 1]):
         return wp_start - 1
@@ -105,7 +110,12 @@ def get_wp_start(span):
 
 
 def get_wp_end(span):
-    wp_end = span[-1]._.pytt_alignment[-1]
+    for token in reversed(span):
+        if token._.pytt_alignment:
+            wp_end = token._.pytt_alignment[-1]
+            break
+    else:
+        return None
     wordpieces = span.doc._.pytt_word_pieces_
     if wp_end < len(wordpieces) and is_special_token(wordpieces[wp_end + 1]):
         return wp_end + 1
@@ -116,7 +126,6 @@ def get_wp_end(span):
 def get_span_wp_getter(attr):
     def span_getter(span):
         return [token._.get(attr) for token in span]
-
     return span_getter
 
 
@@ -124,7 +133,6 @@ def get_token_wp_getter(attr):
     def token_getter(token):
         doc_values = token.doc._.get(attr)
         return doc_values[token.i] if doc_values is not None else None
-
     return token_getter
 
 
@@ -135,13 +143,17 @@ def get_span_tok2vec_getter(attr):
             return None
         wp_start = span[0]._.pytt_alignment[0]
         wp_end = span[-1]._.pytt_alignment[-1]
-        return doc_activations[wp_start:wp_end]
-
+        if wp_start is not None and wp_end is not None:
+            return doc_activations[wp_start:wp_end]
+        else:
+            # Return empty slice.
+            return doc_activations[0:0]
     return span_getter
 
 
 def get_token_tok2vec_getter(attr):
     def token_getter(token):
-        return token.doc[token.i : token.i + 1]._.get(attr)
-
+        # Delegate through span, so get a span with just the token.
+        span = token.doc[token.i : token.i + 1]
+        return span._.get(attr)
     return token_getter

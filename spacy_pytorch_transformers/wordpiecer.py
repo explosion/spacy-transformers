@@ -1,7 +1,7 @@
 from spacy.pipeline import Pipe
 from spacy.util import minibatch
 
-from .util import get_pytt_tokenizer, align_word_pieces
+from .util import get_pytt_tokenizer, align_word_pieces, flatten_list
 
 
 class PyTT_WordPiecer(Pipe):
@@ -91,7 +91,7 @@ class PyTT_WordPiecer(Pipe):
             doc_alignment = []
             doc_word_piece_ids = []
             for sent, wp_tokens in zip(doc.sents, output):
-                spacy_tokens = [w.text for w in sent]
+                spacy_tokens = [self.model.clean_token(w.text) for w in sent]
                 sent_align = align_word_pieces(spacy_tokens, wp_tokens)
                 # We need to align into the flattened document list, instead
                 # of just into this sentence. So offset by number of wp tokens.
@@ -103,7 +103,7 @@ class PyTT_WordPiecer(Pipe):
                 doc_word_pieces.extend(wp_tokens)
                 doc_word_piece_ids.extend(self.model.convert_tokens_to_ids(wp_tokens))
             assert len(doc_alignment) == len(doc)
-            max_aligned = max(max(token_align) for token_align in doc_alignment)
+            max_aligned = max(flatten_list(doc_alignment))
             assert max_aligned <= len(doc_word_pieces)
             doc._.pytt_word_pieces = doc_word_piece_ids
             doc._.pytt_word_pieces_ = doc_word_pieces
