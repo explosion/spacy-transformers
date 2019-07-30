@@ -18,4 +18,4 @@ def test_wordpiecer(wp):
     doc = wp(doc)
     cleaned_words = wp.model.clean_wp_tokens(doc._.pytt_word_pieces_)
     cleaned_words = [w for w in cleaned_words if not is_special_token(w)]
-    assert cleaned_words == words
+    assert "".join(cleaned_words) == "".join(words)

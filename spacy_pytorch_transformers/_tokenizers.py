@@ -247,7 +247,7 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         return text.strip()
 
     def clean_wp_tokens(self, tokens):
-        return tokens
+        return [t.replace("</w>", "").strip() for t in tokens]
 
     def add_special_tokens(self, tokens):
         return tokens
