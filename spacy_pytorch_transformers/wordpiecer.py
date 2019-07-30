@@ -1,4 +1,5 @@
 from spacy.pipeline import Pipe
+from spacy.util import minibatch
 
 from .util import get_pytt_tokenizer, align_word_pieces
 
@@ -36,6 +37,32 @@ class PyTT_WordPiecer(Pipe):
         self.cfg = cfg
         self.model = model
 
+    def __call__(self, doc):
+        """Apply the pipe to one document. The document is
+        modified in-place, and returned.
+
+        Both __call__ and pipe should delegate to the `predict()`
+        and `set_annotations()` methods.
+        """
+        self.require_model()
+        scores = self.predict([doc])
+        self.set_annotations([doc], scores)
+        return doc
+
+    def pipe(self, stream, batch_size=128):
+        """Process Doc objects as a stream and assign the extracted features.
+
+        stream (iterable): A stream of Doc objects.
+        batch_size (int): The number of texts to buffer.
+        YIELDS (spacy.tokens.Doc): Processed Docs in order.
+        """
+        for docs in minibatch(stream, size=batch_size):
+            docs = list(docs)
+            outputs = self.predict(docs)
+            self.set_annotations(docs, outputs)
+            for doc in docs:
+                yield doc
+
     def predict(self, docs):
         """Run the word-piece tokenizer on a batch of docs and return the
         extracted strings.
@@ -50,7 +77,7 @@ class PyTT_WordPiecer(Pipe):
             output.append([])
             for sent in doc.sents:
                 output[-1].append([bos] + self.model.tokenize(sent.text) + [sep])
-        return output, None
+        return output
 
     def set_annotations(self, docs, outputs, tensors=None):
         """Assign the extracted tokens and IDs to the Doc objects.
