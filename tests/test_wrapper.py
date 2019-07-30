@@ -33,4 +33,4 @@ def test_bert_wrapper_from_pretrained(name, ids):
     assert outputs.last_hidden_state.shape == (1, 6, 768)
     assert outputs.pooler_output.shape == (1, 768)
     optimizer = Adam(model.ops, 0.001)
-    backprop(outputs, sgd=optimizer)
+    backprop(outputs.last_hidden_state, sgd=optimizer)
