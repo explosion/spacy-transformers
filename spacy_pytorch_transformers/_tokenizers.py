@@ -10,8 +10,9 @@ from collections import OrderedDict
 import spacy
 import ftfy
 import srsly
-import re
+import regex
 import sentencepiece
+from pathlib import Path
 
 import pytorch_transformers as pytt
 from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
@@ -51,6 +52,7 @@ class SerializationMixin:
         for field in self.serialization_fields:
             setattr(self, field, msg[field])
         self.finish_deserializing()
+        return self
 
     def to_bytes(self, exclude=tuple(), **kwargs):
         self.prepare_for_serialization()
@@ -126,7 +128,7 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "encoder",
-        "bpe_ranks",
+        "_bpe_ranks",
         "errors",
         "_regex_pattern",
     ]
@@ -138,16 +140,22 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
             setattr(self, field, None)
         self.byte_encoder = None
         self.byte_decoder = None
+        self.bpe_ranks = {}
         self.cache = None
         self.pat = None
         return self
 
     def finish_deserializing(self):
+        self.bpe_ranks = deserialize_bpe_ranks(self._bpe_ranks)
         self.decoder = {v: k for k, v in self.encoder.items()}
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
         self.cache = {}
-        self.pat = re.compile(self._regex_pattern)
+        self.pat = regex.compile(self._regex_pattern, flags=regex.V0)
+
+    def prepare_for_serialization(self):
+        self._regex_pattern = self.pat.pattern
+        self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
 
     def clean_token(self, text):
         return text.strip()
@@ -160,7 +168,7 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
 
 
 class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin):
-    serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "bpe_ranks"]
+    serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "_bpe_ranks"]
 
     @classmethod
     def blank(cls):
@@ -171,13 +179,18 @@ class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin
         self.fix_text = None
         self.cache = None
         self.decoder = {}
+        self.bpe_ranks = {}
         return self
 
     def finish_deserializing(self):
+        self.bpe_ranks = deserialize_bpe_ranks(self._bpe_ranks)
         self.nlp = spacy.blank("en")
         self.fix_text = ftfy.fix_text
         self.cache = {}
         self.decoder = {v: k for k, v in self.encoder.items()}
+
+    def prepare_for_serialization(self):
+        self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
 
     def clean_token(self, text):
         return text.strip()
@@ -224,7 +237,7 @@ class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin
 
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
-    serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "bpe_ranks"]
+    serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "_bpe_ranks"]
 
     @classmethod
     def blank(cls):
@@ -235,13 +248,18 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         self.fix_text = None
         self.cache = None
         self.decoder = {}
+        self.bpe_ranks = {}
         return self
 
     def finish_deserializing(self):
+        self.bpe_ranks = deserialize_bpe_ranks(self._bpe_ranks)
         self.nlp = spacy.blank("en")
         self.fix_text = ftfy.fix_text
         self.cache = {}
         self.decoder = {v: k for k, v in self.encoder.items()}
+
+    def prepare_for_serialization(self):
+        self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
 
     def clean_token(self, text):
         return text.strip()
@@ -269,6 +287,11 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         self.sp_model = None
         return self
 
+    def prepare_for_serialization(self):
+        vocab_path = Path(self.vocab_file)
+        with vocab_path.open("rb") as f:
+            self.vocab_bytes = f.read()
+
     def finish_deserializing(self):
         self.sp_model = sentencepiece.SentencePieceProcessor()
         self.sp_model.LoadFromSerializedProto(self.vocab_bytes)
@@ -281,3 +304,11 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
 
     def add_special_tokens(self, tokens):
         return tokens
+
+
+def serialize_bpe_ranks(data):
+    return [{"key": list(key), "value": value} for key, value in data.items()]
+
+
+def deserialize_bpe_ranks(data):
+    return {tuple(item["key"]): item["value"] for item in data}

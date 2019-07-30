@@ -20,7 +20,7 @@ def ids(tokenizer):
 def test_bert_wrapper_from_pretrained(name, ids):
     model = PyTT_Wrapper.from_pretrained(name)
     outputs, backprop = model.begin_update(ids.reshape((1, -1)))
-    assert len(outputs) == 2
+    assert len(outputs) == 4
     assert outputs.last_hidden_state.shape == (1, 6, 768)
     assert outputs.pooler_output.shape == (1, 768)
     optimizer = Adam(model.ops, 0.001)
