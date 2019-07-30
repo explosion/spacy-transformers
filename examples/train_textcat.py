@@ -43,6 +43,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     (train_texts, train_cats), (dev_texts, dev_cats) = load_data(limit=n_texts)
     train_texts = train_texts[:n_texts]
     train_cats = train_cats[:n_texts]
+
     print(
         f"Using {n_texts} examples ({len(train_texts)} training, {len(dev_texts)} evaluation)"
     )
@@ -52,7 +53,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     optimizer = nlp.resume_training()
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
-    batch_sizes = compounding(2.0, 2.0, 1.001)
+    batch_sizes = compounding(2.0, 8.0, 1.001)
     for i in range(n_iter):
         losses = {}
         # batch up the examples using spaCy's minibatch
@@ -67,7 +68,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
         scores = evaluate(nlp, dev_texts, dev_cats)
         print(
             "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
-                losses["textcat"],
+                losses["pytt_textcat"],
                 scores["textcat_p"],
                 scores["textcat_r"],
                 scores["textcat_f"],
@@ -117,7 +118,7 @@ def evaluate(nlp, texts, cats):
     fp = 1e-8  # False positives
     fn = 1e-8  # False negatives
     tn = 0.0  # True negatives
-    for i, doc in nlp.pipe(texts):
+    for i, doc in enumerate(nlp.pipe(texts)):
         gold = cats[i]
         for label, score in doc.cats.items():
             if label not in gold:
