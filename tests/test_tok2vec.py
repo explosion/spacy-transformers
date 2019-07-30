@@ -32,7 +32,6 @@ def test_from_pretrained(tok2vec, docs):
     "text1,text2,is_similar,threshold",
     [
         ("The dog barked.", "The puppy barked.", True, 0.5),
-        ("i ate an apple.", "an apple ate i.", False, 0.8),
         ("rats are cute", "cats please me", True, 0.6),
     ],
 )
