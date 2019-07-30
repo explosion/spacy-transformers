@@ -235,11 +235,27 @@ def _align(seq1, seq2, offset):
     # For each token in seq1, get the set of tokens in seq2
     # that share at least one character with that token.
     alignment = [set() for _ in seq1]
+    unaligned = set(range(len(seq2)))
     for char_position in range(map1.shape[0]):
         i = map1[char_position]
         j = map2[char_position]
-        alignment[i].add(offset + j)
-    return [sorted(list(s)) for s in alignment]
+        alignment[i].add(j)
+        if j in unaligned:
+            unaligned.remove(j)
+    # Sort, make list
+    output = [sorted(list(s)) for s in alignment]
+    # Expand alignment to adjacent unaligned tokens of seq2
+    for indices in output:
+        while indices[0] >= 1 and indices[0]-1 in unaligned:
+            indices.insert(0, indices[0]-1)
+        last = len(seq2)-1
+        while indices[-1] < last and indices[-1]+1 in unaligned:
+            indices.append(indices[-1]+1)
+    # Add offset
+    for indices in output:
+        for i in range(len(indices)):
+            indices[i] += offset
+    return output
 
 
 def _get_char_map(seq):

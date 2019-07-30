@@ -151,7 +151,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             assert wp_tensor.shape == (
                 len(doc._.pytt_word_pieces),
                 self.model.nO,
-            ), wp_tensor.shape
+            ), (len(doc._.pytt_word_pieces), self.model.nO, wp_tensor.shape)
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
@@ -202,6 +202,7 @@ def get_word_pieces(sents, drop=0.0):
     assert isinstance(sents[0], Span)
     outputs = []
     for sent in sents:
+        wordpieces = sent.doc._.pytt_word_pieces_
         wp_start = sent._.pytt_start
         wp_end = sent._.pytt_end
         if wp_start is not None and wp_end is not None:
@@ -286,6 +287,11 @@ def foreach_sentence(layer, drop_factor=1.0):
     def sentence_fwd(docs, drop=0.0):
         sents = flatten_list(doc.sents for doc in docs)
         sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
+        total_rows = sum(sa.shape[0] for sa in sent_acts)
+        total_wps = sum(len(doc._.pytt_word_pieces) for doc in docs)
+        assert total_rows == total_wps, (total_rows, total_wps)
+        for sent, sa in zip(sents, sent_acts):
+            assert ((sent._.pytt_end+1)-sent._.pytt_start) == sa.shape[0], (sent._.pytt_start, sent._.pytt_end+1, sa.shape)
         # sent_acts is List[array], one per sent. Go to List[List[array]],
         # then List[array] (one per doc).
         nested = unflatten_list(sent_acts, [len(list(doc.sents)) for doc in docs])
@@ -311,6 +317,9 @@ def foreach_sentence(layer, drop_factor=1.0):
             n_sents = [len(L) for L in doc_sent_lengths]
             return [ops.flatten(ds) for ds in unflatten_list(d_sents, n_sents)]
 
+        assert len(docs) == len(doc_acts)
+        for doc, da in zip(docs, doc_acts):
+            assert len(doc._.pytt_word_pieces) == da.shape[0], (len(doc._.pytt_word_pieces), da.shape[0])
         return doc_acts, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
