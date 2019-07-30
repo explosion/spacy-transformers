@@ -2,7 +2,8 @@ import spacy.pipeline
 from spacy.util import minibatch
 from thinc.neural.util import get_array_module
 from spacy._ml import build_simple_cnn_text_classifier
-from thinc.api import layerize, chain
+from thinc.api import layerize, chain, flatten_add_lengths
+from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax
 
 
@@ -31,31 +32,39 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The model.
         """
-        tok2vec = layerize(get_pytt_class_tokens)
-        tok2vec.nO = cfg["token_vector_width"]
-        return chain(tok2vec, Softmax(nr_class, cfg["token_vector_width"]))
+        return chain(
+            get_pytt_class_tokens,
+            flatten_add_lengths,
+            Pooling(mean_pool),
+            Softmax(nr_class, cfg["token_vector_width"]))
 
 
+@layerize
 def get_pytt_class_tokens(docs, drop=0.0):
-    """Function that can be wrapped as a Thinc model, that gets the
-    pytt_last_hidden extension attribute from a batch of Doc objects. During
-    the backward pass, we accumulate the gradients into
-    doc._.pytt_d_last_hidden_state.
+    """Output a List[array], where the array is the class vector
+    for each sentence in the document. To backprop, we increment the values
+    in the doc._.pytt_d_last_hidden_state array.
     """
     xp = get_array_module(docs[0]._.pytt_last_hidden_state)
-    Y = xp.vstack([doc._.pytt_last_hidden_state[0] for doc in docs])
+    outputs = []
+    for doc in docs:
+        wp_tensor = doc._.pytt_last_hidden_state
+        Y = xp.vstack([wp_tensor[sent._.pytt_start] for sent in doc.sents])
+        outputs.append(xp.vstack(Y))
 
-    def backprop_pytt_class_tokens(dY, sgd=None):
-        for i, doc in enumerate(docs):
+    def backprop_pytt_class_tokens(d_outputs, sgd=None):
+        for doc, dY in docs:
             if doc._.pytt_d_last_hidden_state is None:
                 xp = get_array_module(doc._.pytt_last_hidden_state)
                 grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype='f')
                 doc._.pytt_d_last_hidden_state = grads
-            doc._.pytt_d_last_hidden_state[0] += dY[i]
+            for i, sent in enumerate(doc.sents):
+                doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
         return None
     return Y, backprop_pytt_class_tokens
 
 
+@layerize
 def get_pytt_last_hidden(docs, drop=0.0):
     """Function that can be wrapped as a Thinc model, that gets the
     pytt_last_hidden extension attribute from a batch of Doc objects. During
