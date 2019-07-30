@@ -66,10 +66,9 @@ def get_pytt_class_tokens(docs, drop=0.0):
 
 @layerize
 def get_pytt_last_hidden(docs, drop=0.0):
-    """Function that can be wrapped as a Thinc model, that gets the
-    pytt_last_hidden extension attribute from a batch of Doc objects. During
-    the backward pass, we accumulate the gradients into
-    doc._.pytt_d_last_hidden_state.
+    """Output a List[array], where the array is the last hidden vector vector
+    for each document. To backprop, we increment the values
+    in the doc._.pytt_d_last_hidden_state array.
     """
     outputs = [doc._.pytt_last_hidden_state for doc in docs]
     for out in outputs:
