@@ -1,6 +1,7 @@
 from spacy.language import Language
 from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
+from spacy.gold import GoldParse
 
 from .util import is_special_token
 from . import about
