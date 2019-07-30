@@ -21,6 +21,23 @@ def test_wordpiecer(wp):
     assert "".join(cleaned_words) == "".join(words)
 
 
+def test_xlnet_weird_align(name, wp):
+    if "xlnet" not in name.lower():
+        return True
+    text = "Well, i rented this movie and found out it realllllllly sucks."
+    spacy_tokens = ['Well', ',', 'i', 'rented', 'this', 'movie', 'and', 'found', 'out', 'it', 'realllllllly', 'sucks', '.']
+    spaces = [True] * len(spacy_tokens)
+    spaces[0] = False
+    spaces[-2] = False
+    spaces[-1] = False
+    doc = Doc(wp.vocab, words=spacy_tokens, spaces=spaces)
+    doc[1].is_sent_start = False
+    assert doc.text == text
+    doc = wp(doc)
+    assert doc._.pytt_word_pieces_[0] == "<cls>"
+    assert doc._.pytt_word_pieces_[-1] == "<sep>"
+    
+
 def test_tokenizers_to_from_bytes(name):
     text = "hello world"
     tokenizer_cls = get_pytt_tokenizer(name)
