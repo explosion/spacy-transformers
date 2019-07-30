@@ -25,7 +25,10 @@ class Activations:
         """
         fields = list(fields)
         fields[0] = torch2xp(fields[0])
-        fields[1] = torch2xp(fields[1])
+        if len(fields) >= 2:
+            fields[1] = torch2xp(fields[1])
+        else:
+            fields.append(None)
         return cls(*fields, is_grad=is_grad)
 
     @classmethod
