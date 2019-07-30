@@ -119,8 +119,8 @@ def load_data(limit=0, split=0.8):
 
 def evaluate(nlp, texts, cats):
     tp = 0.0  # True positives
-    fp = 1e-8  # False positives
-    fn = 1e-8  # False negatives
+    fp = 0.0  # False positives
+    fn = 0.0  # False negatives
     tn = 0.0  # True negatives
     for i, doc in enumerate(nlp.pipe(texts, batch_size=8)):
         gold = cats[i]
@@ -137,8 +137,8 @@ def evaluate(nlp, texts, cats):
                 tn += 1
             elif score < 0.5 and gold[label] >= 0.5:
                 fn += 1
-    precision = tp / (tp + fp)
-    recall = tp / (tp + fn)
+    precision = tp / (tp + fp + 1e-8)
+    recall = tp / (tp + fn + 1e-8)
     if (precision + recall) == 0:
         f_score = 0.0
     else:
