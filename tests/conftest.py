@@ -2,7 +2,7 @@ import pytest
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
 from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
 
-MODEL_NAMES = ["gpt2"]
+MODEL_NAMES = ["bert-base-uncased"]
 
 
 @pytest.fixture(scope="session", params=MODEL_NAMES)
