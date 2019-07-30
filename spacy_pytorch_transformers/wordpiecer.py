@@ -70,13 +70,12 @@ class PyTT_WordPiecer(Pipe):
         docs (iterable): A batch of Docs to process.
         RETURNS (tuple): A (strings, None) tuple.
         """
-        bos = self.model.cls_token
-        sep = self.model.sep_token
         output = []
         for doc in docs:
             output.append([])
             for sent in doc.sents:
-                output[-1].append([bos] + self.model.tokenize(sent.text) + [sep])
+                tokens = self.model.tokenize(sent.text)
+                output[-1].append(self.model.add_special_tokens(tokens))
         return output
 
     def set_annotations(self, docs, outputs, tensors=None):
@@ -92,6 +91,7 @@ class PyTT_WordPiecer(Pipe):
             doc_word_piece_ids = []
             for sent, wp_tokens in zip(doc.sents, output):
                 spacy_tokens = [self.model.clean_token(w.text) for w in sent]
+                wp_tokens = self.model.clean_wp_tokens(wp_tokens)
                 sent_align = align_word_pieces(spacy_tokens, wp_tokens)
                 # We need to align into the flattened document list, instead
                 # of just into this sentence. So offset by number of wp tokens.

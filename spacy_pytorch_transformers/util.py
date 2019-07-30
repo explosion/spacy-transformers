@@ -197,12 +197,9 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
         wp_tokens.pop(-1)
     if not spacy_tokens or not wp_tokens:
         return []
-    wp_tokens = [wpt.replace("##", "", 1) for wpt in wp_tokens]
-    # XLNet uses this as the control char?? Wtf.
-    wp_tokens = [wpt.replace("\u2581", "", 1) for wpt in wp_tokens]
     try:
         assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
-    except:
+    except AssertionError:
         print(repr("".join(spacy_tokens).lower()))
         print(repr("".join(wp_tokens).lower()))
         raise
@@ -247,8 +244,7 @@ def pad_batch(batch):
         else:
             pad_desc = [[0, 0] for _ in seq.shape]
         pad_desc[0][1] = max_len - len(seq)
-        padded.append(
-            xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
+        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
     return xp.vstack(padded)
 
 

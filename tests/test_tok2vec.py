@@ -1,30 +1,16 @@
 import pytest
 from numpy.testing import assert_equal
-from spacy_pytorch_transformers import PyTT_Language, PyTT_TokenVectorEncoder
-from spacy_pytorch_transformers import PyTT_WordPiecer
+from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
 from spacy.vocab import Vocab
 import pickle
 
 from .util import make_tempdir, is_valid_tensor
 
 
-@pytest.fixture(scope="session")
-def name():
-    return "bert-base-uncased"
-
-
 @pytest.fixture
-def texts():
-    return ["the cat sat on the mat.", "hello world."]
-
-
-@pytest.fixture
-def nlp(name):
-    nlp = PyTT_Language(pytt_name=name)
-    nlp.add_pipe(nlp.create_pipe("sentencizer"))
-    wordpiecer = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
-    nlp.add_pipe(wordpiecer)
-    return nlp
+def docs(nlp):
+    texts = ["the cat sat on the mat.", "hello world."]
+    return [nlp(text) for text in texts]
 
 
 @pytest.fixture(scope="session")
@@ -32,11 +18,6 @@ def tok2vec(name):
     cfg = {"batch_by_length": True}
     vocab = Vocab()
     return PyTT_TokenVectorEncoder.from_pretrained(vocab, name, **cfg)
-
-
-@pytest.fixture
-def docs(nlp, texts):
-    return [nlp(text) for text in texts]
 
 
 def test_from_pretrained(tok2vec, docs):
@@ -55,8 +36,7 @@ def test_from_pretrained(tok2vec, docs):
         ("rats are cute", "cats please me", True, 0.6),
     ],
 )
-def test_similarity(nlp, tok2vec, text1, text2, is_similar, threshold):
-    nlp.add_pipe(tok2vec)
+def test_similarity(nlp, text1, text2, is_similar, threshold):
     doc1 = nlp(text1)
     doc2 = nlp(text2)
     similarity = doc1.similarity(doc2)
