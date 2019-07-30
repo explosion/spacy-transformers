@@ -164,11 +164,12 @@ class PyTT_TokenVectorEncoder(Pipe):
                     doc.tensor[i] += wp_tensor[j] / align_sizes[j]
             # To make this weighting work, we "align" the boundary tokens against
             # every token in their sentence.
-            for sent in doc.sents:
-                cls_vector = wp_tensor[sent._.pytt_start]
-                sep_vector = wp_tensor[sent._.pytt_end]
-                doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
-                doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
+            if doc.tensor.sum() != wp_tensor.sum():
+                for sent in doc.sents:
+                    cls_vector = wp_tensor[sent._.pytt_start]
+                    sep_vector = wp_tensor[sent._.pytt_end]
+                    doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
+                    doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
