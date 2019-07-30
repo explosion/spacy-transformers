@@ -51,7 +51,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     print(
         f"Using {n_texts} examples ({len(train_texts)} training, {len(dev_texts)} evaluation)"
     )
-    total_chars = sum(len(text) for text in train_texts)
+    total_words = sum(len(text.split()) for text in train_texts)
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
 
     optimizer = nlp.resume_training()
@@ -63,11 +63,11 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
         # batch up the examples using spaCy's minibatch
         random.shuffle(train_data)
         batches = minibatch(train_data, size=batch_sizes)
-        with tqdm.tqdm(total=total_chars, leave=False) as pbar:
+        with tqdm.tqdm(total=total_words, leave=False) as pbar:
             for batch in batches:
                 texts, annotations = zip(*batch)
                 nlp.update(texts, annotations, sgd=optimizer, drop=0.2, losses=losses)
-                pbar.update(sum(len(text) for text in texts))
+                pbar.update(sum(len(text.split()) for text in texts))
         # evaluate on the dev data split off in load_data()
         scores = evaluate(nlp, dev_texts, dev_cats)
         print(
