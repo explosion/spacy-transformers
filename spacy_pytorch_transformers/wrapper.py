@@ -6,8 +6,8 @@ import torch
 
 from .util import get_pytt_model, Activations
 
-GRAD_CLIP_FACTOR = 10
-LEARN_RATE_FACTOR = 10
+GRAD_CLIP_FACTOR = 100
+LEARN_RATE_FACTOR = 100
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 
