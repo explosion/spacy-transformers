@@ -67,32 +67,36 @@ class PyTT_Language(Language):
         tok2vec = self.get_pipe("pytt_tok2vec")
         textcat = self.get_pipe("pytt_textcat")
         new_docs = []
-        for doc in docs:
+        new_golds = []
+        for doc, gold in zip(docs, golds):
             if isinstance(doc, str):
                 doc = self.make_doc(doc)
             doc = sentencizer(doc)
             doc = wp(doc)
+            if not isinstance(gold, GoldParse):
+                gold = GoldParse(doc, **gold)
             new_docs.append(doc)
+            new_golds.append(gold)
         docs = new_docs
+        golds = new_golds
         pytt_outputs, backprop_tok2vec = tok2vec.begin_update(
             docs, drop=drop, **component_cfg.get("pytt_tok2vec", {})
         )
         assert len(docs) == len(pytt_outputs)
         tok2vec.set_annotations(docs, pytt_outputs)
-        textcat.update(docs, golds, drop=drop, sgd=sgd, losses=losses, component_cfg=component_cfg)
+        for doc in docs:
+            assert doc._.pytt_last_hidden_state is not None
+        components = [p for p in components if p in self.pipe_names]
+        with self.disable_pipes("pytt_tok2vec", *components):
+            super().update(
+                docs,
+                golds,
+                drop=0.0,
+                sgd=sgd,
+                losses=losses,
+                component_cfg=component_cfg,
+            )
         backprop_tok2vec(docs, sgd=sgd)
-        #for doc in docs:
-        #    assert doc._.pytt_last_hidden_state is not None
-        #components = [p for p in components if p in self.pipe_names]
-        #with self.disable_pipes("pytt_tok2vec", *components):
-        #    super().update(
-        #        docs,
-        #        golds,
-        #        drop=0.0,
-        #        sgd=sgd,
-        #        losses=losses,
-        #        component_cfg=component_cfg,
-        #    )
 
 
 def get_defaults(lang):
