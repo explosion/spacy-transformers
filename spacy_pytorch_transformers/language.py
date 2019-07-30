@@ -3,7 +3,7 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 from spacy.gold import GoldParse
 
-from .util import is_special_token
+from .util import is_special_token, flatten_list
 from . import about
 
 
@@ -139,17 +139,25 @@ def get_wp_end(span):
 
 def get_span_wp_getter(attr):
     def span_getter(span):
-        return [token._.get(attr) for token in span]
+        return flatten_list([token._.get(attr) for token in span])
 
     return span_getter
 
 
 def get_token_wp_getter(attr):
-    def token_getter(token):
+    def token_alignment_getter(token):
         doc_values = token.doc._.get(attr)
         return doc_values[token.i] if doc_values is not None else None
 
-    return token_getter
+    def token_wordpiece_getter(token):
+        doc_values = token.doc._.get(attr)
+        indices = token._.pytt_alignment
+        return [doc_values[i] for i in indices]
+
+    if attr == "pytt_alignment":
+        return token_alignment_getter
+    else:
+        return token_wordpiece_getter
 
 
 def get_span_tok2vec_getter(attr):
