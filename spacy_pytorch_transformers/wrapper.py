@@ -22,7 +22,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         return self._model.config.hidden_size
 
     def begin_update(self, ids, drop=None):
-        ids = xp2torch(ids)
+        ids = xp2torch(self.model.ops(ids))
         is_training = self._model.training
         if drop is None:
             self._model.eval()
