@@ -2,8 +2,14 @@ import pytest
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
 from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
 
-MODEL_NAMES = ["bert-base-uncased"]
-ALL_MODEL_NAMES = ["bert-base-uncased", "openai-gpt", "gpt2", "xlnet-base-cased"]
+MODEL_NAMES = ["openai-gpt"]
+ALL_MODEL_NAMES = [
+    "bert-base-uncased",
+    "openai-gpt",
+    "gpt2",
+    "xlnet-base-cased",
+    "xlm-mlm-enfr-1024",
+]
 
 
 @pytest.fixture(scope="session", params=MODEL_NAMES)
