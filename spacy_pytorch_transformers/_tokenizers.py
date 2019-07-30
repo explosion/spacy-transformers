@@ -233,7 +233,7 @@ class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin
         return tokens
 
     def add_special_tokens(self, tokens):
-        return tokens
+        return [self.cls_token] + tokens + [self.eos_token]
 
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
