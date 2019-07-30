@@ -100,7 +100,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             docs = list(docs)
             outputs = self.predict(docs)
             self.set_annotations(docs, outputs)
-            yield from docs
+            for doc in docs:
+                yield doc
 
     def begin_update(self, docs, drop=None, **cfg):
         """Get the predictions and a callback to complete the gradient update.
@@ -122,6 +123,8 @@ class PyTT_TokenVectorEncoder(Pipe):
                 #    )
                 #)
             backprop(gradients, sgd=sgd)
+            for doc in docs:
+                doc._.pytt_d_last_hidden_state.fill(0)
             return None
 
         return outputs, finish_update
