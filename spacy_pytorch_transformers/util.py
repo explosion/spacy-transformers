@@ -8,7 +8,8 @@ import torch
 from . import _tokenizers
 
 
-SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>")
+SPECIAL_TOKENS = ("[CLS]", "[BOS]", "[SEP]", "<cls>", "<sep>", "<|endoftext|>",
+                  "<s>", "</s>")
 
 
 @dataclass
@@ -32,6 +33,8 @@ class Activations:
                 fields[1] = None
             elif isinstance(po, tuple) and all(isinstance(x, torch.Tensor) for x in po):
                 fields[1] = [torch2xp(x) for x in po]
+                xp = get_array_module(fields[1][0])
+                fields[1] = xp.vstack(fields[1])
             else:
                 fields[1] = torch2xp(fields[1])
         else:
