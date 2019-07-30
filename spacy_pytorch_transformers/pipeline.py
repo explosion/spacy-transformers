@@ -1,6 +1,9 @@
 import spacy.pipeline
+from spacy.util import minibatch
+from thinc.neural.util import get_array_module
 from spacy._ml import build_simple_cnn_text_classifier
-from thinc.api import layerize
+from thinc.api import layerize, chain
+from thinc.v2v import Softmax
 
 
 class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
@@ -28,11 +31,29 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The model.
         """
-        tok2vec = layerize(get_pytt_last_hidden)
+        tok2vec = layerize(get_pytt_class_tokens)
         tok2vec.nO = cfg["token_vector_width"]
-        return build_simple_cnn_text_classifier(
-            tok2vec, nr_class=nr_class, width=tok2vec.nO, **cfg
-        )
+        return chain(tok2vec, Softmax(nr_class, cfg["token_vector_width"]))
+
+
+def get_pytt_class_tokens(docs, drop=0.0):
+    """Function that can be wrapped as a Thinc model, that gets the
+    pytt_last_hidden extension attribute from a batch of Doc objects. During
+    the backward pass, we accumulate the gradients into
+    doc._.pytt_d_last_hidden_state.
+    """
+    xp = get_array_module(docs[0]._.pytt_last_hidden_state)
+    Y = xp.vstack([doc._.pytt_last_hidden_state[0] for doc in docs])
+
+    def backprop_pytt_class_tokens(dY, sgd=None):
+        for i, doc in enumerate(docs):
+            if doc._.pytt_d_last_hidden_state is None:
+                xp = get_array_module(doc._.pytt_last_hidden_state)
+                grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype='f')
+                doc._.pytt_d_last_hidden_state = grads
+            doc._.pytt_d_last_hidden_state[0] += dY[i]
+        return None
+    return Y, backprop_pytt_class_tokens
 
 
 def get_pytt_last_hidden(docs, drop=0.0):
