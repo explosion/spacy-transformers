@@ -1,7 +1,13 @@
-import torch
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch
+from pytorch_transformers import AdamW
+import torch.autograd
+import torch.nn.utils
+import torch
 
 from .util import get_pytt_model, Activations
+
+GRAD_CLIP_FACTOR = 10
+LEARN_RATE_FACTOR = 10
 
 
 class PyTT_Wrapper(PyTorchWrapper):
@@ -51,9 +57,18 @@ class PyTT_Wrapper(PyTorchWrapper):
             if sgd is not None:
                 if self._optimizer is None:
                     self._optimizer = self._create_optimizer(sgd)
+                if sgd.max_grad_norm:
+                    torch.nn.utils.clip_grad_norm_(
+                        self._model.parameters(),
+                        sgd.max_grad_norm / GRAD_CLIP_FACTOR)
                 self._optimizer.step()
                 self._optimizer.zero_grad()
             return None
 
         self._model.eval()
         return output, backward_pytorch
+
+    def _create_optimizer(self, sgd):
+        optimizer = AdamW(self._model.parameters(), lr=sgd.alpha / LEARN_RATE_FACTOR,
+            betas=(sgd.b1, sgd.b2))
+        return optimizer
