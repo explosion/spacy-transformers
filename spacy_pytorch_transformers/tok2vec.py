@@ -58,11 +58,11 @@ class PyTT_TokenVectorEncoder(Pipe):
         else:
             model = PyTT_Wrapper(name)
         nO = model.nO
-        batch_by_length = cfg.get("batch_by_length", 1)
+        batch_by_length = cfg.get("batch_by_length", 10)
         with Model.define_operators({">>": chain}):
             model = foreach_sentence(
                 get_word_pieces
-                >> without_length_batching(model >> get_last_hidden_state, batch_by_length)
+                >> with_length_batching(model >> get_last_hidden_state, batch_by_length)
             )
         model.nO = nO
         return model
@@ -245,6 +245,8 @@ def with_length_batching(model, min_batch):
     together, making the padding less wasteful. If min_batch==1, no padding will
     be necessary.
     """
+    if min_batch < 1:
+        return without_length_batching(model, min_batch)
 
     def apply_model_to_batches(inputs, drop=0.0):
         backprops = []
