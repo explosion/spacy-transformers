@@ -20,7 +20,7 @@ from spacy_pytorch_transformers.util import batch_by_length
         ([], [], []),
         (["it", "realllllllly", "sucks", "."], ["it", "real", "ll", "ll", "ll", "ly", "suck", "s", "."],
          [[0], [1, 2, 3, 4, 5], [6, 7], [8]]),
-        (["Well", ",", "i"], ['Well', ',', '', 'i'], [[0], [1], [3]])
+        (["Well", ",", "i"], ['Well', ',', '', 'i'], [[0], [1, 2], [2, 3]])
     ],
 )
 def test_align_word_pieces(spacy_tokens, wp_tokens, expected_alignment):
