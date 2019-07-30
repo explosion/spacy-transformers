@@ -122,7 +122,7 @@ def evaluate(nlp, texts, cats):
     fp = 1e-8  # False positives
     fn = 1e-8  # False negatives
     tn = 0.0  # True negatives
-    for i, doc in enumerate(nlp.pipe(texts)):
+    for i, doc in enumerate(nlp.pipe(texts, batch_size=8)):
         gold = cats[i]
         for label, score in doc.cats.items():
             if label not in gold:
