@@ -17,11 +17,13 @@ def ids(tokenizer):
     return numpy.array(tokenizer.encode(text), dtype=numpy.int_)
 
 
-def test_bert_wrapper_from_pretrained(name, ids):
+def test_wrapper_from_pretrained(name, ids):
     model = PyTT_Wrapper.from_pretrained(name)
     outputs, backprop = model.begin_update(ids.reshape((1, -1)))
-    assert len(outputs) == 4
-    assert outputs.last_hidden_state.shape == (1, 6, 768)
-    assert outputs.pooler_output.shape == (1, 768)
+    assert outputs.has_last_hidden_state
+    assert outputs.last_hidden_state.shape[:2] == (1, 6)
+    assert outputs.has_all_hidden_states
+    if outputs.has_pooler_output:
+        assert hasattr(outputs.pooler_output, "shape")
     optimizer = Adam(model.ops, 0.001)
     backprop(outputs.last_hidden_state, sgd=optimizer)
