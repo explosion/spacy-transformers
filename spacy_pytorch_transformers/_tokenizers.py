@@ -303,7 +303,7 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         return [t.replace("\u2581", "", 1).strip() for t in tokens]
 
     def add_special_tokens(self, tokens):
-        return [self.cls_token] + tokens + [self.sep_token]
+        return [self.cls_token] + tokens + [self.eos_token]
 
 
 def serialize_bpe_ranks(data):
