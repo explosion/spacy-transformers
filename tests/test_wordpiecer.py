@@ -35,7 +35,7 @@ def test_xlnet_weird_align(name, wp):
     assert doc.text == text
     doc = wp(doc)
     assert doc._.pytt_word_pieces_[0] == "<cls>"
-    assert doc._.pytt_word_pieces_[-1] == "<sep>"
+    assert doc._.pytt_word_pieces_[-1] == "</s>"
     
 
 def test_tokenizers_to_from_bytes(name):
