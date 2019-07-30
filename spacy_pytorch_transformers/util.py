@@ -246,11 +246,12 @@ def _align(seq1, seq2, offset):
     output = [sorted(list(s)) for s in alignment]
     # Expand alignment to adjacent unaligned tokens of seq2
     for indices in output:
-        while indices[0] >= 1 and indices[0]-1 in unaligned:
-            indices.insert(0, indices[0]-1)
-        last = len(seq2)-1
-        while indices[-1] < last and indices[-1]+1 in unaligned:
-            indices.append(indices[-1]+1)
+        if indices:
+            while indices[0] >= 1 and indices[0]-1 in unaligned:
+                indices.insert(0, indices[0]-1)
+            last = len(seq2)-1
+            while indices[-1] < last and indices[-1]+1 in unaligned:
+                indices.append(indices[-1]+1)
     # Add offset
     for indices in output:
         for i in range(len(indices)):

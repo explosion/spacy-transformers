@@ -6,6 +6,7 @@ import torch
 
 from .util import get_pytt_model, Activations
 
+FINE_TUNE = False
 GRAD_CLIP_FACTOR = 100
 LEARN_RATE_FACTOR = 100
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
@@ -54,16 +55,17 @@ class PyTT_Wrapper(PyTorchWrapper):
             #    raise ValueError("Gradients on all hidden states not supported yet.")
             # if dy_data.has_all_attentions:
             #    raise ValueError("Gradients on all attentions not supported yet.")
-            torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
-            if sgd is not None:
-                if self._optimizer is None:
-                    self._optimizer = self._create_optimizer(sgd)
-                if sgd.max_grad_norm:
-                    torch.nn.utils.clip_grad_norm_(
-                        self._model.parameters(), sgd.max_grad_norm / GRAD_CLIP_FACTOR
-                    )
-                self._optimizer.step()
-                self._optimizer.zero_grad()
+            if FINE_TUNE:
+                torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
+                if sgd is not None:
+                    if self._optimizer is None:
+                        self._optimizer = self._create_optimizer(sgd)
+                    if sgd.max_grad_norm:
+                        torch.nn.utils.clip_grad_norm_(
+                            self._model.parameters(), sgd.max_grad_norm / GRAD_CLIP_FACTOR
+                        )
+                    self._optimizer.step()
+                    self._optimizer.zero_grad()
             return None
 
         self._model.eval()
