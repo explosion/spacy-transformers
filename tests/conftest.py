@@ -11,8 +11,14 @@ ALL_MODEL_NAMES = [
     "xlm-mlm-enfr-1024",
 ]
 
+SUPPORTED_MODEL_NAMES = [
+    "bert-base-uncased",
+    "gpt2",
+    "xlnet-base-cased",
+    "xlm-mlm-enfr-1024",
+]
 
-@pytest.fixture(scope="session", params=MODEL_NAMES)
+@pytest.fixture(scope="session", params=SUPPORTED_MODEL_NAMES)
 def name(request):
     return request.param
 
