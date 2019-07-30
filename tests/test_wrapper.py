@@ -1,5 +1,5 @@
 from spacy_pytorch_transformers.wrapper import PyTT_Wrapper
-import pytorch_transformers as pytt
+from spacy_pytorch_transformers.util import get_pytt_tokenizer
 import numpy
 import pytest
 
@@ -7,22 +7,13 @@ from thinc.neural.optimizers import Adam
 
 
 @pytest.fixture
-def name():
-    return "bert-base-uncased"
-
-
-@pytest.fixture()
-def text():
-    return "the cat sat on the mat"
-
-
-@pytest.fixture
 def tokenizer(name):
-    return pytt.BertTokenizer.from_pretrained(name)
+    return get_pytt_tokenizer(name).from_pretrained(name)
 
 
 @pytest.fixture
-def ids(tokenizer, text):
+def ids(tokenizer):
+    text = "the cat sat on the mat"
     return numpy.array(tokenizer.encode(text), dtype=numpy.int_)
 
 

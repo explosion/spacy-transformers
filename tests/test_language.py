@@ -8,22 +8,6 @@ from spacy.tokens import Doc
 from .util import make_tempdir, is_valid_tensor
 
 
-@pytest.fixture(scope="session")
-def name():
-    return "bert-base-uncased"
-
-
-@pytest.fixture(scope="session")
-def nlp(name):
-    pytt_nlp = PyTT_Language(pytt_name=name)
-    pytt_nlp.add_pipe(pytt_nlp.create_pipe("sentencizer"))
-    wordpiecer = PyTT_WordPiecer.from_pretrained(pytt_nlp.vocab, pytt_name=name)
-    tok2vec = PyTT_TokenVectorEncoder.from_pretrained(pytt_nlp.vocab, name=name)
-    pytt_nlp.add_pipe(wordpiecer)
-    pytt_nlp.add_pipe(tok2vec)
-    return pytt_nlp
-
-
 def test_language_init(name):
     meta = {"lang": "en", "name": "test", "pipeline": []}
     nlp = PyTT_Language(meta=meta, pytt_name=name)

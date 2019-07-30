@@ -15,7 +15,7 @@ from spacy_pytorch_transformers.util import batch_by_length
         (["ab", "c"], ["a", "b", "c"], [[0, 1], [2]]),
         (["a", "b", "c"], ["ab", "c"], [[0], [0], [1]]),
         (["ab", "cd"], ["a", "bc", "d"], [[0, 1], [1, 2]]),
-        (["abcd"], ["ab", "##cd"], [[0, 1]]),
+        (["abcd"], ["ab", "cd"], [[0, 1]]),
         (["d", "e", "f"], ["[CLS]", "d", "e", "f"], [[1], [2], [3]]),
         ([], [], []),
     ],
@@ -61,13 +61,14 @@ def test_pad_batch(lengths, expected_shape):
 
 
 @pytest.mark.parametrize(
-    "wp_tokens,span,expected_start", [
-    (["[CLS]", "hello", "world", "[SEP]"], slice(0, 1), 0),
-    (["[CLS]", "hello", "world", "[SEP]"], slice(1, 2), 2),
-])
+    "wp_tokens,span,expected_start",
+    [
+        (["[CLS]", "hello", "world", "[SEP]"], slice(0, 1), 0),
+        (["[CLS]", "hello", "world", "[SEP]"], slice(1, 2), 2),
+    ],
+)
 def test_wp_start(wp_tokens, span, expected_start):
     doc = Doc(Vocab(), words=wp_tokens[1:-1])
     doc._.pytt_word_pieces_ = wp_tokens
     doc._.pytt_alignment = align_word_pieces([w.text for w in doc], wp_tokens)
-    print(doc[span]._.pytt_start)
     assert doc[span]._.pytt_start == expected_start

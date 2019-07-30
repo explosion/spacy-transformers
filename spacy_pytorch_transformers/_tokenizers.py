@@ -116,6 +116,12 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
         else:
             return text.strip()
 
+    def clean_wp_tokens(self, tokens):
+        return [t.replace("##", "", 1).strip() for t in tokens]
+
+    def add_special_tokens(self, tokens):
+        return [self.cls_token] + tokens + [self.sep_token]
+
 
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
@@ -146,6 +152,12 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
     def clean_token(self, text):
         return text.strip()
 
+    def clean_wp_tokens(self, tokens):
+        return [t.replace("\u0120", "", 1).strip() for t in tokens]
+
+    def add_special_tokens(self, tokens):
+        return tokens
+
 
 class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "bpe_ranks"]
@@ -169,6 +181,12 @@ class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin
 
     def clean_token(self, text):
         return text.strip()
+
+    def clean_wp_tokens(self, tokens):
+        return [t.replace("</w>", "").strip() for t in tokens]
+
+    def add_special_tokens(self, tokens):
+        return tokens
 
 
 class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin):
@@ -198,6 +216,12 @@ class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin
     def clean_token(self, text):
         return text.strip()
 
+    def clean_wp_tokens(self, tokens):
+        return tokens
+
+    def add_special_tokens(self, tokens):
+        return tokens
+
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "bpe_ranks"]
@@ -222,6 +246,12 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
     def clean_token(self, text):
         return text.strip()
 
+    def clean_wp_tokens(self, tokens):
+        return [t.replace("</w>", "").strip() for t in tokens]
+
+    def add_special_tokens(self, tokens):
+        return tokens
+
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
@@ -245,3 +275,9 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
 
     def clean_token(self, text):
         return text.strip()
+
+    def clean_wp_tokens(self, tokens):
+        return [t.replace("\u2581", "", 1).strip() for t in tokens]
+
+    def add_special_tokens(self, tokens):
+        return tokens
