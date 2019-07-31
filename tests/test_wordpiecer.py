@@ -25,7 +25,21 @@ def test_xlnet_weird_align(name, wp):
     if "xlnet" not in name.lower():
         return True
     text = "Well, i rented this movie and found out it realllllllly sucks."
-    spacy_tokens = ['Well', ',', 'i', 'rented', 'this', 'movie', 'and', 'found', 'out', 'it', 'realllllllly', 'sucks', '.']
+    spacy_tokens = [
+        "Well",
+        ",",
+        "i",
+        "rented",
+        "this",
+        "movie",
+        "and",
+        "found",
+        "out",
+        "it",
+        "realllllllly",
+        "sucks",
+        ".",
+    ]
     spaces = [True] * len(spacy_tokens)
     spaces[0] = False
     spaces[-2] = False
@@ -36,7 +50,7 @@ def test_xlnet_weird_align(name, wp):
     doc = wp(doc)
     assert doc._.pytt_word_pieces_[0] == "<cls>"
     assert doc._.pytt_word_pieces_[-1] == "</s>"
-    
+
 
 def test_tokenizers_to_from_bytes(name):
     text = "hello world"
