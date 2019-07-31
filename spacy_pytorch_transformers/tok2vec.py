@@ -1,15 +1,16 @@
-from typing import Union, List, Tuple, TypeVar, Callable, Any, Optional
+from typing import Union, List, Tuple, TypeVar, Callable, Any, Optional, Sequence
 from spacy.pipeline import Pipe
 from thinc.neural.ops import get_array_module
-from thinc.v2v import Model
+from thinc.neural._classes.model import Model
 from thinc.api import chain, layerize, wrap
-from spacy.util import minibatch, Activations
+from spacy.util import minibatch
 from spacy.tokens import Doc, Span
 import numpy
-import cupy
 
 from .wrapper import PyTT_Wrapper
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
+from .util import pad_batch_activations
+from .util import Array, Optimizer, Dropout
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -220,10 +221,15 @@ def get_last_hidden_state(activations, drop=0.0):
     return activations.last_hidden_state, backprop_last_hidden_state
 
 
-def without_length_batching(model, _):
-    def apply_model_padded(inputs, drop=0.0):
-        X = pad_batch(inputs)
-        activs, get_dX = model.begin_update(X, drop=drop)
+def without_length_batching(model: Model, _: Any) -> Model:
+    Input = List[Array]
+    Output = List[Activations]
+    Backprop = Callable[[Output, Optional[Optimizer]], Optional[Input]]
+    model_begin_update: Callable[[Array, Dropout], Tuple[Activations, Backprop]]
+    model_begin_update = model.begin_update
+ 
+    def apply_model_padded(inputs: Input, drop: Dropout=0.0) -> Tuple[Output, Backprop]:
+        activs, get_dX = model_begin_update(pad_batch(inputs), drop)
         last_hiddens = [activs.last_hidden_state[i, : len(seq)]
                         for i, seq in enumerate(inputs)]
         outputs = [Activations(y, None, None, None) for y in last_hiddens]
@@ -245,7 +251,7 @@ def without_length_batching(model, _):
     return wrap(apply_model_padded, model)
 
 
-def with_length_batching(model, min_batch):
+def with_length_batching(model: Model, min_batch: int) -> Model:
     """Wrapper that applies a model to variable-length sequences by first batching
     and padding the sequences. This allows us to group similarly-lengthed sequences
     together, making the padding less wasteful. If min_batch==1, no padding will
@@ -254,42 +260,41 @@ def with_length_batching(model, min_batch):
     if min_batch < 1:
         return without_length_batching(model, min_batch)
 
-    def apply_model_to_batches(inputs, drop=0.0):
+    Input = List[Activations]
+    Output = List[Activations]
+    Backprop = Callable[[Output, Optional[Optimizer]], Output]
+ 
+    def apply_model_to_batches(inputs: Input, drop: Dropout=0.0) -> Tuple[Output, Backprop]:
         backprops = []
-        batches = batch_by_length(inputs, min_batch)
+        batches: List[List[int]] = batch_by_length(inputs, min_batch)
         # Initialize this, so we can place the outputs back in order.
-        last_hiddens = [None for _ in inputs]
+        unbatched: List[Optional[Activations]] = [None for _ in inputs]
         for indices in batches:
-            X = pad_batch([inputs[i] for i in indices])
+            X = pad_batch_activations([inputs[i] for i in indices])
             activs, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
-            Y = activs.last_hidden_state
             for i, j in enumerate(indices):
-                last_hiddens[j] = Y[i, : len(inputs[j])]
+                unbatched[j] = activs.get_slice(i, slice(0, len(inputs[j])))
+        outputs: List[Activations] = [y for y in unbatched if y is not None]
+        assert len(outputs) == len(unbatched)
 
-        outputs = [Activations(y, None, None, None) for y in last_hiddens]
-
-        def backprop_batched(d_outputs, sgd=None):
-            d_inputs = [None for _ in inputs]
+        def backprop_batched(d_outputs: Output, sgd: Optimizer=None) -> Input:
+            d_inputs: List[Optional[Activations]] = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
-                d_last_hiddens = [d_outputs[i].last_hidden_state for i in indices]
-                dY = pad_batch(d_last_hiddens)
-                dY = dY.reshape(len(indices), -1, dY.shape[-1])
-                d_activs = Activations(dY, None, None, None, is_grad=True)
+                d_activs = pad_batch_activations([d_outputs[i] for i in indices])
                 dX = get_dX(d_activs, sgd=sgd)
                 if dX is not None:
                     for i, j in enumerate(indices):
                         # As above, put things back in order, unpad.
                         d_inputs[j] = dX[i, : len(d_outputs[j])]
-            return d_inputs
+            not_none = [x for x in d_inputs if x is not None]
+            assert len(not_none) == len(d_inputs)
+            return not_none
 
         return outputs, backprop_batched
 
     return wrap(apply_model_to_batches, model)
 
-Array = Union[numpy.ndarray, cupy.ndarray]
-Optimizer = Callable[[Array, Array, Optional[int]], None]
-Dropout = Optional[float]
 
 def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
@@ -318,7 +323,7 @@ def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
         doc_sent_lengths = [[len(sa) for sa in doc_sa] for doc_sa in nested]
         doc_states = [ops.flatten(doc_sa) for doc_sa in nested]
         assert len(docs) == len(doc_acts)
-        doc_acts = [Activations(da, None, None, None) for da in doc_acts]
+        doc_acts = [Activations(da, None, None, None) for da in doc_states]
 
         def sentence_bwd(d_doc_acts: Input, sgd: Optional[Optimizer]=None) -> None:
             d_doc_states = [da.last_hidden_state for da in d_doc_acts]
