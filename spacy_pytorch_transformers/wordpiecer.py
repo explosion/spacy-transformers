@@ -91,7 +91,7 @@ class PyTT_WordPiecer(Pipe):
             doc_word_piece_ids = []
             for sent, wp_tokens in zip(doc.sents, output):
                 spacy_tokens = [self.model.clean_token(w.text) for w in sent]
-                new_wp_tokens = self.model.clean_wp_tokens(wp_tokens)
+                new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
                 assert len(wp_tokens) == len(new_wp_tokens)
                 sent_align = align_word_pieces(spacy_tokens, new_wp_tokens)
                 # We need to align into the flattened document list, instead
@@ -103,9 +103,21 @@ class PyTT_WordPiecer(Pipe):
                 doc_alignment.extend(sent_align)
                 doc_word_pieces.extend(wp_tokens)
                 doc_word_piece_ids.extend(self.model.convert_tokens_to_ids(wp_tokens))
-            assert len(doc_alignment) == len(doc)
+            if len(doc_alignment) != len(doc):
+                print("doc_alignment:", doc_alignment)
+                print("doc:", [t.text for t in doc])
+                print("wps:", doc_word_pieces)
+                raise AssertionError(
+                    f"doc_alignment length ({len(doc_alignment)}) != doc length ({len(doc)})"
+                )
             max_aligned = max(flatten_list(doc_alignment))
-            assert max_aligned <= len(doc_word_pieces)
+            if max_aligned > len(doc_word_pieces):
+                print("doc_alignment:", doc_alignment)
+                print("doc:", [t.text for t in doc])
+                print("wps:", doc_word_pieces)
+                raise AssertionError(
+                    f"max_aligned ({max_aligned}) > word piece length {len(doc_word_pieces)}"
+                )
             doc._.pytt_word_pieces = doc_word_piece_ids
             doc._.pytt_word_pieces_ = doc_word_pieces
             doc._.pytt_alignment = doc_alignment

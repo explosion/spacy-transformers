@@ -18,6 +18,7 @@ SUPPORTED_MODEL_NAMES = [
     "xlm-mlm-enfr-1024",
 ]
 
+
 @pytest.fixture(scope="session", params=SUPPORTED_MODEL_NAMES)
 def name(request):
     return request.param

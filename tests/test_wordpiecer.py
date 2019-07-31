@@ -16,7 +16,7 @@ def test_wordpiecer(wp):
     doc[0].is_sent_start = True
     doc[1].is_sent_start = False
     doc = wp(doc)
-    cleaned_words = wp.model.clean_wp_tokens(doc._.pytt_word_pieces_)
+    cleaned_words = [wp.model.clean_wp_token(t) for t in doc._.pytt_word_pieces_]
     cleaned_words = [w for w in cleaned_words if not is_special_token(w)]
     assert "".join(cleaned_words) == "".join(words)
 
@@ -25,7 +25,21 @@ def test_xlnet_weird_align(name, wp):
     if "xlnet" not in name.lower():
         return True
     text = "Well, i rented this movie and found out it realllllllly sucks."
-    spacy_tokens = ['Well', ',', 'i', 'rented', 'this', 'movie', 'and', 'found', 'out', 'it', 'realllllllly', 'sucks', '.']
+    spacy_tokens = [
+        "Well",
+        ",",
+        "i",
+        "rented",
+        "this",
+        "movie",
+        "and",
+        "found",
+        "out",
+        "it",
+        "realllllllly",
+        "sucks",
+        ".",
+    ]
     spaces = [True] * len(spacy_tokens)
     spaces[0] = False
     spaces[-2] = False
@@ -36,7 +50,7 @@ def test_xlnet_weird_align(name, wp):
     doc = wp(doc)
     assert doc._.pytt_word_pieces_[0] == "<cls>"
     assert doc._.pytt_word_pieces_[-1] == "</s>"
-    
+
 
 def test_tokenizers_to_from_bytes(name):
     text = "hello world"

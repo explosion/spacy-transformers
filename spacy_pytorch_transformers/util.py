@@ -210,14 +210,17 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
         offset += 1
     while wp_tokens and wp_tokens[-1] in specials:
         wp_tokens.pop(-1)
-    if not spacy_tokens or not wp_tokens:
+    if not wp_tokens:
+        return [[] for _ in spacy_tokens]
+    elif not spacy_tokens:
         return []
-    try:
-        assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
-    except AssertionError:
-        print(repr("".join(spacy_tokens).lower()))
-        print(repr("".join(wp_tokens).lower()))
-        raise
+    # Check alignment
+    spacy_string = "".join(spacy_tokens).lower()
+    wp_string = "".join(wp_tokens).lower()
+    if spacy_string != wp_string:
+        print("spaCy:", spacy_string)
+        print("WP:", wp_string)
+        raise AssertionError((spacy_string, wp_string))
     output = _align(spacy_tokens, wp_tokens, offset)
     return output
 
@@ -241,11 +244,11 @@ def _align(seq1, seq2, offset):
     # Expand alignment to adjacent unaligned tokens of seq2
     for indices in output:
         if indices:
-            while indices[0] >= 1 and indices[0]-1 in unaligned:
-                indices.insert(0, indices[0]-1)
-            last = len(seq2)-1
-            while indices[-1] < last and indices[-1]+1 in unaligned:
-                indices.append(indices[-1]+1)
+            while indices[0] >= 1 and indices[0] - 1 in unaligned:
+                indices.insert(0, indices[0] - 1)
+            last = len(seq2) - 1
+            while indices[-1] < last and indices[-1] + 1 in unaligned:
+                indices.append(indices[-1] + 1)
     # Add offset
     for indices in output:
         for i in range(len(indices)):
