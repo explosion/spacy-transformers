@@ -26,9 +26,11 @@ def main(name="bert-base-uncased", n_texts=1000, lang="en"):
     texts, _ = zip(*data)
     msg.good(f"Using {len(texts)} texts from IMDB data")
     msg.info("Processing texts...")
+    sent_counts = 0
     for doc in tqdm.tqdm(nlp.pipe(texts), total=len(texts)):
         try:
             doc = wp(doc)
+            sent_counts += len(list(doc.sents))
         except AssertionError as e:
             if len(e.args) and isinstance(e.args[0], tuple):  # Misaligned error
                 a, b = e.args[0]
@@ -39,7 +41,7 @@ def main(name="bert-base-uncased", n_texts=1000, lang="en"):
                 msg.fail(f"Error: {e.args[0]}", exits=1)
             else:
                 raise e
-    msg.good(f"Processed {len(texts)}")
+    msg.good(f"Processed {len(texts)} documents ({sent_counts} sentences)")
 
 
 def diff_strings(a, b):
