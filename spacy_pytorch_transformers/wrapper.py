@@ -9,7 +9,7 @@ from thinc.neural.optimizers import Optimizer
 from .util import get_pytt_model, Activations
 from .util import Array, Dropout
 
-FINE_TUNE = False
+FINE_TUNE = True
 GRAD_CLIP_FACTOR = 100
 LEARN_RATE_FACTOR = 100
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
