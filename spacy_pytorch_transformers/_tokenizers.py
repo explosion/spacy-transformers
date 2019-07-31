@@ -13,6 +13,7 @@ import srsly
 import regex
 import sentencepiece
 from pathlib import Path
+import unicodedata
 
 import pytorch_transformers as pytt
 from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
@@ -32,6 +33,12 @@ BASE_CLASS_FIELDS = [
     "added_tokens_encoder",
     "added_tokens_decoder",
 ]
+
+
+def clean_accents(text):
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    )
 
 
 class SerializationMixin:
@@ -114,9 +121,9 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
 
     def clean_token(self, text):
         if self.do_basic_tokenize:
-            return self.basic_tokenizer._clean_text(text)
-        else:
-            return text.strip()
+            text = self.basic_tokenizer._clean_text(text)
+        text = text.strip()
+        return clean_accents(text)
 
     def clean_wp_token(self, token):
         return token.replace("##", "", 1).strip()
