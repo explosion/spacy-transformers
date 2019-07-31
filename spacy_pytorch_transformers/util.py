@@ -29,11 +29,15 @@ SPECIAL_TOKENS: Sequence[str] = (
 
 @dataclass
 class Activations:
-    last_hidden_state: Array
-    pooler_output: Optional[List[Array]]
-    all_hidden_states: Optional[List[Array]] = None
-    all_attentions: Optional[List[Array]] = None
+    lh: Array
+    po: List[Array]
+    ah: List[Array]
+    aa: List[Array]
     is_grad: bool = False
+
+    @classmethod
+    def blank(cls, is_grad=False):
+        return cls(numpy.zeros((0,0), dtype="f"), [], [], [], is_grad=is_grad)
 
     @classmethod
     def from_pytt(cls, fields, *, is_grad=False) -> "Activations":
@@ -41,38 +45,39 @@ class Activations:
         Includes converting torch tensors to xp, and handling missing values.
         """
         fields = list(fields)
-        fields[0] = torch2xp(fields[0])
-        if len(fields) >= 2:
-            po = fields[1]  # pooler output
-            if isinstance(po, tuple) and all(x is None for x in po):
-                fields[1] = None
-            elif isinstance(po, tuple) and all(isinstance(x, torch.Tensor) for x in po):
-                fields[1] = [torch2xp(x) for x in po]
-                xp = get_array_module(fields[1][0])
-                fields[1] = xp.vstack(fields[1])
-            else:
-                fields[1] = torch2xp(fields[1])
-        else:
-            fields.append(None)
-        if len(fields) == 2:
-            fields.append(None)
-            fields.append(None)
-        elif len(fields) == 3:
-            fields.append(None)
-        return cls(fields[0], fields[1], fields[2], fields[3], is_grad=is_grad)
+        # Make sure we have 4 elements
+        while len(fields) < 4:
+            fields.append([])
+        # Normalize None to []
+        fields = [f if f is not None else f for f in fields]
+        # lh: last hidden
+        # po: pooler_output
+        # ah: all_hidden
+        # aa: all_attention
+        lh, po, ah, aa = fields
+        # Convert last_hidden_state to xp
+        lh = torch2xp(lh)
+        xp = get_array_module(lh)
+        # Normalize "None" value for pooler output
+        if isinstance(po, tuple) and all(x is None for x in po):
+            po = []
+        po = list(map(torch2xp, po))
+        ah = list(map(torch2xp, ah))
+        aa = list(map(torch2xp, aa))
+        return cls(lh, po, ah, aa, is_grad=is_grad)
 
     @classmethod
     def join(cls, sub_acts: List["Activations"]) -> "Activations":
         """Concatenate activations from subsequences."""
-        xp = get_array_module(sub_acts[0].last_hidden_state)
-        lh: Array = xp.vstack([x.last_hidden_state for x in sub_acts])
-        return cls(lh, None, None, None, is_grad=sub_acts[0].is_grad)
+        xp = get_array_module(sub_acts[0].lh)
+        lh: Array = xp.vstack([x.lh for x in sub_acts])
+        return cls(lh, [], [], [], is_grad=sub_acts[0].is_grad)
 
     def __len__(self) -> int:
-        return len(self.last_hidden_state)
+        return len(self.lh)
 
     def get_slice(self, x, y) -> "Activations":
-        lh = self.last_hidden_state[x, y]
+        lh = self.lh[x, y]
         # if self.has_pooler_output:
         #    po = self.pooler_output[x, y]
         # else:
@@ -81,13 +86,13 @@ class Activations:
         #    raise NotImplementedError
         # if self.has_all_attentions:
         #    raise NotImplementedError
-        return Activations(lh, None, None, None, is_grad=self.is_grad)
+        return Activations(lh, [], [], [], is_grad=self.is_grad)
 
     def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
-        last_hiddens = ops.unflatten(self.last_hidden_state, lengths)
+        last_hiddens = ops.unflatten(self.lh, lengths)
         return [
-            Activations(lh, None, None, None, is_grad=self.is_grad)
+            Activations(lh, [], [], [], is_grad=self.is_grad)
             for lh in last_hiddens
         ]
         # lh_values = [None] * len(shapes)
@@ -113,33 +118,20 @@ class Activations:
         # return outputs
 
     @property
-    def shapes(self):
-        output = [None, None, None, None]
-        if self.has_last_hidden_state:
-            output[0] = self.last_hidden_state.shape
-        if self.has_pooler_output:
-            output[1] = self.pooler_output.shape
-        if self.has_all_hidden_states:
-            output[2] = self.all_hidden_states.shape
-        if self.has_all_attentions:
-            output[3] = self.all_attentions.shape
-        return output
+    def has_lh(self) -> bool:
+        return bool(self.lh.size)
 
     @property
-    def has_last_hidden_state(self) -> bool:
-        return self.last_hidden_state is not None
+    def has_po(self) -> bool:
+        return bool(sum(len(x) for x in self.po))
 
     @property
-    def has_pooler_output(self) -> bool:
-        return self.pooler_output is not None
+    def has_ah(self) -> bool:
+        return bool(sum(len(x) for x in self.ah))
 
     @property
-    def has_all_hidden_states(self) -> bool:
-        return self.all_hidden_states is not None
-
-    @property
-    def has_all_attentions(self) -> bool:
-        return self.all_attentions is not None
+    def has_aa(self) -> bool:
+        return bool(sum(len(x) for x in self.aa))
 
 
 def get_pytt_config(name):
@@ -288,8 +280,8 @@ def pad_batch(batch: List[Array]) -> Array:
 
 
 def pad_batch_activations(batch: List[Activations]) -> Activations:
-    lh = pad_batch([x.last_hidden_state for x in batch])
-    return Activations(lh, None, None, None, is_grad=batch[0].is_grad)
+    lh = pad_batch([x.lh for x in batch])
+    return Activations(lh, [], [], [], is_grad=batch[0].is_grad)
 
 
 def batch_by_length(

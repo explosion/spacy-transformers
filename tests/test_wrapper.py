@@ -16,13 +16,16 @@ def ids(tokenizer):
     text = "the cat sat on the mat"
     return numpy.array(tokenizer.encode(text), dtype=numpy.int_)
 
+@pytest.fixture
+def model(nlp):
+    return nlp.get_pipe("pytt_tok2vec").model._model
 
-def test_wrapper_from_pretrained(name, ids):
-    model = PyTT_Wrapper.from_pretrained(name)
+
+def test_wrapper_from_pretrained(name, model, ids):
     outputs, backprop = model.begin_update(ids.reshape((1, -1)))
-    assert outputs.has_last_hidden_state
-    if outputs.has_pooler_output:
-        assert hasattr(outputs.pooler_output, "shape")
+    assert outputs.has_lh
+    if outputs.has_po:
+        assert hasattr(outputs.po[0], "shape")
     optimizer = Adam(model.ops, 0.001)
-    d_outputs = Activations(outputs.last_hidden_state, None, None, None, is_grad=True)
+    d_outputs = Activations(outputs.lh, [], [], [], is_grad=True)
     backprop(d_outputs, sgd=optimizer)

@@ -47,7 +47,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         return self
 
     @classmethod
-    def Model(cls, **cfg) -> PyTT_Wrapper:
+    def Model(cls, **cfg) -> Any:
         """Create an instance of `PyTT_Wrapper`, which holds the
         PyTorch-Transformers model.
 
@@ -58,15 +58,18 @@ class PyTT_TokenVectorEncoder(Pipe):
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
-            model = PyTT_Wrapper.from_pretrained(name)
+            pytt_model = PyTT_Wrapper.from_pretrained(name)
         else:
-            model = PyTT_Wrapper(name)
-        nO = model.nO
+            pytt_model = PyTT_Wrapper(name)
+        nO = pytt_model.nO
         batch_by_length = cfg.get("batch_by_length", 10)
         model = foreach_sentence(
-            chain(get_word_pieces, with_length_batching(model, batch_by_length))
+            chain(
+                get_word_pieces,
+                with_length_batching(pytt_model, batch_by_length))
         )
-        model.nO = nO
+        setattr(model, "nO", nO)
+        setattr(model, "_model", pytt_model)
         return model
 
     def __init__(self, vocab, model=True, **cfg):
@@ -116,7 +119,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             for doc in docs:
                 gradients.append(
                     Activations(
-                        doc._.pytt_d_last_hidden_state, None, None, None, is_grad=True
+                        doc._.pytt_d_last_hidden_state, [], [], [], is_grad=True
                     )
                 )
             backprop(gradients, sgd=sgd)
@@ -143,7 +146,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         activations (iterable): A batch of activations.
         """
         for doc, doc_acts in zip(docs, activations):
-            wp_tensor = doc_acts.last_hidden_state
+            wp_tensor = doc_acts.lh
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
             assert wp_tensor.shape == (len(doc._.pytt_word_pieces), self.model.nO), (
@@ -217,7 +220,7 @@ def get_last_hidden_state(activations, drop=0.0):
     def backprop_last_hidden_state(d_last_hidden_state, sgd=None):
         return d_last_hidden_state
 
-    return activations.last_hidden_state, backprop_last_hidden_state
+    return activations.lh, backprop_last_hidden_state
 
 
 def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
@@ -232,15 +235,15 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
         last_hiddens = [
-            activs.last_hidden_state[i, : len(seq)] for i, seq in enumerate(inputs)
+            activs.lh[i, : len(seq)] for i, seq in enumerate(inputs)
         ]
-        outputs = [Activations(y, None, None, None) for y in last_hiddens]
+        outputs = [Activations(y, [], [], []) for y in last_hiddens]
 
         def backprop_batched(d_outputs, sgd=None):
-            d_last_hiddens = [x.last_hidden_state for x in d_outputs]
+            d_last_hiddens = [x.lh for x in d_outputs]
             dY = pad_batch(d_last_hiddens)
             dY = dY.reshape(len(d_outputs), -1, dY.shape[-1])
-            d_activs = Activations(dY, None, None, None, is_grad=True)
+            d_activs = Activations(dY, [], [], [], is_grad=True)
             dX = get_dX(d_activs, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]
@@ -300,7 +303,7 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
     return wrap(apply_model_to_batches, model)
 
 
-def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> PyTT_Wrapper:
+def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
     ops = layer.ops
 
@@ -354,7 +357,7 @@ def _assert_no_missing_sent_rows(docs, sent_acts):
 def _assert_no_missing_doc_rows(docs, doc_acts):
     assert len(docs) == len(doc_acts)
     for doc, da in zip(docs, doc_acts):
-        shape = da.last_hidden_state.shape
+        shape = da.lh.shape
         assert len(doc._.pytt_word_pieces) == shape[0], (
             len(doc._.pytt_word_pieces),
             shape[0],

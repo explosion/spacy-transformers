@@ -4,9 +4,10 @@ import torch.autograd
 import torch.nn.utils.clip_grad
 import torch
 from typing import Tuple, Callable, Optional, Any
+from thinc.neural.optimizers import Optimizer
 
 from .util import get_pytt_model, Activations
-from .util import Array, Dropout, Optimizer
+from .util import Array, Dropout
 
 FINE_TUNE = False
 GRAD_CLIP_FACTOR = 100
@@ -47,19 +48,19 @@ class PyTT_Wrapper(PyTorchWrapper):
             y_var = self._model(ids)
         self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
-        assert output.has_last_hidden_state
+        assert output.lh is not None
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
             dy_for_bwd = []
-            if d_output.has_last_hidden_state:
-                dy_for_bwd.append(xp2torch(d_output.last_hidden_state))
+            if d_output.has_lh:
+                dy_for_bwd.append(xp2torch(d_output.lh))
                 y_for_bwd.append(y_var[0])
-            if d_output.has_pooler_output:
+            if d_output.has_po:
                 raise ValueError("Gradients on all hidden states not supported yet.")
-            if d_output.has_all_hidden_states:
+            if d_output.has_ah:
                 raise ValueError("Gradients on all hidden states not supported yet.")
-            if d_output.has_all_attentions:
+            if d_output.has_aa:
                 raise ValueError("Gradients on all attentions not supported yet.")
             if FINE_TUNE:
                 torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)

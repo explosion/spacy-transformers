@@ -14,10 +14,8 @@ def docs(nlp):
 
 
 @pytest.fixture(scope="session")
-def tok2vec(name):
-    cfg = {"batch_by_length": True}
-    vocab = Vocab()
-    return PyTT_TokenVectorEncoder.from_pretrained(vocab, name, **cfg)
+def tok2vec(name, nlp):
+    return nlp.get_pipe("pytt_tok2vec")
 
 
 def test_from_pretrained(tok2vec, docs):
