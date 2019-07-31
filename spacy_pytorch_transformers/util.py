@@ -218,12 +218,13 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
         wp_tokens.pop(-1)
     if not spacy_tokens or not wp_tokens:
         return []
-    try:
-        assert "".join(spacy_tokens).lower() == "".join(wp_tokens).lower()
-    except AssertionError:
-        print(repr("".join(spacy_tokens).lower()))
-        print(repr("".join(wp_tokens).lower()))
-        raise
+    # Check alignment
+    spacy_string = "".join(spacy_tokens).lower()
+    wp_string = "".join(wp_tokens).lower()
+    if spacy_string != wp_string:
+        print("spaCy:", spacy_string)
+        print("WP:", wp_string)
+        raise AssertionError((spacy_string, wp_string))
     output = _align(spacy_tokens, wp_tokens, offset)
     return output
 
