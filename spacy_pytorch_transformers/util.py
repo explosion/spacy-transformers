@@ -62,24 +62,25 @@ class Activations:
         return cls(fields[0], fields[1], fields[2], fields[3], is_grad=is_grad)
 
     @classmethod
-    def join(cls, sub_acts, *, is_grad=False):
+    def join(cls, sub_acts: List[Activations]) -> Activations:
         """Concatenate activations from subsequences."""
-        fields = [None, None, None, None]
-        if not sub_acts:
-            return cls(*fields, None, is_grad=is_grad)
-        if sub_acts[0].has_last_hidden_state:
-            xp = get_array_module(sub_acts[0].last_hidden_state)
-            fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts])
-        if sub_acts[0].has_pooler_output:
-            xp = get_array_module(sub_acts[0].pooler_output)
-            # fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts])
-        if sub_acts[0].has_all_hidden_states:
-            xp = get_array_module(sub_acts[0].all_hidden_states)
-            # fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts])
-        if sub_acts[0].has_all_attentions:
-            xp = get_array_module(sub_acts[0].all_hidden_states)
-            # fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts])
-        return cls(*fields, is_grad=is_grad)
+        return sub_acts[0]
+        #fields = [None, None, None, None]
+        #if not sub_acts:
+        #    return cls(*fields, None, is_grad=is_grad)
+        #if sub_acts[0].has_last_hidden_state:
+        #    xp = get_array_module(sub_acts[0].last_hidden_state)
+        #    fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts])
+        #if sub_acts[0].has_pooler_output:
+        #    xp = get_array_module(sub_acts[0].pooler_output)
+        #    # fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts])
+        #if sub_acts[0].has_all_hidden_states:
+        #    xp = get_array_module(sub_acts[0].all_hidden_states)
+        #    # fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts])
+        #if sub_acts[0].has_all_attentions:
+        #    xp = get_array_module(sub_acts[0].all_hidden_states)
+        #    # fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts])
+        #return cls(*fields, is_grad=is_grad)
 
     def __len__(self) -> int:
         return len(self.last_hidden_state)

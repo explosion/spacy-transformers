@@ -315,28 +315,24 @@ def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
         
         sents = flatten_list([list(doc.sents) for doc in docs])
         sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
-        sent_states = [sa.last_hidden_state for sa in sent_acts]
         # sent_acts is List[array], one per sent. Go to List[List[array]],
         # then List[array] (one per doc).
-        nested = unflatten_list(sent_states, [len(list(doc.sents)) for doc in docs])
+        nested = unflatten_list(sent_acts, [len(list(doc.sents)) for doc in docs])
         # Need this for the callback.
         doc_sent_lengths = [[len(sa) for sa in doc_sa] for doc_sa in nested]
-        doc_states = [ops.flatten(doc_sa) for doc_sa in nested]
+        doc_acts = [Activations.join(doc_sa) for doc_sa in nested]
         assert len(docs) == len(doc_acts)
-        doc_acts = [Activations(da, None, None, None) for da in doc_states]
 
-        def sentence_bwd(d_doc_acts: Input, sgd: Optional[Optimizer]=None) -> None:
-            d_doc_states = [da.last_hidden_state for da in d_doc_acts]
+        def sentence_bwd(d_doc_acts: Output, sgd: Optional[Optimizer]=None) -> None:
             d_nested = [
-                ops.unflatten(d_doc_acts[i], doc_sent_lengths[i])
+                Activations.join(d_doc_acts[i], doc_sent_lengths[i])
                 for i in range(len(d_doc_acts))
             ]
             d_sent_acts = flatten_list(d_nested)
-            d_sent_acts = [Activations(sa, None, None, None) for sa in d_sent_acts]
             d_ids = bp_sent_acts(d_sent_acts, sgd=sgd)
             if not (d_ids is None or all(ds is None for ds in d_ids)):
                 raise ValueError("Expected gradient of sentence to be None")
-            return None
+            return d_ids
 
         _assert_no_missing_doc_rows(docs, doc_acts)
         return doc_acts, sentence_bwd
