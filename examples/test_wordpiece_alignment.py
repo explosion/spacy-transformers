@@ -13,7 +13,7 @@ msg = Printer()
 
 @plac.annotations(
     name=("Pretrained model name, e.g. 'bert-base-uncased'", "positional", None, str),
-    n_texts=("Number of texts to train from", "option", "n", int),
+    n_texts=("Number of texts to load (0 for all)", "option", "n", int),
     lang=("spaCy language to use for tokenization", "option", "l", str),
 )
 def main(name="bert-base-uncased", n_texts=1000, lang="en"):
