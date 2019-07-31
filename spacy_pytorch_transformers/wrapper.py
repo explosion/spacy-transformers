@@ -1,10 +1,12 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch
-from pytorch_transformers import AdamW
+from pytorch_transformers.optimization import AdamW
 import torch.autograd
-import torch.nn.utils
+import torch.nn.utils.clip_grad
 import torch
+from typing import Tuple, Callable, Optional, Any
 
 from .util import get_pytt_model, Activations
+from .util import Array, Dropout, Optimizer
 
 FINE_TUNE = False
 GRAD_CLIP_FACTOR = 100
@@ -14,6 +16,9 @@ CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 class PyTT_Wrapper(PyTorchWrapper):
     """Wrap a PyTorch-Transformers model for use in Thinc."""
+
+    _model: Any
+    _optimizer: Any
 
     @classmethod
     def from_pretrained(cls, name):
@@ -29,7 +34,9 @@ class PyTT_Wrapper(PyTorchWrapper):
     def nO(self):
         return self._model.config.hidden_size
 
-    def begin_update(self, ids, drop=None):
+    def begin_update(
+        self, ids: Array, drop: Dropout = None
+    ) -> Tuple[Activations, Callable[..., None]]:
         ids = xp2torch(self.ops.asarray(ids))
         is_training = self._model.training
         if drop is None:
@@ -42,7 +49,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.has_last_hidden_state
 
-        def backward_pytorch(d_output, sgd=None):
+        def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_last_hidden_state:
@@ -60,11 +67,13 @@ class PyTT_Wrapper(PyTorchWrapper):
                     if self._optimizer is None:
                         self._optimizer = self._create_optimizer(sgd)
                     if sgd.max_grad_norm:
-                        torch.nn.utils.clip_grad_norm_(
-                            self._model.parameters(), sgd.max_grad_norm / GRAD_CLIP_FACTOR
+                        torch.nn.utils.clip_grad.clip_grad_norm_(
+                            self._model.parameters(),
+                            sgd.max_grad_norm / GRAD_CLIP_FACTOR,
                         )
-                    self._optimizer.step()
-                    self._optimizer.zero_grad()
+                    optimizer = self._optimizer
+                    optimizer.step()
+                    optimizer.zero_grad()
             return None
 
         self._model.eval()

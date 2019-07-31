@@ -1,4 +1,6 @@
+from typing import Union, List, Tuple, Sequence, TypeVar, Callable, Any, Optional, Sized
 import numpy
+import cupy
 from dataclasses import dataclass
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
@@ -9,8 +11,12 @@ import re
 from . import _tokenizers
 
 
-alpha_re = re.compile(r"[^A-Za-z]+")
-SPECIAL_TOKENS = (
+Array = Union["numpy.ndarray", "cupy.ndarray"]
+Optimizer = Callable[[Array, Array, Optional[int]], None]
+Dropout = Optional[float]
+
+
+SPECIAL_TOKENS: Sequence[str] = (
     "[CLS]",
     "[BOS]",
     "[SEP]",
@@ -20,18 +26,19 @@ SPECIAL_TOKENS = (
     "<s>",
     "</s>",
 )
+alpha_re = re.compile(r"[^A-Za-z]+")
 
 
 @dataclass
 class Activations:
-    last_hidden_state: object
-    pooler_output: object
-    all_hidden_states: object = None
-    all_attentions: object = None
+    last_hidden_state: Array
+    pooler_output: Optional[List[Array]]
+    all_hidden_states: Optional[List[Array]] = None
+    all_attentions: Optional[List[Array]] = None
     is_grad: bool = False
 
     @classmethod
-    def from_pytt(cls, fields, *, is_grad=False):
+    def from_pytt(cls, fields, *, is_grad=False) -> "Activations":
         """Create Activations from the output tuples produced by PyTorch Transformers.
         Includes converting torch tensors to xp, and handling missing values.
         """
@@ -49,73 +56,63 @@ class Activations:
                 fields[1] = torch2xp(fields[1])
         else:
             fields.append(None)
-        return cls(*fields, is_grad=is_grad)
+        if len(fields) == 2:
+            fields.append(None)
+            fields.append(None)
+        elif len(fields) == 3:
+            fields.append(None)
+        return cls(fields[0], fields[1], fields[2], fields[3], is_grad=is_grad)
 
     @classmethod
-    def join(cls, sub_acts, *, is_grad=False):
+    def join(cls, sub_acts: List["Activations"]) -> "Activations":
         """Concatenate activations from subsequences."""
-        fields = [None, None, None, None]
-        if not sub_acts:
-            return cls(*fields, None, is_grad=is_grad)
-        if sub_acts[0].has_last_hidden_state:
-            xp = get_array_module(sub_acts[0].last_hidden_state)
-            fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts])
-        if sub_acts[0].has_pooler_output:
-            xp = get_array_module(sub_acts[0].pooler_output)
-            # fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts])
-        if sub_acts[0].has_all_hidden_states:
-            xp = get_array_module(sub_acts[0].all_hidden_states)
-            # fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts])
-        if sub_acts[0].has_all_attentions:
-            xp = get_array_module(sub_acts[0].all_hidden_states)
-            # fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts])
-        return cls(*fields, is_grad=is_grad)
+        xp = get_array_module(sub_acts[0].last_hidden_state)
+        lh: Array = xp.vstack([x.last_hidden_state for x in sub_acts])
+        return cls(lh, None, None, None, is_grad=sub_acts[0].is_grad)
 
-    def __len__(self):
-        return sum(
-            (
-                self.has_last_hidden_state,
-                self.has_pooler_output,
-                self.has_all_hidden_states,
-                self.has_all_attentions,
-            )
-        )
+    def __len__(self) -> int:
+        return len(self.last_hidden_state)
 
-    def get_slice(self, x, y):
-        output = Activations(None, None, None, None, is_grad=self.is_grad)
-        if self.has_last_hidden_state:
-            output.last_hidden_state = self.last_hidden_state[x, y]
-        if self.has_pooler_output:
-            output.pooler_output = self.pooler_output[x, y]
-        if self.has_all_hidden_states:
-            raise NotImplementedError
-        if self.has_all_attentions:
-            raise NotImplementedError
-        return output
+    def get_slice(self, x, y) -> "Activations":
+        lh = self.last_hidden_state[x, y]
+        # if self.has_pooler_output:
+        #    po = self.pooler_output[x, y]
+        # else:
+        # po = None
+        ##if self.has_all_hidden_states:
+        #    raise NotImplementedError
+        # if self.has_all_attentions:
+        #    raise NotImplementedError
+        return Activations(lh, None, None, None, is_grad=self.is_grad)
 
-    def split(self, ops, shapes):
+    def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
-        lh_values = [None] * len(shapes)
-        po_values = [None] * len(shapes)
-        ah_values = [None] * len(shapes)
-        aa_values = [None] * len(shapes)
-        lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
-        if self.has_last_hidden_state:
-            lh_lengths = [shape[0] for shape in lh_shapes]
-            lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
-        if self.has_pooler_output:
-            po_lengths = [shape[0] for shape in po_shapes]
-            # po_values = ops.unflatten(self.pooler_output, po_lengths)
-        if self.has_all_hidden_states:
-            ah_lengths = [shape[0] for shape in ah_shapes]
-            # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
-        if self.has_all_attentions:
-            aa_lengths = [shape[0] for shape in aa_shapes]
-            # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
-        outputs = []
-        for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
-            outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
-        return outputs
+        last_hiddens = ops.unflatten(self.last_hidden_state, lengths)
+        return [
+            Activations(lh, None, None, None, is_grad=self.is_grad)
+            for lh in last_hiddens
+        ]
+        # lh_values = [None] * len(shapes)
+        # po_values = [None] * len(shapes)
+        # ah_values = [None] * len(shapes)
+        # aa_values = [None] * len(shapes)
+        # lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
+        # if self.has_last_hidden_state:
+        #    lh_lengths = [shape[0] for shape in lh_shapes]
+        #    lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
+        # if self.has_pooler_output:
+        #    po_lengths = [shape[0] for shape in po_shapes]
+        #    # po_values = ops.unflatten(self.pooler_output, po_lengths)
+        # if self.has_all_hidden_states:
+        #    ah_lengths = [shape[0] for shape in ah_shapes]
+        #    # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
+        # if self.has_all_attentions:
+        #    aa_lengths = [shape[0] for shape in aa_shapes]
+        #    # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
+        # outputs = []
+        # for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
+        #    outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
+        # return outputs
 
     @property
     def shapes(self):
@@ -131,19 +128,19 @@ class Activations:
         return output
 
     @property
-    def has_last_hidden_state(self):
+    def has_last_hidden_state(self) -> bool:
         return self.last_hidden_state is not None
 
     @property
-    def has_pooler_output(self):
+    def has_pooler_output(self) -> bool:
         return self.pooler_output is not None
 
     @property
-    def has_all_hidden_states(self):
+    def has_all_hidden_states(self) -> bool:
         return self.all_hidden_states is not None
 
     @property
-    def has_all_attentions(self):
+    def has_all_attentions(self) -> bool:
         return self.all_attentions is not None
 
 
@@ -278,12 +275,13 @@ def _get_char_map(seq):
     return char_map
 
 
-def pad_batch(batch):
+def pad_batch(batch: List[Array]) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
     them into a single array. Supports only 1d input arrays."""
-    max_len = max(len(seq) for seq in batch)
-    padded = []
+    max_len = max((len(seq) or 0) for seq in batch)
+    padded: List[Array] = []
     xp = get_array_module(batch[0])
+    seq: Array
     for seq in batch:
         # Ugh, numpy.pad sucks.
         if isinstance(seq, list):
@@ -295,15 +293,22 @@ def pad_batch(batch):
     return xp.vstack(padded)
 
 
-def batch_by_length(seqs, min_batch):
+def pad_batch_activations(batch: List[Activations]) -> Activations:
+    lh = pad_batch([x.last_hidden_state for x in batch])
+    return Activations(lh, None, None, None, is_grad=batch[0].is_grad)
+
+
+def batch_by_length(
+    seqs: Union[List[Array], List[Activations]], min_batch: int
+) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
     must be at least min_batch length long.
     """
     lengths_indices = [(len(seq), i) for i, seq in enumerate(seqs)]
     lengths_indices.sort(reverse=True)
-    batches = []
-    batch = []
+    batches: List[List[int]] = []
+    batch: List[int] = []
     prev_length = None
     for length, i in lengths_indices:
         if not batch or length == prev_length or len(batch) < min_batch:
@@ -328,10 +333,10 @@ def batch_by_length(seqs, min_batch):
     return batches
 
 
-def unflatten_list(flat, lengths):
+def unflatten_list(flat: List[Any], lengths: List[int]) -> List[List[Any]]:
     """Unflatten a list into nested sublists, where each sublist i should have
     length lengths[i]."""
-    nested = []
+    nested: List[List[Any]] = []
     offset = 0
     for length in lengths:
         nested.append(flat[offset : offset + length])
@@ -339,7 +344,7 @@ def unflatten_list(flat, lengths):
     return nested
 
 
-def flatten_list(nested):
+def flatten_list(nested: List[List[Any]]) -> List[Any]:
     """Flatten a nested list."""
     flat = []
     for x in nested:
@@ -347,5 +352,5 @@ def flatten_list(nested):
     return flat
 
 
-def is_special_token(text):
+def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
