@@ -31,7 +31,7 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         RETURNS (thinc.neural.Model): The model.
         """
         return chain(
-            get_pytt_last_hidden,
+            get_pytt_class_tokens,
             flatten_add_lengths,
             Pooling(mean_pool),
             Softmax(nr_class, cfg["token_vector_width"]),

@@ -61,7 +61,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         else:
             pytt_model = PyTT_Wrapper(name)
         nO = pytt_model.nO
-        batch_by_length = cfg.get("batch_by_length", 10)
+        batch_by_length = cfg.get("words_per_batch", 2000)
         model = foreach_sentence(
             chain(
                 get_word_pieces,
@@ -254,14 +254,14 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     return wrap(apply_model_padded, model)
 
 
-def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
+def with_length_batching(model: PyTT_Wrapper, max_words: int) -> Model:
     """Wrapper that applies a model to variable-length sequences by first batching
     and padding the sequences. This allows us to group similarly-lengthed sequences
     together, making the padding less wasteful. If min_batch==1, no padding will
     be necessary.
     """
-    if min_batch < 1:
-        return without_length_batching(model, min_batch)
+    if max_words < 1:
+        return without_length_batching(model, max_words)
 
     Input = List[Array]
     Output = List[Activations]
@@ -270,7 +270,7 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
     def apply_model_to_batches(
         inputs: List[Array], drop: Dropout = 0.0
     ) -> Tuple[List[Activations], Backprop]:
-        batches: List[List[int]] = batch_by_length(inputs, min_batch)
+        batches: List[List[int]] = batch_by_length(inputs, max_words)
         # Initialize this, so we can place the outputs back in order.
         unbatched: List[Optional[Activations]] = [None for _ in inputs]
         backprops = []

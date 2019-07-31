@@ -57,7 +57,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     optimizer = nlp.resume_training()
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
-    batch_sizes = compounding(2.0, 8.0, 1.001)
+    batch_sizes = compounding(8.0, 8.0, 1.001)
     for i in range(n_iter):
         losses = {}
         # batch up the examples using spaCy's minibatch
