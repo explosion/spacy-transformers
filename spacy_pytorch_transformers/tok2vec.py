@@ -265,7 +265,7 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
 
     Input = List[Array]
     Output = List[Activations]
-    Backprop = Callable[[Output, Optional[Optimizer]], Input]
+    Backprop = Callable[[Output, Optional[Optimizer]], Optional[Input]]
 
     def apply_model_to_batches(
         inputs: List[Array], drop: Dropout = 0.0
@@ -283,7 +283,7 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
         outputs: List[Activations] = [y for y in unbatched if y is not None]
         assert len(outputs) == len(unbatched)
 
-        def backprop_batched(d_outputs: Output, sgd: Optimizer = None) -> Input:
+        def backprop_batched(d_outputs: Output, sgd: Optimizer = None) -> Optional[Input]:
             d_inputs: List[Optional[Array]] = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
                 d_activs = pad_batch_activations([d_outputs[i] for i in indices])
@@ -293,8 +293,11 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
                         # As above, put things back in order, unpad.
                         d_inputs[j] = dX[i, : len(d_outputs[j])]
             not_none = [x for x in d_inputs if x is not None]
-            assert len(not_none) == len(d_inputs)
-            return not_none
+            if len(not_none) == 0:
+                return None
+            else:
+                assert len(not_none) == len(d_inputs)
+                return not_none
 
         return outputs, backprop_batched
 
