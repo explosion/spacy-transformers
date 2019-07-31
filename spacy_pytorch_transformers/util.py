@@ -36,7 +36,7 @@ class Activations:
     is_grad: bool = False
 
     @classmethod
-    def from_pytt(cls, fields, *, is_grad=False) -> Activations:
+    def from_pytt(cls, fields, *, is_grad=False) -> "Activations":
         """Create Activations from the output tuples produced by PyTorch Transformers.
         Includes converting torch tensors to xp, and handling missing values.
         """
@@ -62,7 +62,7 @@ class Activations:
         return cls(fields[0], fields[1], fields[2], fields[3], is_grad=is_grad)
 
     @classmethod
-    def join(cls, sub_acts: List[Activations]) -> Activations:
+    def join(cls, sub_acts: List["Activations"]) -> "Activations":
         """Concatenate activations from subsequences."""
         return sub_acts[0]
         #fields = [None, None, None, None]
@@ -85,7 +85,7 @@ class Activations:
     def __len__(self) -> int:
         return len(self.last_hidden_state)
 
-    def get_slice(self, x, y) -> Activations:
+    def get_slice(self, x, y) -> "Activations":
         if self.has_last_hidden_state:
             lh = self.last_hidden_state[x, y]
         else:
@@ -100,7 +100,7 @@ class Activations:
             raise NotImplementedError
         return Activations(lh, po, None, None, is_grad=self.is_grad)
 
-    def split(self, ops: Any, shapes: List[int]) -> List[Activations]:
+    def split(self, ops: Any, shapes: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
         return [self]
         #lh_values = [None] * len(shapes)
@@ -301,7 +301,7 @@ def pad_batch_activations(batch: List[Activations]) -> Activations:
     return []
 
 
-def batch_by_length(seqs: Union[List[ndarray], List[Activations]], min_batch: int) -> List[List[int]]:
+def batch_by_length(seqs: Union[List[Array], List[Activations]], min_batch: int) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
     must be at least min_batch length long.
