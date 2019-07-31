@@ -94,6 +94,11 @@ class PyTT_WordPiecer(Pipe):
                 new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
                 assert len(wp_tokens) == len(new_wp_tokens)
                 sent_align = align_word_pieces(spacy_tokens, new_wp_tokens)
+                if sent_align is None:
+                    # As a final fallback, we resort to word-piece tokenizing
+                    # the spaCy tokens individually, to make the alignment
+                    # trivial.
+                    wp_tokens, sent_align = _tokenize_individual_tokens(self.model, sent)
                 # We need to align into the flattened document list, instead
                 # of just into this sentence. So offset by number of wp tokens.
                 for token_align in sent_align:
@@ -121,3 +126,20 @@ class PyTT_WordPiecer(Pipe):
             doc._.pytt_word_pieces = doc_word_piece_ids
             doc._.pytt_word_pieces_ = doc_word_pieces
             doc._.pytt_alignment = doc_alignment
+
+
+def _tokenize_individual_tokens(model, sent):
+    # As a last-chance strategy, run the wordpiece tokenizer on the
+    # individual tokens, so that alignment is trivial.
+    wp_tokens = []
+    sent_align = []
+    offset = 0
+    # Figure out whether we're adding special tokens
+    if model.add_special_tokens(["the"])[0] != "the":
+        offset += 1
+    for token in sent:
+        subtokens = model.tokenize(token.text)
+        wp_tokens.extend(subtokens)
+        sent_align.append([offset+i for i in range(len(subtokens))])
+        offset += len(subtokens)
+    return model.add_special_tokens(wp_tokens), sent_align
