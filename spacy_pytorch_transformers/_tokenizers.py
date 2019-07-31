@@ -14,6 +14,7 @@ import regex
 import sentencepiece
 from pathlib import Path
 import unicodedata
+import re
 
 import pytorch_transformers as pytt
 from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
@@ -39,6 +40,26 @@ def clean_accents(text):
     return "".join(
         c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
     )
+
+
+def clean_fractions(text):
+    chars = []
+    for c in text:
+        try:
+            name = unicodedata.name(c)
+        except ValueError:
+            chars.append(c)
+            continue
+        name = unicodedata.name(c)
+        if name.startswith("VULGAR FRACTION"):
+            chars.append(unicodedata.normalize("NFKC", c))
+        else:
+            chars.append(c)
+    return "".join(chars)
+
+
+def clean_extended_unicode(text):
+    return "".join(i for i in text if 31 < ord(i) < 127)
 
 
 class SerializationMixin:
@@ -165,10 +186,15 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
 
     def clean_token(self, text):
+        text = clean_extended_unicode(text)
         return text.strip()
 
-    def clean_wp_token(self, token):
-        return token.replace("\u0120", "", 1).strip()
+    def clean_wp_token(self, text):
+        text = text.replace("\u0120", "", 1)
+        text = text.replace("\u010a", "", 1)
+        text = ftfy.fix_text(text)
+        text = clean_extended_unicode(text)
+        return text.strip()
 
     def add_special_tokens(self, tokens):
         return [self.bos_token] + tokens + [self.eos_token]
@@ -244,6 +270,7 @@ class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin
 
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
+    _replace_re = re.compile(r"[\s\.\-`'\";]+")
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "_bpe_ranks"]
 
     @classmethod
@@ -269,16 +296,27 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
 
     def clean_token(self, text):
+        # Model seems to just strip out all unicode so we need to do this, too,
+        # instead of calling clean_accents etc.
+        text = ftfy.fix_text(text)
+        text = re.sub(r"&(#\d+|#x[a-f\d]+)", "", text)  # malformed HTML entities
+        text = clean_extended_unicode(text)
+        text = self._replace_re.sub("", text)
         return text.strip()
 
-    def clean_wp_token(self, token):
-        return token.replace("</w>", "").strip()
+    def clean_wp_token(self, text):
+        text = ftfy.fix_text(text)
+        text = clean_extended_unicode(text)
+        text = self._replace_re.sub("", text)
+        return text.replace("</w>", "").strip()
 
     def add_special_tokens(self, tokens):
         return [self.bos_token] + tokens + [self.cls_token]
 
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
+    _replace_re = re.compile(r"[\s\.\-`'\";]+")
+    _replacements = [("º", "o"), *zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")]
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "do_lower_case",
         "remove_space",
@@ -304,10 +342,22 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         self.sp_model.LoadFromSerializedProto(self.vocab_bytes)
 
     def clean_token(self, text):
+        text = clean_fractions(text)
+        text = clean_accents(text)
+        for a, b in self._replacements:
+            text = text.replace(a, b)
+        text = clean_extended_unicode(text)
+        text = self._replace_re.sub("", text)
         return text.strip()
 
-    def clean_wp_token(self, token):
-        return token.replace("\u2581", "", 1).strip()
+    def clean_wp_token(self, text):
+        # Note: The special control character is \u2581
+        text = clean_accents(text)
+        for a, b in self._replacements:
+            text = text.replace(a, b)
+        text = clean_extended_unicode(text)
+        text = self._replace_re.sub("", text)
+        return text.strip()
 
     def add_special_tokens(self, tokens):
         return [self.cls_token] + tokens + [self.eos_token]

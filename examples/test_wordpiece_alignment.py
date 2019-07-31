@@ -15,12 +15,14 @@ msg = Printer()
     name=("Pretrained model name, e.g. 'bert-base-uncased'", "positional", None, str),
     n_texts=("Number of texts to load (0 for all)", "option", "n", int),
     lang=("spaCy language to use for tokenization", "option", "l", str),
+    skip=("Don't stop processing on errors, only print", "flag", "s", bool),
 )
-def main(name="bert-base-uncased", n_texts=1000, lang="en"):
+def main(name="bert-base-uncased", n_texts=1000, lang="en", skip=False):
     """Test the wordpiecer on a large dataset to find misalignments."""
     nlp = get_lang_class(lang)()
     nlp.add_pipe(nlp.create_pipe("sentencizer"))
     wp = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
+    msg.good(f"Loaded WordPiecer for model '{name}'")
     with msg.loading("Loading IMDB data..."):
         data, _ = thinc.extra.datasets.imdb(limit=n_texts)
     texts, _ = zip(*data)
@@ -36,11 +38,15 @@ def main(name="bert-base-uncased", n_texts=1000, lang="en"):
                 a, b = e.args[0]
                 msg.fail("Misaligned tokens")
                 print(diff_strings(a, b))
-                sys.exit(1)
+                if not skip:
+                    sys.exit(1)
             elif len(e.args):
-                msg.fail(f"Error: {e.args[0]}", exits=1)
+                msg.fail(f"Error: {e.args[0]}", exits=None if skip else 1)
             else:
-                raise e
+                if skip:
+                    print(e)
+                else:
+                    raise e
     msg.good(f"Processed {len(texts)} documents ({sent_counts} sentences)")
 
 
