@@ -216,7 +216,9 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
         offset += 1
     while wp_tokens and wp_tokens[-1] in specials:
         wp_tokens.pop(-1)
-    if not spacy_tokens or not wp_tokens:
+    if not wp_tokens:
+        return [[] for _ in spacy_tokens]
+    elif not spacy_tokens:
         return []
     # Check alignment
     spacy_string = "".join(spacy_tokens).lower()
