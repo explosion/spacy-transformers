@@ -4,10 +4,12 @@ import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
 from thinc.extra.wrappers import torch2xp
 import torch
+import re
 
 from . import _tokenizers
 
 
+alpha_re = re.compile(r"[^A-Za-z]+")
 SPECIAL_TOKENS = (
     "[CLS]",
     "[BOS]",
@@ -221,12 +223,16 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
     elif not spacy_tokens:
         return []
     # Check alignment
-    spacy_string = "".join(spacy_tokens).lower()
-    wp_string = "".join(wp_tokens).lower()
-    if spacy_string != wp_string:
-        print("spaCy:", spacy_string)
-        print("WP:", wp_string)
-        raise AssertionError((spacy_string, wp_string))
+    if "".join(spacy_tokens).lower() != "".join(wp_tokens).lower():
+        # Force alignment
+        spacy_tokens = [alpha_re.sub("", t) for t in spacy_tokens]
+        wp_tokens = [alpha_re.sub("", t) for t in wp_tokens]
+        spacy_string = "".join(spacy_tokens).lower()
+        wp_string = "".join(wp_tokens).lower()
+        if spacy_string != wp_string:
+            print("spaCy:", spacy_string)
+            print("WP:", wp_string)
+            raise AssertionError((spacy_string, wp_string))
     output = _align(spacy_tokens, wp_tokens, offset)
     return output
 
