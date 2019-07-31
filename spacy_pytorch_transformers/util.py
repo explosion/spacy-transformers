@@ -73,41 +73,44 @@ class Activations:
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.last_hidden_state[x, y]
-        #if self.has_pooler_output:
+        # if self.has_pooler_output:
         #    po = self.pooler_output[x, y]
-        #else:
-        #po = None
+        # else:
+        # po = None
         ##if self.has_all_hidden_states:
         #    raise NotImplementedError
-        #if self.has_all_attentions:
+        # if self.has_all_attentions:
         #    raise NotImplementedError
         return Activations(lh, None, None, None, is_grad=self.is_grad)
 
     def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
         last_hiddens = ops.unflatten(self.last_hidden_state, lengths)
-        return [Activations(lh, None, None, None, is_grad=self.is_grad) for lh in last_hiddens]
-        #lh_values = [None] * len(shapes)
-        #po_values = [None] * len(shapes)
-        #ah_values = [None] * len(shapes)
-        #aa_values = [None] * len(shapes)
-        #lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
-        #if self.has_last_hidden_state:
+        return [
+            Activations(lh, None, None, None, is_grad=self.is_grad)
+            for lh in last_hiddens
+        ]
+        # lh_values = [None] * len(shapes)
+        # po_values = [None] * len(shapes)
+        # ah_values = [None] * len(shapes)
+        # aa_values = [None] * len(shapes)
+        # lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
+        # if self.has_last_hidden_state:
         #    lh_lengths = [shape[0] for shape in lh_shapes]
         #    lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
-        #if self.has_pooler_output:
+        # if self.has_pooler_output:
         #    po_lengths = [shape[0] for shape in po_shapes]
         #    # po_values = ops.unflatten(self.pooler_output, po_lengths)
-        #if self.has_all_hidden_states:
+        # if self.has_all_hidden_states:
         #    ah_lengths = [shape[0] for shape in ah_shapes]
         #    # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
-        #if self.has_all_attentions:
+        # if self.has_all_attentions:
         #    aa_lengths = [shape[0] for shape in aa_shapes]
         #    # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
-        #outputs = []
-        #for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
+        # outputs = []
+        # for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
         #    outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
-        #return outputs
+        # return outputs
 
     @property
     def shapes(self):
@@ -289,7 +292,9 @@ def pad_batch_activations(batch: List[Activations]) -> Activations:
     return Activations(lh, None, None, None, is_grad=batch[0].is_grad)
 
 
-def batch_by_length(seqs: Union[List[Array], List[Activations]], min_batch: int) -> List[List[int]]:
+def batch_by_length(
+    seqs: Union[List[Array], List[Activations]], min_batch: int
+) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
     must be at least min_batch length long.

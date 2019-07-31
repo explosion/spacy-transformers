@@ -140,6 +140,7 @@ def get_wp_end(span):
 def get_span_wp_getter(attr):
     def span_getter(span):
         return [token._.get(attr) for token in span]
+
     return span_getter
 
 

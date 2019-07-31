@@ -64,10 +64,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         nO = model.nO
         batch_by_length = cfg.get("batch_by_length", 10)
         model = foreach_sentence(
-            chain(
-                get_word_pieces,
-                with_length_batching(model, batch_by_length)
-            ))
+            chain(get_word_pieces, with_length_batching(model, batch_by_length))
+        )
         model.nO = nO
         return model
 
@@ -118,9 +116,9 @@ class PyTT_TokenVectorEncoder(Pipe):
             for doc in docs:
                 gradients.append(
                     Activations(
-                        doc._.pytt_d_last_hidden_state,
-                        None, None, None,
-                        is_grad=True))
+                        doc._.pytt_d_last_hidden_state, None, None, None, is_grad=True
+                    )
+                )
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
@@ -148,10 +146,11 @@ class PyTT_TokenVectorEncoder(Pipe):
             wp_tensor = doc_acts.last_hidden_state
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
-            assert wp_tensor.shape == (
+            assert wp_tensor.shape == (len(doc._.pytt_word_pieces), self.model.nO), (
                 len(doc._.pytt_word_pieces),
                 self.model.nO,
-            ), (len(doc._.pytt_word_pieces), self.model.nO, wp_tensor.shape)
+                wp_tensor.shape,
+            )
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
@@ -227,11 +226,14 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     Backprop = Callable[[Output, Optional[Optimizer]], Optional[Input]]
     model_begin_update: Callable[[Array, Dropout], Tuple[Activations, Backprop]]
     model_begin_update = model.begin_update
- 
-    def apply_model_padded(inputs: Input, drop: Dropout=0.0) -> Tuple[Output, Backprop]:
+
+    def apply_model_padded(
+        inputs: Input, drop: Dropout = 0.0
+    ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
-        last_hiddens = [activs.last_hidden_state[i, : len(seq)]
-                        for i, seq in enumerate(inputs)]
+        last_hiddens = [
+            activs.last_hidden_state[i, : len(seq)] for i, seq in enumerate(inputs)
+        ]
         outputs = [Activations(y, None, None, None) for y in last_hiddens]
 
         def backprop_batched(d_outputs, sgd=None):
@@ -263,8 +265,10 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
     Input = List[Array]
     Output = List[Activations]
     Backprop = Callable[[Output, Optional[Optimizer]], Input]
- 
-    def apply_model_to_batches(inputs: List[Array], drop: Dropout=0.0) -> Tuple[List[Activations], Backprop]:
+
+    def apply_model_to_batches(
+        inputs: List[Array], drop: Dropout = 0.0
+    ) -> Tuple[List[Activations], Backprop]:
         batches: List[List[int]] = batch_by_length(inputs, min_batch)
         # Initialize this, so we can place the outputs back in order.
         unbatched: List[Optional[Activations]] = [None for _ in inputs]
@@ -278,7 +282,7 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
         outputs: List[Activations] = [y for y in unbatched if y is not None]
         assert len(outputs) == len(unbatched)
 
-        def backprop_batched(d_outputs: Output, sgd: Optimizer=None) -> Input:
+        def backprop_batched(d_outputs: Output, sgd: Optimizer = None) -> Input:
             d_inputs: List[Optional[Array]] = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
                 d_activs = pad_batch_activations([d_outputs[i] for i in indices])
@@ -296,32 +300,29 @@ def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
     return wrap(apply_model_to_batches, model)
 
 
-def foreach_sentence(layer: Model, drop_factor: float=1.) -> PyTT_Wrapper:
+def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> PyTT_Wrapper:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
     ops = layer.ops
 
-    Input = List[Doc]
     Output = List[Activations]
     Backprop = Callable[[Output, Optional[Optimizer]], None]
-    def sentence_fwd(docs: Input, drop: Dropout = 0.0) -> Tuple[Output, Backprop]:
+
+    def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Output, Backprop]:
         sents: List[Span]
         sent_acts: List[Activations]
         bp_sent_acts: Callable[..., Optional[List[None]]]
         nested: List[List[Activations]]
         doc_sent_lengths: List[List[int]]
         doc_acts: List[Activations]
-        
+
         sents = flatten_list([list(doc.sents) for doc in docs])
         sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
-        # sent_acts is List[array], one per sent. Go to List[List[array]],
-        # then List[array] (one per doc).
         nested = unflatten_list(sent_acts, [len(list(doc.sents)) for doc in docs])
-        # Need this for the callback.
         doc_sent_lengths = [[len(sa) for sa in doc_sa] for doc_sa in nested]
         doc_acts = [Activations.join(doc_sa) for doc_sa in nested]
         assert len(docs) == len(doc_acts)
 
-        def sentence_bwd(d_doc_acts: Output, sgd: Optional[Optimizer]=None) -> None:
+        def sentence_bwd(d_doc_acts: Output, sgd: Optional[Optimizer] = None) -> None:
             d_nested = [
                 d_doc_acts[i].split(ops, doc_sent_lengths[i])
                 for i in range(len(d_doc_acts))
@@ -343,11 +344,18 @@ def _assert_no_missing_sent_rows(docs, sent_acts):
     total_wps = sum(len(doc._.pytt_word_pieces) for doc in docs)
     assert total_rows == total_wps, (total_rows, total_wps)
     for sent, sa in zip(sents, sent_acts):
-        assert ((sent._.pytt_end+1)-sent._.pytt_start) == sa.shape[0], (sent._.pytt_start, sent._.pytt_end+1, sa.shape)
+        assert ((sent._.pytt_end + 1) - sent._.pytt_start) == sa.shape[0], (
+            sent._.pytt_start,
+            sent._.pytt_end + 1,
+            sa.shape,
+        )
+
 
 def _assert_no_missing_doc_rows(docs, doc_acts):
     assert len(docs) == len(doc_acts)
     for doc, da in zip(docs, doc_acts):
         shape = da.last_hidden_state.shape
-        assert len(doc._.pytt_word_pieces) == shape[0], (len(doc._.pytt_word_pieces), shape[0])
-
+        assert len(doc._.pytt_word_pieces) == shape[0], (
+            len(doc._.pytt_word_pieces),
+            shape[0],
+        )

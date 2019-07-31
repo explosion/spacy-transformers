@@ -16,6 +16,7 @@ CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 class PyTT_Wrapper(PyTorchWrapper):
     """Wrap a PyTorch-Transformers model for use in Thinc."""
+
     _model: Any
     _optimizer: Any
 
@@ -33,7 +34,9 @@ class PyTT_Wrapper(PyTorchWrapper):
     def nO(self):
         return self._model.config.hidden_size
 
-    def begin_update(self, ids: Array, drop: Dropout=None) -> Tuple[Activations, Callable[..., None]]:
+    def begin_update(
+        self, ids: Array, drop: Dropout = None
+    ) -> Tuple[Activations, Callable[..., None]]:
         ids = xp2torch(self.ops.asarray(ids))
         is_training = self._model.training
         if drop is None:
@@ -46,7 +49,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.has_last_hidden_state
 
-        def backward_pytorch(d_output: Activations, sgd: Optimizer=None) -> None:
+        def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_last_hidden_state:
@@ -65,7 +68,8 @@ class PyTT_Wrapper(PyTorchWrapper):
                         self._optimizer = self._create_optimizer(sgd)
                     if sgd.max_grad_norm:
                         torch.nn.utils.clip_grad.clip_grad_norm_(
-                            self._model.parameters(), sgd.max_grad_norm / GRAD_CLIP_FACTOR
+                            self._model.parameters(),
+                            sgd.max_grad_norm / GRAD_CLIP_FACTOR,
                         )
                     optimizer = self._optimizer
                     optimizer.step()
