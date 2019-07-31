@@ -150,16 +150,12 @@ def get_pytt_config(name):
         return pytt.BertConfig
     elif "xlnet" in name:
         return pytt.XLNetConfig
-    elif "openai" in name:
-        return pytt.OpenAIGPTConfig
-    elif "transfoxl" in name:
-        return pytt.TransfoXLConfig
     elif "gpt2" in name:
         return pytt.GPT2Config
     elif "xlm" in name:
         return pytt.XLMConfig
     else:
-        raise ValueError(f"Unrecognized PyTT config name: {name}")
+        raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
 def get_pytt_model(name):
@@ -169,16 +165,12 @@ def get_pytt_model(name):
         return pytt.BertModel
     elif "xlnet" in name:
         return pytt.XLNetModel
-    elif "openai" in name:
-        return pytt.OpenAIGPTModel
-    elif "transfoxl" in name:
-        return pytt.TransfoXLModel
     elif "gpt2" in name:
         return pytt.GPT2Model
     elif "xlm" in name:
         return pytt.XLMModel
     else:
-        raise ValueError(f"Unrecognized PyTT config name: {name}")
+        raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
 def get_pytt_tokenizer(name):
@@ -188,16 +180,12 @@ def get_pytt_tokenizer(name):
         return _tokenizers.SerializableBertTokenizer
     elif "xlnet" in name:
         return _tokenizers.SerializableXLNetTokenizer
-    elif "openai" in name:
-        return _tokenizers.SerializableOpenAIGPTTokenizer
-    elif "transfoxl" in name:
-        return _tokenizers.SerializableTransfoXLTokenizer
     elif "gpt2" in name:
         return _tokenizers.SerializableGPT2Tokenizer
     elif "xlm" in name:
         return _tokenizers.SerializableXLMTokenizer
     else:
-        raise ValueError(f"Unrecognized PyTT config name: {name}")
+        raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
 def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
