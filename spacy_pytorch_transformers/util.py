@@ -100,29 +100,30 @@ class Activations:
             raise NotImplementedError
         return Activations(lh, po, None, None, is_grad=self.is_grad)
 
-    def split(self, ops, shapes):
+    def split(self, ops: Any, shapes: List[int]) -> List[Activations]:
         """Split into a list of Activation objects."""
-        lh_values = [None] * len(shapes)
-        po_values = [None] * len(shapes)
-        ah_values = [None] * len(shapes)
-        aa_values = [None] * len(shapes)
-        lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
-        if self.has_last_hidden_state:
-            lh_lengths = [shape[0] for shape in lh_shapes]
-            lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
-        if self.has_pooler_output:
-            po_lengths = [shape[0] for shape in po_shapes]
-            # po_values = ops.unflatten(self.pooler_output, po_lengths)
-        if self.has_all_hidden_states:
-            ah_lengths = [shape[0] for shape in ah_shapes]
-            # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
-        if self.has_all_attentions:
-            aa_lengths = [shape[0] for shape in aa_shapes]
-            # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
-        outputs = []
-        for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
-            outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
-        return outputs
+        return [self]
+        #lh_values = [None] * len(shapes)
+        #po_values = [None] * len(shapes)
+        #ah_values = [None] * len(shapes)
+        #aa_values = [None] * len(shapes)
+        #lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
+        #if self.has_last_hidden_state:
+        #    lh_lengths = [shape[0] for shape in lh_shapes]
+        #    lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
+        #if self.has_pooler_output:
+        #    po_lengths = [shape[0] for shape in po_shapes]
+        #    # po_values = ops.unflatten(self.pooler_output, po_lengths)
+        #if self.has_all_hidden_states:
+        #    ah_lengths = [shape[0] for shape in ah_shapes]
+        #    # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
+        #if self.has_all_attentions:
+        #    aa_lengths = [shape[0] for shape in aa_shapes]
+        #    # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
+        #outputs = []
+        #for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
+        #    outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
+        #return outputs
 
     @property
     def shapes(self):

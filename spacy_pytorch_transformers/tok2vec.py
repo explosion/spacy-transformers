@@ -306,11 +306,9 @@ def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
     def sentence_fwd(docs: Input, drop: Dropout = 0.0) -> Tuple[Output, Backprop]:
         sents: List[Span]
         sent_acts: List[Activations]
-        sent_states: List[Array]
         bp_sent_acts: Callable[..., Optional[List[None]]]
-        nested: List[List[Array]]
+        nested: List[List[Activations]]
         doc_sent_lengths: List[List[int]]
-        doc_states: List[Array]
         doc_acts: List[Activations]
         
         sents = flatten_list([list(doc.sents) for doc in docs])
@@ -325,14 +323,13 @@ def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
 
         def sentence_bwd(d_doc_acts: Output, sgd: Optional[Optimizer]=None) -> None:
             d_nested = [
-                Activations.join(d_doc_acts[i], doc_sent_lengths[i])
+                d_doc_acts[i].split(ops, doc_sent_lengths[i])
                 for i in range(len(d_doc_acts))
             ]
             d_sent_acts = flatten_list(d_nested)
             d_ids = bp_sent_acts(d_sent_acts, sgd=sgd)
             if not (d_ids is None or all(ds is None for ds in d_ids)):
                 raise ValueError("Expected gradient of sentence to be None")
-            return d_ids
 
         _assert_no_missing_doc_rows(docs, doc_acts)
         return doc_acts, sentence_bwd
