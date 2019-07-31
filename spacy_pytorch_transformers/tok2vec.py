@@ -59,11 +59,11 @@ class PyTT_TokenVectorEncoder(Pipe):
             model = PyTT_Wrapper(name)
         nO = model.nO
         batch_by_length = cfg.get("batch_by_length", 10)
-        with Model.define_operators({">>": chain}):
-            model = foreach_sentence(
-                get_word_pieces
-                >> with_length_batching(model >> get_last_hidden_state, batch_by_length)
-            )
+        model = foreach_sentence(
+            chain(
+                get_word_pieces,
+                with_length_batching(model, batch_by_length)
+            ))
         model.nO = nO
         return model
 
@@ -112,16 +112,11 @@ class PyTT_TokenVectorEncoder(Pipe):
         def finish_update(docs, sgd=None):
             gradients = []
             for doc in docs:
-                gradients.append(doc._.pytt_d_last_hidden_state)
-                # gradients.append(
-                #    Activations(
-                #        doc._.pytt_d_last_hidden_state,
-                #        doc._.pytt_d_pooler_output,
-                #        doc._.pytt_d_all_hidden_states,
-                #        doc._.pytt_d_all_attentions,
-                #        is_grad=True,
-                #    )
-                # )
+                gradients.append(
+                    Activations(
+                        doc._.pytt_d_last_hidden_state,
+                        None, None, None,
+                        is_grad=True))
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
@@ -145,7 +140,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        for doc, wp_tensor in zip(docs, activations):
+        for doc, doc_acts in zip(docs, activations):
+            wp_tensor = doc_acts.last_hidden_state
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
             assert wp_tensor.shape == (
@@ -224,13 +220,17 @@ def get_last_hidden_state(activations, drop=0.0):
 def without_length_batching(model, _):
     def apply_model_padded(inputs, drop=0.0):
         X = pad_batch(inputs)
-        Y, get_dX = model.begin_update(X, drop=drop)
-        outputs = [Y[i, : len(seq)] for i, seq in enumerate(inputs)]
+        activs, get_dX = model.begin_update(X, drop=drop)
+        last_hiddens = [activs.last_hidden_state[i, : len(seq)]
+                        for i, seq in enumerate(inputs)]
+        outputs = [Activations(y, None, None, None) for y in last_hiddens]
 
         def backprop_batched(d_outputs, sgd=None):
-            dY = pad_batch(d_outputs)
+            d_last_hiddens = [x.last_hidden_state for x in d_outputs]
+            dY = pad_batch(d_last_hiddens)
             dY = dY.reshape(len(d_outputs), -1, dY.shape[-1])
-            dX = get_dX(dY, sgd=sgd)
+            d_activs = Activations(dY, None, None, None, is_grad=True)
+            dX = get_dX(d_activs, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]
             else:
@@ -255,20 +255,25 @@ def with_length_batching(model, min_batch):
         backprops = []
         batches = batch_by_length(inputs, min_batch)
         # Initialize this, so we can place the outputs back in order.
-        outputs = [None for _ in inputs]
+        last_hiddens = [None for _ in inputs]
         for indices in batches:
             X = pad_batch([inputs[i] for i in indices])
-            Y, get_dX = model.begin_update(X, drop=drop)
+            activs, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
+            Y = activs.last_hidden_state
             for i, j in enumerate(indices):
-                outputs[j] = Y[i, : len(inputs[j])]
+                last_hiddens[j] = Y[i, : len(inputs[j])]
+
+        outputs = [Activations(y, None, None, None) for y in last_hiddens]
 
         def backprop_batched(d_outputs, sgd=None):
             d_inputs = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
-                dY = pad_batch([d_outputs[i] for i in indices])
+                d_last_hiddens = [d_outputs[i].last_hidden_state for i in indices]
+                dY = pad_batch(d_last_hiddens)
                 dY = dY.reshape(len(indices), -1, dY.shape[-1])
-                dX = get_dX(dY, sgd=sgd)
+                d_activs = Activations(dY, None, None, None, is_grad=True)
+                dX = get_dX(d_activs, sgd=sgd)
                 if dX is not None:
                     for i, j in enumerate(indices):
                         # As above, put things back in order, unpad.
@@ -287,6 +292,7 @@ def foreach_sentence(layer, drop_factor=1.0):
     def sentence_fwd(docs, drop=0.0):
         sents = flatten_list(doc.sents for doc in docs)
         sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
+        sent_acts = [sa.last_hidden_state for sa in sent_acts]
         total_rows = sum(sa.shape[0] for sa in sent_acts)
         total_wps = sum(len(doc._.pytt_word_pieces) for doc in docs)
         assert total_rows == total_wps, (total_rows, total_wps)
@@ -299,15 +305,18 @@ def foreach_sentence(layer, drop_factor=1.0):
         doc_sent_lengths = [[len(sa) for sa in doc_sa] for doc_sa in nested]
         doc_acts = [ops.flatten(doc_sa) for doc_sa in nested]
         assert len(docs) == len(doc_acts)
+        doc_acts = [Activations(da, None, None, None) for da in doc_acts]
 
         def sentence_bwd(d_doc_acts, sgd=None):
+            d_doc_acts = [da.last_hidden_state for da in d_doc_acts]
             d_nested = [
                 ops.unflatten(d_doc_acts[i], doc_sent_lengths[i])
                 for i in range(len(d_doc_acts))
             ]
             d_sent_acts = flatten_list(d_nested)
-            d_sents = bp_sent_acts(d_sent_acts, sgd=sgd)
-            if d_sents is None or all(ds is None for ds in d_sents):
+            d_sent_acts = [Activations(sa, None, None, None) for sa in d_sent_acts]
+            d_ids = bp_sent_acts(d_sent_acts, sgd=sgd)
+            if d_ids is None or all(ds is None for ds in d_ids):
                 return None
             # Finally we have List[array], one per sentence, where each row is
             # the gradient wrt the token.
@@ -315,11 +324,12 @@ def foreach_sentence(layer, drop_factor=1.0):
             # First get List[List[array]], grouped by doc, then just flatten
             # the lists.
             n_sents = [len(L) for L in doc_sent_lengths]
-            return [ops.flatten(ds) for ds in unflatten_list(d_sents, n_sents)]
+            return [ops.flatten(ds) for ds in unflatten_list(d_ids, n_sents)]
 
         assert len(docs) == len(doc_acts)
         for doc, da in zip(docs, doc_acts):
-            assert len(doc._.pytt_word_pieces) == da.shape[0], (len(doc._.pytt_word_pieces), da.shape[0])
+            shape = da.last_hidden_state.shape
+            assert len(doc._.pytt_word_pieces) == shape[0], (len(doc._.pytt_word_pieces), shape[0])
         return doc_acts, sentence_bwd
 
     model = wrap(sentence_fwd, layer)

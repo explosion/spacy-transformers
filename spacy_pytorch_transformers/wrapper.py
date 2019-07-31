@@ -42,19 +42,18 @@ class PyTT_Wrapper(PyTorchWrapper):
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.has_last_hidden_state
 
-        def backward_pytorch(dy_data, sgd=None):
-            y_for_bwd = [y_var[0]]
-            dy_for_bwd = [xp2torch(dy_data)]
-            # if dy_data.has_last_hidden_state:
-            #    dy_for_bwd.append(xp2torch(dy_data.last_hidden_state))
-            #    y_for_bwd.append(y_var[0])
-            # if dy_data.has_pooler_output:
-            #    dy_for_bwd.append(xp2torch(dy_data.pooler_output))
-            #    y_for_bwd.append(y_var[1])
-            # if dy_data.has_all_hidden_states:
-            #    raise ValueError("Gradients on all hidden states not supported yet.")
-            # if dy_data.has_all_attentions:
-            #    raise ValueError("Gradients on all attentions not supported yet.")
+        def backward_pytorch(d_output, sgd=None):
+            y_for_bwd = []
+            dy_for_bwd = []
+            if d_output.has_last_hidden_state:
+                dy_for_bwd.append(xp2torch(d_output.last_hidden_state))
+                y_for_bwd.append(y_var[0])
+            if d_output.has_pooler_output:
+                raise ValueError("Gradients on all hidden states not supported yet.")
+            if d_output.has_all_hidden_states:
+                raise ValueError("Gradients on all hidden states not supported yet.")
+            if d_output.has_all_attentions:
+                raise ValueError("Gradients on all attentions not supported yet.")
             if FINE_TUNE:
                 torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
                 if sgd is not None:
