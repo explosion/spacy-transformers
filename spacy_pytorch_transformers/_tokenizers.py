@@ -36,32 +36,6 @@ BASE_CLASS_FIELDS = [
 ]
 
 
-def clean_accents(text):
-    return "".join(
-        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
-    )
-
-
-def clean_fractions(text):
-    chars = []
-    for c in text:
-        try:
-            name = unicodedata.name(c)
-        except ValueError:
-            chars.append(c)
-            continue
-        name = unicodedata.name(c)
-        if name.startswith("VULGAR FRACTION"):
-            chars.append(unicodedata.normalize("NFKC", c))
-        else:
-            chars.append(c)
-    return "".join(chars)
-
-
-def clean_extended_unicode(text):
-    return "".join(i for i in text if 31 < ord(i) < 127)
-
-
 class SerializationMixin:
     """Provide generic serialization methods, for compatibility with spaCy.
     These expect the tokenizer subclass to provide the following:
@@ -200,75 +174,6 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         return [self.bos_token] + tokens + [self.eos_token]
 
 
-class SerializableOpenAIGPTTokenizer(pytt.OpenAIGPTTokenizer, SerializationMixin):
-    serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "_bpe_ranks"]
-
-    @classmethod
-    def blank(cls):
-        self = cls.__new__(cls)
-        for field in self.serialization_fields:
-            setattr(self, field, None)
-        self.nlp = None
-        self.fix_text = None
-        self.cache = None
-        self.decoder = {}
-        self.bpe_ranks = {}
-        return self
-
-    def finish_deserializing(self):
-        self.bpe_ranks = deserialize_bpe_ranks(self._bpe_ranks)
-        self.nlp = spacy.blank("en")
-        self.fix_text = ftfy.fix_text
-        self.cache = {}
-        self.decoder = {v: k for k, v in self.encoder.items()}
-
-    def prepare_for_serialization(self):
-        self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
-
-    def clean_token(self, text):
-        return text.strip()
-
-    def clean_wp_token(self, token):
-        return token.replace("</w>", "").strip()
-
-    def add_special_tokens(self, tokens):
-        return tokens
-
-
-class SerializableTransfoXLTokenizer(pytt.TransfoXLTokenizer, SerializationMixin):
-    serialization_fields = list(BASE_CLASS_FIELDS) + [
-        "counter",
-        "special",
-        "min_freq",
-        "max_size",
-        "lower_case",
-        "delimiter",
-        "never_split",
-        "idx2sym",
-        "eos_idx",
-    ]
-
-    @classmethod
-    def blank(cls):
-        self = cls.__new__(cls)
-        for field in self.serialization_fields:
-            setattr(self, field, None)
-        self.sym2idx = {}
-        return self
-
-    def finish_deserializing(self):
-        self.sym2idx = {sym: i for i, sym in enumerate(self.idx2sym)}
-
-    def clean_token(self, text):
-        return text.strip()
-
-    def clean_wp_token(self, token):
-        return token
-
-    def add_special_tokens(self, tokens):
-        return [self.cls_token] + tokens + [self.eos_token]
-
-
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
     _replace_re = re.compile(r"[\s\.\-`'\";]+")
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "_bpe_ranks"]
@@ -361,6 +266,32 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
 
     def add_special_tokens(self, tokens):
         return [self.cls_token] + tokens + [self.eos_token]
+
+
+def clean_accents(text):
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    )
+
+
+def clean_fractions(text):
+    chars = []
+    for c in text:
+        try:
+            name = unicodedata.name(c)
+        except ValueError:
+            chars.append(c)
+            continue
+        name = unicodedata.name(c)
+        if name.startswith("VULGAR FRACTION"):
+            chars.append(unicodedata.normalize("NFKC", c))
+        else:
+            chars.append(c)
+    return "".join(chars)
+
+
+def clean_extended_unicode(text):
+    return "".join(i for i in text if 31 < ord(i) < 127)
 
 
 def serialize_bpe_ranks(data):

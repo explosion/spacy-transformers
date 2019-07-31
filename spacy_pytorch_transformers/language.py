@@ -3,7 +3,7 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 from spacy.gold import GoldParse
 
-from .util import is_special_token, flatten_list
+from .util import is_special_token
 from . import about
 
 
@@ -66,7 +66,6 @@ class PyTT_Language(Language):
         sentencizer = self.get_pipe("sentencizer")
         wp = self.get_pipe("pytt_wordpiecer")
         tok2vec = self.get_pipe("pytt_tok2vec")
-        textcat = self.get_pipe("pytt_textcat")
         new_docs = []
         new_golds = []
         for doc, gold in zip(docs, golds):
