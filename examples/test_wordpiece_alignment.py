@@ -13,7 +13,7 @@ msg = Printer()
 
 @plac.annotations(
     name=("Pretrained model name, e.g. 'bert-base-uncased'", "positional", None, str),
-    n_texts=("Number of texts to train from", "option", "t", int),
+    n_texts=("Number of texts to train from", "option", "n", int),
     lang=("spaCy language to use for tokenization", "option", "l", str),
 )
 def main(name="bert-base-uncased", n_texts=1000, lang="en"):
@@ -23,9 +23,8 @@ def main(name="bert-base-uncased", n_texts=1000, lang="en"):
     wp = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
     with msg.loading("Loading IMDB data..."):
         data, _ = thinc.extra.datasets.imdb(limit=n_texts)
-    msg.good(f"Using {n_texts} texts from IMDB data")
-    data = data[-n_texts:]
     texts, _ = zip(*data)
+    msg.good(f"Using {len(texts)} texts from IMDB data")
     msg.info("Processing texts...")
     for doc in tqdm.tqdm(nlp.pipe(texts), total=len(texts)):
         try:
@@ -40,6 +39,7 @@ def main(name="bert-base-uncased", n_texts=1000, lang="en"):
                 msg.fail(f"Error: {e.args[0]}", exits=1)
             else:
                 raise e
+    msg.good(f"Processed {n_texts}")
 
 
 def diff_strings(a, b):
