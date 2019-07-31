@@ -39,7 +39,7 @@ def main(name="bert-base-uncased", n_texts=1000, lang="en"):
                 msg.fail(f"Error: {e.args[0]}", exits=1)
             else:
                 raise e
-    msg.good(f"Processed {n_texts}")
+    msg.good(f"Processed {len(texts)}")
 
 
 def diff_strings(a, b):
