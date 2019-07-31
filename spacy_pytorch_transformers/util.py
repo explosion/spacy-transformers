@@ -272,6 +272,7 @@ def pad_batch(batch: List[Array]) -> Array:
 
 def pad_batch_activations(batch: List[Activations]) -> Activations:
     lh = pad_batch([x.lh for x in batch])
+    lh = lh.reshape((len(batch), -1, lh.shape[-1]))
     return Activations(lh, [], [], [], is_grad=batch[0].is_grad)
 
 
