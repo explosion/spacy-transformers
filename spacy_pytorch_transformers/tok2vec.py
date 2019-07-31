@@ -47,7 +47,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         return self
 
     @classmethod
-    def Model(cls, **cfg):
+    def Model(cls, **cfg) -> PyTT_Wrapper:
         """Create an instance of `PyTT_Wrapper`, which holds the
         PyTorch-Transformers model.
 
@@ -221,7 +221,7 @@ def get_last_hidden_state(activations, drop=0.0):
     return activations.last_hidden_state, backprop_last_hidden_state
 
 
-def without_length_batching(model: Model, _: Any) -> Model:
+def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     Input = List[Array]
     Output = List[Activations]
     Backprop = Callable[[Output, Optional[Optimizer]], Optional[Input]]
@@ -251,7 +251,7 @@ def without_length_batching(model: Model, _: Any) -> Model:
     return wrap(apply_model_padded, model)
 
 
-def with_length_batching(model: Model, min_batch: int) -> Model:
+def with_length_batching(model: PyTT_Wrapper, min_batch: int) -> Model:
     """Wrapper that applies a model to variable-length sequences by first batching
     and padding the sequences. This allows us to group similarly-lengthed sequences
     together, making the padding less wasteful. If min_batch==1, no padding will
@@ -260,17 +260,17 @@ def with_length_batching(model: Model, min_batch: int) -> Model:
     if min_batch < 1:
         return without_length_batching(model, min_batch)
 
-    Input = List[Activations]
+    Input = List[Array]
     Output = List[Activations]
-    Backprop = Callable[[Output, Optional[Optimizer]], Output]
+    Backprop = Callable[[Output, Optional[Optimizer]], Input]
  
-    def apply_model_to_batches(inputs: Input, drop: Dropout=0.0) -> Tuple[Output, Backprop]:
-        backprops = []
+    def apply_model_to_batches(inputs: List[Array], drop: Dropout=0.0) -> Tuple[List[Activations], Backprop]:
         batches: List[List[int]] = batch_by_length(inputs, min_batch)
         # Initialize this, so we can place the outputs back in order.
         unbatched: List[Optional[Activations]] = [None for _ in inputs]
+        backprops = []
         for indices in batches:
-            X = pad_batch_activations([inputs[i] for i in indices])
+            X: Array = pad_batch([inputs[i] for i in indices])
             activs, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
             for i, j in enumerate(indices):
@@ -279,7 +279,7 @@ def with_length_batching(model: Model, min_batch: int) -> Model:
         assert len(outputs) == len(unbatched)
 
         def backprop_batched(d_outputs: Output, sgd: Optimizer=None) -> Input:
-            d_inputs: List[Optional[Activations]] = [None for _ in inputs]
+            d_inputs: List[Optional[Array]] = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
                 d_activs = pad_batch_activations([d_outputs[i] for i in indices])
                 dX = get_dX(d_activs, sgd=sgd)
@@ -296,7 +296,7 @@ def with_length_batching(model: Model, min_batch: int) -> Model:
     return wrap(apply_model_to_batches, model)
 
 
-def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
+def foreach_sentence(layer: Model, drop_factor: float=1.) -> PyTT_Wrapper:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
     ops = layer.ops
 

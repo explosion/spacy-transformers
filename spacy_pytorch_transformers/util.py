@@ -10,7 +10,7 @@ import torch
 from . import _tokenizers
 
 
-Array = Union[numpy.ndarray, cupy.ndarray]
+Array = Union["numpy.ndarray", "cupy.ndarray"]
 Optimizer = Callable[[Array, Array, Optional[int]], None]
 Dropout = Optional[float]
 
@@ -64,45 +64,29 @@ class Activations:
     @classmethod
     def join(cls, sub_acts: List["Activations"]) -> "Activations":
         """Concatenate activations from subsequences."""
-        return sub_acts[0]
-        #fields = [None, None, None, None]
-        #if not sub_acts:
-        #    return cls(*fields, None, is_grad=is_grad)
-        #if sub_acts[0].has_last_hidden_state:
-        #    xp = get_array_module(sub_acts[0].last_hidden_state)
-        #    fields[0] = xp.vstack([sa.last_hidden_state for sa in sub_acts])
-        #if sub_acts[0].has_pooler_output:
-        #    xp = get_array_module(sub_acts[0].pooler_output)
-        #    # fields[1] = xp.vstack([sa.pooler_output for sa in sub_acts])
-        #if sub_acts[0].has_all_hidden_states:
-        #    xp = get_array_module(sub_acts[0].all_hidden_states)
-        #    # fields[2] = xp.vstack([sa.all_hidden_states for sa in sub_acts])
-        #if sub_acts[0].has_all_attentions:
-        #    xp = get_array_module(sub_acts[0].all_hidden_states)
-        #    # fields[3] = xp.vstack([sa.all_attentions for sa in sub_acts])
-        #return cls(*fields, is_grad=is_grad)
+        xp = get_array_module(sub_acts[0].last_hidden_state)
+        lh: Array = xp.vstack([x.last_hidden_state for x in sub_acts])
+        return cls(lh, None, None, None, is_grad=sub_acts[0].is_grad)
 
     def __len__(self) -> int:
         return len(self.last_hidden_state)
 
     def get_slice(self, x, y) -> "Activations":
-        if self.has_last_hidden_state:
-            lh = self.last_hidden_state[x, y]
-        else:
-            lh = None
-        if self.has_pooler_output:
-            po = self.pooler_output[x, y]
-        else:
-            po = None
-        if self.has_all_hidden_states:
-            raise NotImplementedError
-        if self.has_all_attentions:
-            raise NotImplementedError
-        return Activations(lh, po, None, None, is_grad=self.is_grad)
+        lh = self.last_hidden_state[x, y]
+        #if self.has_pooler_output:
+        #    po = self.pooler_output[x, y]
+        #else:
+        #po = None
+        ##if self.has_all_hidden_states:
+        #    raise NotImplementedError
+        #if self.has_all_attentions:
+        #    raise NotImplementedError
+        return Activations(lh, None, None, None, is_grad=self.is_grad)
 
-    def split(self, ops: Any, shapes: List[int]) -> List["Activations"]:
+    def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
-        return [self]
+        last_hiddens = ops.unflatten(self.last_hidden_state, lengths)
+        return [Activations(lh, None, None, None, is_grad=self.is_grad) for lh in last_hiddens]
         #lh_values = [None] * len(shapes)
         #po_values = [None] * len(shapes)
         #ah_values = [None] * len(shapes)
@@ -298,7 +282,8 @@ def pad_batch(batch: List[Array]) -> Array:
 
 
 def pad_batch_activations(batch: List[Activations]) -> Activations:
-    return []
+    lh = pad_batch([x.last_hidden_state for x in batch])
+    return Activations(lh, None, None, None, is_grad=batch[0].is_grad)
 
 
 def batch_by_length(seqs: Union[List[Array], List[Activations]], min_batch: int) -> List[List[int]]:
