@@ -1,12 +1,11 @@
-from typing import Union, List, Tuple, Sequence, TypeVar, Callable, Any, Optional, Sized
-import numpy
-import cupy
+from typing import Union, List, Sequence, Callable, Any, Optional
 from dataclasses import dataclass
 import pytorch_transformers as pytt
 from thinc.neural.ops import get_array_module
 from thinc.extra.wrappers import torch2xp
 import torch
 import re
+import numpy
 
 from . import _tokenizers
 
@@ -79,7 +78,7 @@ class Activations:
         #    po = self.pooler_output[x, y]
         # else:
         # po = None
-        ##if self.has_all_hidden_states:
+        # if self.has_all_hidden_states:
         #    raise NotImplementedError
         # if self.has_all_attentions:
         #    raise NotImplementedError

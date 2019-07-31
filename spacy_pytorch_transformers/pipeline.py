@@ -1,7 +1,5 @@
 import spacy.pipeline
-from spacy.util import minibatch
 from thinc.neural.util import get_array_module
-from spacy._ml import build_simple_cnn_text_classifier
 from thinc.api import layerize, chain, flatten_add_lengths
 from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax

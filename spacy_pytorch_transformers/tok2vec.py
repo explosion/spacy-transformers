@@ -1,11 +1,10 @@
-from typing import Union, List, Tuple, TypeVar, Callable, Any, Optional, Sequence
+from typing import List, Tuple, Callable, Any, Optional
 from spacy.pipeline import Pipe
 from thinc.neural.ops import get_array_module
 from thinc.neural._classes.model import Model
 from thinc.api import chain, layerize, wrap
 from spacy.util import minibatch
 from spacy.tokens import Doc, Span
-import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
@@ -201,7 +200,6 @@ def get_word_pieces(sents, drop=0.0):
     assert isinstance(sents[0], Span)
     outputs = []
     for sent in sents:
-        wordpieces = sent.doc._.pytt_word_pieces_
         wp_start = sent._.pytt_start
         wp_end = sent._.pytt_end
         if wp_start is not None and wp_end is not None:
@@ -332,30 +330,7 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> PyTT_Wrapper:
             if not (d_ids is None or all(ds is None for ds in d_ids)):
                 raise ValueError("Expected gradient of sentence to be None")
 
-        _assert_no_missing_doc_rows(docs, doc_acts)
         return doc_acts, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
     return model
-
-
-def _assert_no_missing_sent_rows(docs, sent_acts):
-    total_rows = sum(sa.shape[0] for sa in sent_acts)
-    total_wps = sum(len(doc._.pytt_word_pieces) for doc in docs)
-    assert total_rows == total_wps, (total_rows, total_wps)
-    for sent, sa in zip(sents, sent_acts):
-        assert ((sent._.pytt_end + 1) - sent._.pytt_start) == sa.shape[0], (
-            sent._.pytt_start,
-            sent._.pytt_end + 1,
-            sa.shape,
-        )
-
-
-def _assert_no_missing_doc_rows(docs, doc_acts):
-    assert len(docs) == len(doc_acts)
-    for doc, da in zip(docs, doc_acts):
-        shape = da.last_hidden_state.shape
-        assert len(doc._.pytt_word_pieces) == shape[0], (
-            len(doc._.pytt_word_pieces),
-            shape[0],
-        )

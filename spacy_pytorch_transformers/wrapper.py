@@ -3,7 +3,7 @@ from pytorch_transformers.optimization import AdamW
 import torch.autograd
 import torch.nn.utils.clip_grad
 import torch
-from typing import Tuple, Callable, Optional, Any
+from typing import Tuple, Callable, Any
 
 from .util import get_pytt_model, Activations
 from .util import Array, Dropout, Optimizer
