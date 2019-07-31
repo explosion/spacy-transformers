@@ -1,9 +1,12 @@
+from typing import Union, List, Tuple, TypeVar, Callable, Any, Optional
 from spacy.pipeline import Pipe
+from thinc.neural.ops import get_array_module
 from thinc.v2v import Model
 from thinc.api import chain, layerize, wrap
-from thinc.neural.ops import get_array_module
-from spacy.util import minibatch
-from spacy.tokens import Span
+from spacy.util import minibatch, Activations
+from spacy.tokens import Doc, Span
+import numpy
+import cupy
 
 from .wrapper import PyTT_Wrapper
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
@@ -284,31 +287,41 @@ def with_length_batching(model, min_batch):
 
     return wrap(apply_model_to_batches, model)
 
+Array = Union[numpy.ndarray, cupy.ndarray]
+Optimizer = Callable[[Array, Array, Optional[int]], None]
+Dropout = Optional[float]
 
-def foreach_sentence(layer, drop_factor=1.0):
+def foreach_sentence(layer: Model, drop_factor: float=1.) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
     ops = layer.ops
 
-    def sentence_fwd(docs, drop=0.0):
-        sents = flatten_list(doc.sents for doc in docs)
+    Input = List[Doc]
+    Output = List[Activations]
+    Backprop = Callable[[Output, Optional[Optimizer]], None]
+    def sentence_fwd(docs: Input, drop: Dropout = 0.0) -> Tuple[Output, Backprop]:
+        sents: List[Span]
+        sent_acts: List[Activations]
+        sent_states: List[Array]
+        bp_sent_acts: Callable[..., Optional[List[None]]]
+        nested: List[List[Array]]
+        doc_sent_lengths: List[List[int]]
+        doc_states: List[Array]
+        doc_acts: List[Activations]
+        
+        sents = flatten_list([list(doc.sents) for doc in docs])
         sent_acts, bp_sent_acts = layer.begin_update(sents, drop=drop)
-        sent_acts = [sa.last_hidden_state for sa in sent_acts]
-        total_rows = sum(sa.shape[0] for sa in sent_acts)
-        total_wps = sum(len(doc._.pytt_word_pieces) for doc in docs)
-        assert total_rows == total_wps, (total_rows, total_wps)
-        for sent, sa in zip(sents, sent_acts):
-            assert ((sent._.pytt_end+1)-sent._.pytt_start) == sa.shape[0], (sent._.pytt_start, sent._.pytt_end+1, sa.shape)
+        sent_states = [sa.last_hidden_state for sa in sent_acts]
         # sent_acts is List[array], one per sent. Go to List[List[array]],
         # then List[array] (one per doc).
-        nested = unflatten_list(sent_acts, [len(list(doc.sents)) for doc in docs])
+        nested = unflatten_list(sent_states, [len(list(doc.sents)) for doc in docs])
         # Need this for the callback.
         doc_sent_lengths = [[len(sa) for sa in doc_sa] for doc_sa in nested]
-        doc_acts = [ops.flatten(doc_sa) for doc_sa in nested]
+        doc_states = [ops.flatten(doc_sa) for doc_sa in nested]
         assert len(docs) == len(doc_acts)
         doc_acts = [Activations(da, None, None, None) for da in doc_acts]
 
-        def sentence_bwd(d_doc_acts, sgd=None):
-            d_doc_acts = [da.last_hidden_state for da in d_doc_acts]
+        def sentence_bwd(d_doc_acts: Input, sgd: Optional[Optimizer]=None) -> None:
+            d_doc_states = [da.last_hidden_state for da in d_doc_acts]
             d_nested = [
                 ops.unflatten(d_doc_acts[i], doc_sent_lengths[i])
                 for i in range(len(d_doc_acts))
@@ -316,21 +329,27 @@ def foreach_sentence(layer, drop_factor=1.0):
             d_sent_acts = flatten_list(d_nested)
             d_sent_acts = [Activations(sa, None, None, None) for sa in d_sent_acts]
             d_ids = bp_sent_acts(d_sent_acts, sgd=sgd)
-            if d_ids is None or all(ds is None for ds in d_ids):
-                return None
-            # Finally we have List[array], one per sentence, where each row is
-            # the gradient wrt the token.
-            # We want List[array], one per document.
-            # First get List[List[array]], grouped by doc, then just flatten
-            # the lists.
-            n_sents = [len(L) for L in doc_sent_lengths]
-            return [ops.flatten(ds) for ds in unflatten_list(d_ids, n_sents)]
+            if not (d_ids is None or all(ds is None for ds in d_ids)):
+                raise ValueError("Expected gradient of sentence to be None")
+            return None
 
-        assert len(docs) == len(doc_acts)
-        for doc, da in zip(docs, doc_acts):
-            shape = da.last_hidden_state.shape
-            assert len(doc._.pytt_word_pieces) == shape[0], (len(doc._.pytt_word_pieces), shape[0])
+        _assert_no_missing_doc_rows(docs, doc_acts)
         return doc_acts, sentence_bwd
 
     model = wrap(sentence_fwd, layer)
     return model
+
+
+def _assert_no_missing_sent_rows(docs, sent_acts):
+    total_rows = sum(sa.shape[0] for sa in sent_acts)
+    total_wps = sum(len(doc._.pytt_word_pieces) for doc in docs)
+    assert total_rows == total_wps, (total_rows, total_wps)
+    for sent, sa in zip(sents, sent_acts):
+        assert ((sent._.pytt_end+1)-sent._.pytt_start) == sa.shape[0], (sent._.pytt_start, sent._.pytt_end+1, sa.shape)
+
+def _assert_no_missing_doc_rows(docs, doc_acts):
+    assert len(docs) == len(doc_acts)
+    for doc, da in zip(docs, doc_acts):
+        shape = da.last_hidden_state.shape
+        assert len(doc._.pytt_word_pieces) == shape[0], (len(doc._.pytt_word_pieces), shape[0])
+
