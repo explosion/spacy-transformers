@@ -55,7 +55,6 @@ class Activations:
         lh, po, ah, aa = fields
         # Convert last_hidden_state to xp
         lh = torch2xp(lh)
-        xp = get_array_module(lh)
         # Normalize "None" value for pooler output
         if isinstance(po, tuple) and all(x is None for x in po):
             po = []
@@ -76,43 +75,16 @@ class Activations:
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.lh[x, y]
-        # if self.has_pooler_output:
-        #    po = self.pooler_output[x, y]
-        # else:
-        # po = None
-        # if self.has_all_hidden_states:
-        #    raise NotImplementedError
-        # if self.has_all_attentions:
-        #    raise NotImplementedError
+        # TODO: Support other output fields
         return Activations(lh, [], [], [], is_grad=self.is_grad)
 
     def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
         last_hiddens = ops.unflatten(self.lh, lengths)
+        # TODO: Support other output fields
         return [
             Activations(lh, [], [], [], is_grad=self.is_grad) for lh in last_hiddens
         ]
-        # lh_values = [None] * len(shapes)
-        # po_values = [None] * len(shapes)
-        # ah_values = [None] * len(shapes)
-        # aa_values = [None] * len(shapes)
-        # lh_shapes, po_shapes, ah_shapes, aa_shapes = zip(*shapes)
-        # if self.has_last_hidden_state:
-        #    lh_lengths = [shape[0] for shape in lh_shapes]
-        #    lh_values = ops.unflatten(self.last_hidden_state, lh_lengths)
-        # if self.has_pooler_output:
-        #    po_lengths = [shape[0] for shape in po_shapes]
-        #    # po_values = ops.unflatten(self.pooler_output, po_lengths)
-        # if self.has_all_hidden_states:
-        #    ah_lengths = [shape[0] for shape in ah_shapes]
-        #    # ah_values = ops.unflatten(self.all_hiddens, ah_lengths)
-        # if self.has_all_attentions:
-        #    aa_lengths = [shape[0] for shape in aa_shapes]
-        #    # aa_values = ops.unflatten(self.all_attentions, aa_lengths)
-        # outputs = []
-        # for lh, po, ah, aa in zip(lh_values, po_values, ah_values, aa_values):
-        #    outputs.append(Activations(lh, po, ah, aa, is_grad=self.is_grad))
-        # return outputs
 
     @property
     def has_lh(self) -> bool:

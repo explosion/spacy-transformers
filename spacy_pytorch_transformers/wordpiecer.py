@@ -3,7 +3,7 @@ from spacy.util import minibatch
 import re
 import numpy
 
-from .util import get_pytt_tokenizer, flatten_list, SPECIAL_TOKENS
+from .util import get_pytt_tokenizer, flatten_list, is_special_token
 
 
 class PyTT_WordPiecer(Pipe):
@@ -131,21 +131,9 @@ class PyTT_WordPiecer(Pipe):
                 doc_alignment.extend(sent_align)
                 doc_word_pieces.extend(wp_tokens)
                 doc_word_piece_ids.extend(self.model.convert_tokens_to_ids(wp_tokens))
-            if len(doc_alignment) != len(doc):
-                print("doc_alignment:", doc_alignment)
-                print("doc:", [t.text for t in doc])
-                print("wps:", doc_word_pieces)
-                raise AssertionError(
-                    f"doc_alignment length ({len(doc_alignment)}) != doc length ({len(doc)})"
-                )
+            assert len(doc_alignment) == len(doc)
             max_aligned = max(flatten_list(doc_alignment))
-            if max_aligned > len(doc_word_pieces):
-                print("doc_alignment:", doc_alignment)
-                print("doc:", [t.text for t in doc])
-                print("wps:", doc_word_pieces)
-                raise AssertionError(
-                    f"max_aligned ({max_aligned}) > word piece length {len(doc_word_pieces)}"
-                )
+            assert max_aligned <= len(doc_word_pieces)
             doc._.pytt_word_pieces = doc_word_piece_ids
             doc._.pytt_word_pieces_ = doc_word_pieces
             doc._.pytt_alignment = doc_alignment
@@ -154,7 +142,7 @@ class PyTT_WordPiecer(Pipe):
 alpha_re = re.compile(r"[^A-Za-z]+")
 
 
-def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS, retry=True):
+def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
     """Align tokens against word-piece tokens. The alignment is returned as a
     list of lists. If alignment[3] == [4, 5, 6], that means that spacy_tokens[3]
     aligns against 3 tokens: wp_tokens[4], wp_tokens[5] and wp_tokens[6].
@@ -163,10 +151,10 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS, retry=Tr
     spacy_tokens = list(spacy_tokens)
     wp_tokens = list(wp_tokens)
     offset = 0
-    while wp_tokens and wp_tokens[0] in specials:
+    while wp_tokens and is_special_token(wp_tokens[0]):
         wp_tokens.pop(0)
         offset += 1
-    while wp_tokens and wp_tokens[-1] in specials:
+    while wp_tokens and is_special_token(wp_tokens[-1]):
         wp_tokens.pop(-1)
     if not wp_tokens:
         return [[] for _ in spacy_tokens]

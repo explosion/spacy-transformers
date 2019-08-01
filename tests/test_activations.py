@@ -1,18 +1,13 @@
 import pytest
 import numpy
 
-from spacy_pytorch_transformers.util import Activations
-
 
 @pytest.fixture
 def model(nlp):
     return nlp.get_pipe("pytt_tok2vec").model._model
 
 
-@pytest.mark.parametrize("ids", [
-    [[10, 5], [7, 9]]
-])
-
+@pytest.mark.parametrize("ids", [[[10, 5], [7, 9]]])
 def test_act_fields(name, model, ids):
     ids = numpy.array(ids, dtype=numpy.int_)
     acts = model(ids)

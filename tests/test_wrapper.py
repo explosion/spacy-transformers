@@ -1,4 +1,3 @@
-from spacy_pytorch_transformers.wrapper import PyTT_Wrapper
 from spacy_pytorch_transformers.util import get_pytt_tokenizer, Activations
 import numpy
 import pytest
@@ -15,6 +14,7 @@ def tokenizer(name):
 def ids(tokenizer):
     text = "the cat sat on the mat"
     return numpy.array(tokenizer.encode(text), dtype=numpy.int_)
+
 
 @pytest.fixture
 def model(nlp):

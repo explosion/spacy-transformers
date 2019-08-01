@@ -153,11 +153,6 @@ class PyTT_TokenVectorEncoder(Pipe):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
             if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):
-                print(
-                    "Mismatch between tensor shape and word pieces. This usually "
-                    "means we did something wrong in the sentence reshaping, "
-                    "or possibly finding the separator tokens."
-                )
                 print("# word pieces: ", len(doc._.pytt_word_pieces))
                 print("# tensor rows: ", wp_tensor.shape[0])
                 for sent in doc.sents:
@@ -165,7 +160,11 @@ class PyTT_TokenVectorEncoder(Pipe):
                         print("Text: ", sent.text)
                         print("WPs: ", sent._.pytt_word_pieces_)
                         print(sent._.pytt_start, sent._.pytt_end)
-                raise ValueError
+                raise ValueError(
+                    "Mismatch between tensor shape and word pieces. This usually "
+                    "means we did something wrong in the sentence reshaping, "
+                    "or possibly finding the separator tokens."
+                )
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
@@ -244,8 +243,6 @@ def truncate_long_inputs(model, max_len):
         # Dim 1 should be batch, dim 2 sequence length
         if X.shape[1] < max_len:
             return model.begin_update(X, drop=drop)
-        print("Truncating from", X.shape[1], "to", max_len)
-
         X_short = X[:, :max_len]
         Y_short, get_dX_short = model.begin_update(X_short, drop=drop)
         short_lh = Y_short.lh
