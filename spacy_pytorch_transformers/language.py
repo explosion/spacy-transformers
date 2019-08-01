@@ -118,9 +118,9 @@ class PyTT_Language(Language):
         tok2vec = self.get_pipe(tok2vec_name)
         token_vector_width = tok2vec.token_vector_width
         for name, component in self.pipeline:
-            if name != tok2vec_name:
+            if name == tok2vec_name:
                 continue
-            elif getattr(component, "model", None) == True:
+            elif getattr(component, "model", None) != True:
                 continue
             elif not hasattr(component, "begin_training"):
                 continue
@@ -130,6 +130,7 @@ class PyTT_Language(Language):
             if "token_vector_width" not in component_cfg:
                 cfg["token_vector_width"] = token_vector_width
             component.begin_training(pipeline=self.pipeline, sgd=False, **cfg)
+            assert component.model is not True
         return super().resume_training(sgd=sgd, **kwargs)
 
 
