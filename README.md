@@ -27,7 +27,8 @@ state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc.
 ## 🚀 Quickstart
 
 Installing the package from pip will automatically install all dependencies,
-including PyTorch and spaCy.
+including PyTorch and spaCy. Make sure you install this package **before** you
+install the models.
 
 ```bash
 pip install spacy-pytorch-transformers
@@ -37,13 +38,15 @@ We've also pre-packaged some of the pre-trained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name                 | Pre-trained model   | Language |   Size |                                            Release                                             |
-| ---------------------------- | ------------------- | -------- | -----: | :--------------------------------------------------------------------------------------------: |
-| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased` | English  | 406 MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.0) |
-| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`  | English  | 434 MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.0)  |
+| Package name                 | Pre-trained model        | Language | Author                                                     |   Size |                                            Release                                             |
+| ---------------------------- | ------------------------ | -------- | ---------------------------------------------------------- | -----: | :--------------------------------------------------------------------------------------------: |
+| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased`      | English  | [Google Research](https://github.com/google-research/bert) | 406 MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.0) |
+| `de_pytt_bertbasecased_lg`   | `bert-base-german-cased` | German   | [deepset](https://deepset.ai/german-bert)                  | 406 MB |  [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.0)  |
+| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`       | English  | [CMU & Google Brain](https://github.com/zihangdai/xlnet/)  | 434 MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.0)  |
 
 ```bash
 python -m spacy download en_pytt_bertbaseuncased_lg
+python -m spacy download de_pytt_bertbasecased_lg
 python -m spacy download en_pytt_xlnetbasecased_lg
 ```
 
