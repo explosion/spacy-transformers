@@ -75,7 +75,10 @@ class PyTT_WordPiecer(Pipe):
             output.append([])
             for sent in doc.sents:
                 tokens = self.model.tokenize(sent.text)
-                output[-1].append(self.model.add_special_tokens(tokens))
+                if tokens:
+                    output[-1].append(self.model.add_special_tokens(tokens))
+                else:
+                    output[-1].append(tokens)
         return output
 
     def set_annotations(self, docs, outputs, tensors=None):
@@ -95,6 +98,7 @@ class PyTT_WordPiecer(Pipe):
                 assert len(wp_tokens) == len(new_wp_tokens)
                 sent_align = align_word_pieces(spacy_tokens, new_wp_tokens)
                 if sent_align is None:
+                    print("Alignment failed. Using fallback")
                     # As a final fallback, we resort to word-piece tokenizing
                     # the spaCy tokens individually, to make the alignment
                     # trivial.
