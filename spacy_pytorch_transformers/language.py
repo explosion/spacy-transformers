@@ -97,6 +97,42 @@ class PyTT_Language(Language):
             )
         backprop_tok2vec(docs, sgd=sgd)
 
+    def resume_training(self, sgd=None, component_cfg=None, **kwargs):
+        """Continue training a pre-trained model.
+
+        Before running the normal Language.resume_training method, we do the
+        following:
+
+        * Look for a tok2vec pipeline component. By default we look for the name
+            'pytt_tok2vec'. This can be changed with the tok2vec_name keyword
+            argument. If no component is found, a ValueError is raised.
+        * If any other components have `component.model == True` and a `.begin_training()`
+            method, we call the `.begin_training()` method. Configuration can
+            be passed in using the component_cfg keyword argument. If unset,
+            we also pass in a value for token_vector_width, which we read from
+            the tok2vec component.
+        """
+        if component_cfg is None:
+            component_cfg = {}
+        tok2vec_name = kwargs.get("tok2vec_name", "pytt_tok2vec")
+        tok2vec = self.get_pipe(tok2vec_name)
+        token_vector_width = tok2vec.token_vector_width
+        for name, component in self.pipeline:
+            if name != tok2vec_name:
+                continue
+            elif getattr(component, "model", None) == True
+                continue
+            elif not hasattr(component, "begin_training"):
+                continue
+            cfg = component_cfg.get(name, {})
+            if "tok2vec_name" not in component_cfg:
+                cfg["tok2vec_name"] = tok2vec_name
+            if "token_vector_width" not in component_cfg:
+                cfg["token_vector_width"] = token_vector_width
+            component.begin_training(
+                pipeline=self.pipeline, sgd=False, **cfg)
+        return super().resume_training(sgd=sgd, **kwargs)
+
 
 def get_defaults(lang):
     """Get the language-specific defaults, if available in spaCy."""
