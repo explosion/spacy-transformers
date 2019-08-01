@@ -38,6 +38,14 @@ def setup_package():
             "dataclasses>=0.6,<0.7; python_version < '3.7'",
         ],
         python_requires=">=3.6",
+        extras_require={
+            "cuda": ["thinc_gpu_ops>=0.0.1,<0.1.0", "cupy>=5.0.0b4"],
+            "cuda80": ["thinc_gpu_ops>=0.0.1,<0.1.0", "cupy-cuda80>=5.0.0b4"],
+            "cuda90": ["thinc_gpu_ops>=0.0.1,<0.1.0", "cupy-cuda90>=5.0.0b4"],
+            "cuda91": ["thinc_gpu_ops>=0.0.1,<0.1.0", "cupy-cuda91>=5.0.0b4"],
+            "cuda92": ["thinc_gpu_ops>=0.0.1,<0.1.0", "cupy-cuda92>=5.0.0b4"],
+            "cuda100": ["thinc_gpu_ops>=0.0.1,<0.1.0", "cupy-cuda100>=5.0.0b4"],
+        },
         entry_points={
             "spacy_factories": [
                 "pytt_wordpiecer = spacy_pytorch_transformers:PyTT_WordPiecer.from_nlp",
