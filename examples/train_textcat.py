@@ -44,7 +44,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
 
     # load the IMDB dataset
     print("Loading IMDB data...")
-    (train_texts, train_cats), (dev_texts, dev_cats) = load_data(limit=n_texts)
+    (train_texts, train_cats), (dev_texts, dev_cats) = load_data()
     train_texts = train_texts[:n_texts]
     train_cats = train_cats[:n_texts]
 
