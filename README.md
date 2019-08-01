@@ -36,14 +36,14 @@ We've also pre-packaged some of the pre-trained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name              | Pre-trained model   |   Size | Release |
-| ------------------------- | ------------------- | -----: | :-----: |
-| `en_bert_base_uncased_lg` | `bert-base-uncased` | 406 MB | [ℹ️](#) |
-| `en_xlnet_base_cased_lg`  | `xlnet-base-cased`  | 434 MB | [ℹ️](#) |
+| Package name                 | Pre-trained model   |   Size | Release |
+| ---------------------------- | ------------------- | -----: | :-----: |
+| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased` | 406 MB | [ℹ️](#) |
+| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`  | 434 MB | [ℹ️](#) |
 
 ```bash
-python -m spacy download en_bert_base_uncased_lg
-python -m spacy download en_xlnet_base_cased_lg
+python -m spacy download en_pytt_bertbaseuncased_lg
+python -m spacy download en_pytt_xlnetbasecased_lg
 ```
 
 Once the model is installed, you can load it in spaCy like any other model
@@ -52,7 +52,7 @@ package.
 ```python
 import spacy
 
-nlp = spacy.load("en_bert_base_uncased_lg")
+nlp = spacy.load("en_pytt_bertbaseuncased_lg")
 doc = nlp("The dog barked. The puppy barked.")
 print(doc[0:4].similarity(doc[4:8]))
 print(doc._.pytt_last_hidden_state.shape)
@@ -90,7 +90,7 @@ import spacy
 from spacy.util import minibatch
 import random
 
-nlp = spacy.load("en_bert_base_uncased_lg")
+nlp = spacy.load("en_pytt_bertbaseuncased_lg")
 print(nlp.pipe_names) # ["sentencizer", "pytt_wordpiecer", "pytt_tok2vec"]
 textcat = nlp.create_pipe("pytt_textcat", config={"exclusive_classes": True})
 for label in ("POSITIVE", "NEGATIVE"):
@@ -146,9 +146,9 @@ this:
 
 ```bash
 python -m spacy package /bert-textcat /output
-cd /output/en_bert_base_uncased_lg-0.0.0
+cd /output/en_pytt_bertbaseuncased_lg-1.0.0
 python setup.py sdist
-pip install dist/en_bert_base_uncased_lg.tar.gz
+pip install dist/en_pytt_bertbaseuncased_lg-1.0.0.tar.gz
 ```
 
 ### Extension attributes
