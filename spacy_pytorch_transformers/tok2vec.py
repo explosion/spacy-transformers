@@ -257,6 +257,8 @@ def truncate_long_inputs(model, max_len):
         def with_truncate_backward(dY, sgd=None):
             dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
             dX_short = get_dX_short(dY_short, sgd=sgd)
+            if dX_short is None:
+                return None
             dX = model.ops.allocate(
                 (dX_short.shape[0], dY.shape[1]) + dY_short.shape[2:]
             )
