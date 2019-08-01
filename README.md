@@ -6,7 +6,7 @@ This package provides [spaCy](https://github.com/explosion/spaCy) model
 pipelines that wrap
 [HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
-state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
+state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc.
 
 [![Azure Pipelines](https://img.shields.io/azure-devops/build/explosion-ai/public/11/master.svg?logo=azure-devops&style=flat-square)](https://dev.azure.com/explosion-ai/public/_build?definitionId=11)
 [![PyPi](https://img.shields.io/pypi/v/spacy-pytorch-transformers.svg?style=flat-square)](https://pypi.python.org/pypi/spacy-pytorch-transformers)
@@ -15,13 +15,14 @@ state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 
 ## Features
 
--   Use BERT, XLNet etc in spaCy.
--   Aligned tokenization.
--   Multi-sentence documents.
--   Transfer learning, text classification.
--   Fine-tuning.
--   Built-in hooks for context-sensitive vectors and similarity.
--   Out-of-the-box serialization.
+-   Use **BERT**, **XLNet** and **GPT-2** directly in your spaCy pipeline.
+-   **Fine-tune** pre-trained transformer models on your task using spaCy's API.
+-   Custom component for **text classification** using transformer features.
+-   Automatic **alignment** of word pieces and outputs to linguistic tokens.
+-   Process multi-sentence documents with intelligent **per-sentence
+    prediction**.
+-   Built-in hooks for **context-sensitive vectors** and similarity.
+-   Out-of-the-box serialization and model packaging.
 
 ## 🚀 Quickstart
 
