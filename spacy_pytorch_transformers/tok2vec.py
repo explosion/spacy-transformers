@@ -62,10 +62,13 @@ class PyTT_TokenVectorEncoder(Pipe):
             pytt_model = PyTT_Wrapper(name)
         nO = pytt_model.nO
         batch_by_length = cfg.get("words_per_batch", 2000)
+        max_length = cfg.get("max_length", 512)
         model = foreach_sentence(
             chain(
                 get_word_pieces,
-                with_length_batching(pytt_model, batch_by_length))
+                with_length_batching(
+                    truncate_long_inputs(pytt_model, max_length),
+                    batch_by_length))
         )
         setattr(model, "nO", nO)
         setattr(model, "_model", pytt_model)
@@ -220,6 +223,37 @@ def get_last_hidden_state(activations, drop=0.0):
 
     return activations.lh, backprop_last_hidden_state
 
+
+def truncate_long_inputs(model, max_len):
+    """Truncate inputs on the way into a model, and restore their shape on
+    the way out.
+    """
+    def with_truncate_forward(X, drop=0.):
+        # Dim 1 should be batch, dim 2 sequence length
+        if X.shape[1] < max_len:
+            return model.begin_update(X, drop=drop)
+        print("Truncating from", X.shape[1], "to", max_len)
+
+        X_short = X[:, :max_len]
+        Y_short, get_dX_short = model.begin_update(X_short, drop=drop)
+        short_lh = Y_short.lh
+        Y = model.ops.allocate((short_lh.shape[0], X.shape[1]) + short_lh.shape[2:])
+        Y[:, :max_len] = short_lh
+        outputs = Activations(Y, [], [], [])
+
+
+        def with_truncate_backward(dY, sgd=None):
+            dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
+            dX_short = get_dX_short(dY_short, sgd=sgd)
+            dX = model.ops.allocate((dX_short.shape[0], dY.shape[1]) + dY_short.shape[2:])
+            dX[:, :max_len] = dX_short
+            return dX
+
+        return outputs, with_truncate_backward
+
+    return wrap(with_truncate_forward, model)
+
+        
 
 def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     Input = List[Array]
