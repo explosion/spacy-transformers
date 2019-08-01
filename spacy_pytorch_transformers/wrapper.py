@@ -51,7 +51,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         return Activations.from_pytt(y_var, is_grad=False)
  
     def begin_update(
-        self, ids: Array, drop: Dropout = None
+        self, ids: Array, drop: Dropout = 0.0
     ) -> Tuple[Activations, Callable[..., None]]:
         if drop is None:
             # "drop is None" indicates prediction. It's one of the parts of
