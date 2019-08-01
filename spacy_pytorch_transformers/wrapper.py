@@ -48,7 +48,8 @@ class PyTT_Wrapper(PyTorchWrapper):
         model_kwargs = self.get_model_kwargs(ids)
         if drop is None:
             self._model.eval()
-            y_var = self._model(ids, **model_kwargs)
+            with torch.no_grad():
+                y_var = self._model(ids, **model_kwargs)
         else:
             self._model.train()
             y_var = self._model(ids, **model_kwargs)
