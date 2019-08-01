@@ -129,8 +129,7 @@ class PyTT_Language(Language):
                 cfg["tok2vec_name"] = tok2vec_name
             if "token_vector_width" not in component_cfg:
                 cfg["token_vector_width"] = token_vector_width
-            component.begin_training(
-                pipeline=self.pipeline, sgd=False, **cfg)
+            component.begin_training(pipeline=self.pipeline, sgd=False, **cfg)
         return super().resume_training(sgd=sgd, **kwargs)
 
 
