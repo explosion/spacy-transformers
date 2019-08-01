@@ -33,13 +33,11 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
         "pytt_textcat",
         config={
             "exclusive_classes": True,
-            "token_vector_width": nlp.get_pipe("pytt_tok2vec").model.nO,
         },
     )
     # add label to text classifier
     textcat.add_label("POSITIVE")
     textcat.add_label("NEGATIVE")
-    textcat.begin_training()
     nlp.add_pipe(textcat, last=True)
 
     # load the IMDB dataset
@@ -55,7 +53,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     )
     total_words = sum(len(text.split()) for text in train_texts)
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
-
+    # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
