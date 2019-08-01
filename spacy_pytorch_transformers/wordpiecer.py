@@ -98,6 +98,9 @@ class PyTT_WordPiecer(Pipe):
         docs (iterable): A batch of `Doc` objects.
         outputs (iterable): A batch of outputs.
         """
+        # Set model.max_len to some high value, to avoid annoying prints.
+        max_len = self.model.max_len
+        self.model.max_len = 1e12
         retry, force = self.alignment_strategy
         for doc, output in zip(docs, outputs):
             offset = 0
@@ -137,6 +140,7 @@ class PyTT_WordPiecer(Pipe):
             doc._.pytt_word_pieces = doc_word_piece_ids
             doc._.pytt_word_pieces_ = doc_word_pieces
             doc._.pytt_alignment = doc_alignment
+        self.model.max_len = max_len
 
 
 alpha_re = re.compile(r"[^A-Za-z]+")
