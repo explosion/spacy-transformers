@@ -16,12 +16,22 @@ msg = Printer()
     n_texts=("Number of texts to load (0 for all)", "option", "n", int),
     lang=("spaCy language to use for tokenization", "option", "l", str),
     skip=("Don't stop processing on errors, only print", "flag", "s", bool),
+    retry=("Enable retrying alignment by aggressive replacement", "flag", "r", bool),
+    force=("Enable forced alignment via tokens", "flag", "f", bool),
 )
-def main(name="bert-base-uncased", n_texts=1000, lang="en", skip=False):
+def main(
+    name="bert-base-uncased",
+    n_texts=1000,
+    lang="en",
+    skip=False,
+    retry=False,
+    force=False,
+):
     """Test the wordpiecer on a large dataset to find misalignments."""
+    cfg = {"retry_alignment": retry, "force_alignment": force}
     nlp = get_lang_class(lang)()
     nlp.add_pipe(nlp.create_pipe("sentencizer"))
-    wp = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
+    wp = PyTT_WordPiecer.from_pretrained(nlp.vocab, pytt_name=name, **cfg)
     msg.good(f"Loaded WordPiecer for model '{name}'")
     with msg.loading("Loading IMDB data..."):
         data, _ = thinc.extra.datasets.imdb(limit=n_texts)
