@@ -265,7 +265,7 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         return text.strip()
 
     def add_special_tokens(self, tokens):
-        return [self.cls_token] + tokens + [self.eos_token]
+        return [self.sep_token] + tokens + [self.cls_token]
 
 
 def clean_accents(text):
