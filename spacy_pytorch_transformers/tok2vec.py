@@ -151,11 +151,19 @@ class PyTT_TokenVectorEncoder(Pipe):
             wp_tensor = doc_acts.lh
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
-            assert wp_tensor.shape == (len(doc._.pytt_word_pieces), self.model.nO), (
-                len(doc._.pytt_word_pieces),
-                self.model.nO,
-                wp_tensor.shape,
-            )
+            if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):
+                print(
+                    "Mismatch between tensor shape and word pieces. This usually "
+                    "means we did something wrong in the sentence reshaping, "
+                    "or possibly finding the separator tokens.")
+                print("# word pieces: ", len(doc._.pytt_word_pieces))
+                print("# tensor rows: ", wp_tensor.shape[0])
+                for sent in doc.sents:
+                    if sent._.pytt_start is None or sent._.pytt_end is None:
+                        print("Text: ", sent.text)
+                        print("WPs: ", sent._.pytt_word_pieces_)
+                        print(sent._.pytt_start, sent._.pytt_end)
+                raise ValueError
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
@@ -170,10 +178,11 @@ class PyTT_TokenVectorEncoder(Pipe):
             # every token in their sentence.
             if doc.tensor.sum() != wp_tensor.sum():
                 for sent in doc.sents:
-                    cls_vector = wp_tensor[sent._.pytt_start]
-                    sep_vector = wp_tensor[sent._.pytt_end]
-                    doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
-                    doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
+                    if sent._.pytt_start is not None and sent._.pytt_end is not None:
+                        cls_vector = wp_tensor[sent._.pytt_start]
+                        sep_vector = wp_tensor[sent._.pytt_end]
+                        doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
+                        doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
