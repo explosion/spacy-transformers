@@ -44,12 +44,14 @@ class PyTT_Wrapper(PyTorchWrapper):
     ) -> Tuple[Activations, Callable[..., None]]:
         ids = torch.as_tensor(ids, dtype=torch.int64)
         is_training = self._model.training
+        # Calculate "attention map"
+        mask = ids.clamp(0, 1)
         if drop is None:
             self._model.eval()
-            y_var = self._model(ids)
+            y_var = self._model(ids, attention_mask=mask)
         else:
             self._model.train()
-            y_var = self._model(ids)
+            y_var = self._model(ids, attention_mask=mask)
         self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
