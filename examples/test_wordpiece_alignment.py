@@ -27,7 +27,17 @@ def main(
     retry=False,
     force=False,
 ):
-    """Test the wordpiecer on a large dataset to find misalignments."""
+    """Test the wordpiecer on a large dataset to find misalignments. If both the
+    retry and force flag are set (which is the default runtime configuration),
+    this script should always pass.
+
+    * retry: If alignment fails after cleaning and normalizing both sets of
+        tokens, try again with a more aggressive strategy that strips out all
+        characters that are not uppercase/lowercase letters.
+    * force: If alignment still fails, run the word-piece tokenizer on the
+        individual spaCy tokens, so that alignment is trivial. This should
+        always work.
+    """
     cfg = {"retry_alignment": retry, "force_alignment": force}
     nlp = get_lang_class(lang)()
     nlp.add_pipe(nlp.create_pipe("sentencizer"))
