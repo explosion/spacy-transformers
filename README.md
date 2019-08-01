@@ -36,10 +36,10 @@ We've also pre-packaged some of the pre-trained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name                 | Pre-trained model   |   Size |                                            Release                                            |
-| ---------------------------- | ------------------- | -----: | :-------------------------------------------------------------------------------------------: |
-| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased` | 406 MB | [ℹ️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.0) |
-| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`  | 434 MB | [ℹ️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.0)  |
+| Package name                 | Pre-trained model   |   Size |                                            Release                                             |
+| ---------------------------- | ------------------- | -----: | :--------------------------------------------------------------------------------------------: |
+| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased` | 406 MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.0) |
+| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`  | 434 MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.0)  |
 
 ```bash
 python -m spacy download en_pytt_bertbaseuncased_lg
