@@ -120,7 +120,7 @@ class PyTT_Language(Language):
         for name, component in self.pipeline:
             if name != tok2vec_name:
                 continue
-            elif getattr(component, "model", None) == True
+            elif getattr(component, "model", None) == True:
                 continue
             elif not hasattr(component, "begin_training"):
                 continue
