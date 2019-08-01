@@ -29,18 +29,18 @@ def test_align_word_pieces(spacy_tokens, wp_tokens, expected_alignment):
 
 
 @pytest.mark.parametrize(
-    "lengths,min_batch,expected",
+    "lengths,max_words,expected",
     [
-        ([1, 2, 2, 4], 1, [[3], [1, 2], [0]]),
-        ([1, 2, 2, 4], 2, [[0, 1, 2, 3]]),
-        ([4, 2, 2, 1], 2, [[0, 1, 2, 3]]),
-        ([4, 4, 2, 2, 1], 2, [[0, 1], [2, 3, 4]]),
-        ([10, 7, 2, 2, 1], 2, [[0, 1], [2, 3, 4]]),
+        ([1, 2, 2, 4], 4, [[3], [1, 2], [0]]),
+        ([1, 2, 2, 4], 3, [[3], [2], [1], [0]]),
+        ([4, 2, 2, 1], 4, [[0], [1, 2], [3]]),
+        ([4, 4, 2, 2, 1], 6, [[1], [0], [2, 3, 4]]),
+        ([10, 7, 2, 2, 1], 10, [[0], [1], [2, 3, 4]]),
     ],
 )
-def test_batch_by_length(lengths, min_batch, expected):
+def test_batch_by_length(lengths, max_words, expected):
     seqs = ["a" * length for length in lengths]
-    batches = batch_by_length(seqs, min_batch)
+    batches = batch_by_length(seqs, max_words)
     assert batches == expected
 
 
