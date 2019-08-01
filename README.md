@@ -15,8 +15,10 @@ state-of-the-art transformer architectures, such as BERT, GPT2, XLNet, etc.
 
 ## Features
 
+-   Use BERT, XLNet etc in spaCy.
 -   Aligned tokenization.
--   Transfer learning, Text classification.
+-   Multi-sentence documents.
+-   Transfer learning, text classification.
 -   Fine-tuning.
 -   Built-in hooks for context-sensitive vectors and similarity.
 -   Out-of-the-box serialization.
@@ -47,9 +49,61 @@ import spacy
 nlp = spacy.load("en_bert_base_uncased_xl")
 doc = nlp("The dog barked. The puppy barked.")
 print(doc[0:4].similarity(doc[4:8]))
+print(doc._.pytt_last_hidden_state.shape)
 ```
 
 ## 📖 Usage
+
+### Transfer learning
+
+The main use case for pretrained transformer models is transfer learning. You
+load in a large generic model pretrained on lots of text, and start training on
+your smaller dataset with labels specific to your problem. This package has
+custom pipeline components that make this especially easy. We provide an example
+component for text categorization. Development of analogous components for other
+tasks should be quite straight-forward.
+
+The `pytt_textcat` component is based on spaCy's built-in
+[`TextCategorizer`](https://spacy.io/api/textcategorizer) and supports using the
+features assigned by the PyTorch-Transformers models, via the `pytt_tok2vec`
+component. This lets you use a model like BERT to predict contextual token
+representations, and then learn a text categorizer on top as a task-specific
+"head". The API is the same as any other spaCy pipeline:
+
+```python
+TRAIN_DATA = [
+    ("text1", {"cats": {"POSITIVE": 1.0, "NEGATIVE": 0.0}})
+]
+DEV_DATA = [
+    ("text2", {"cats": {"POSITIVE": 0.0, "NEGATIVE": 1.0}})
+]
+```
+
+```python
+import spacy
+from spacy.util import minibatch
+import random
+
+nlp = spacy.load("en_bert_base_uncased_xl")
+print(nlp.pipe_names)
+# ["sentencizer", "pytt_wordpiecer", "pytt_tok2vec"]
+
+textcat = nlp.create_pipe("pytt_textcat", config={"exclusive_classes": True})
+for label in ("POSITIVE", "NEGATIVE"):
+    textcat.add_label(label)
+nlp.add_pipe(textcat)
+
+optimizer = nlp.resume_training()
+for i in range(10):
+    random.shuffle(TRAIN_DATA)
+    losses = {}
+    for batch in minibatch(TRAIN_DATA, size=8):
+        texts, cats = zip(*batch)
+        nlp.update(texts, cats, optimizer=optimizer, losses=losses)
+    scores = nlp.evaluate(DEV_DATA)
+    print(i, scores, losses)
+nlp.to_disk("/bert-textcat")
+```
 
 ### Vectors and similarity
 
@@ -67,51 +121,6 @@ apple_co = doc_company[0]
 apple_fruit = doc_fruit[-3]
 print(apple_co.similarity(nlp("fruit")))
 print(apple_fruit.similarity(nlp("company")))
-```
-
-### Transfer learning
-
-The main use case for pretrained transformer models is transfer learning. You
-load in the pretrained weights, and start training on your data. This package
-has custom pipeline components that make this especially easy.
-
-The `pytt_textcat` component is based on spaCy's built-in
-[`TextCategorizer`](https://spacy.io/api/textcategorizer) and supports using the
-features assigned by the PyTorch-Transformers models via the token vector
-encoder. You can use a pre-trained transformer model as the base model, add it
-on top and train it like any other spaCy text classifier.
-
-```python
-TRAIN_DATA = [
-    ("text1", {"cats": {"POSITIVE": 1.0, "NEGATIVE": 0.0}})
-]
-DEV_DATA = [
-    ("text2", {"cats": {"POSITIVE": 0.0, "NEGATIVE": 1.0}})
-]
-```
-
-```python
-import spacy
-from spacy.util import minibatch
-import random
-
-nlp = spacy.load("en_bert_base_uncased_xl")
-
-textcat = nlp.create_pipe("pytt_textcat", config={"exclusive_classes": True})
-for label in ("POSITIVE", "NEGATIVE"):
-    textcat.add_label(label)
-nlp.add_pipe(textcat)
-
-optimizer = nlp.resume_training()
-for i in range(10):
-    random.shuffle(TRAIN_DATA)
-    losses = {}
-    for batch in minibatch(TRAIN_DATA, size=128):
-        texts, cats = zip(*batch)
-        nlp.update(texts, cats, optimizer=optimizer, losses=losses)
-    scores = nlp.evaluate(DEV_DATA)
-    print(i, scores, losses)
-nlp.to_disk("/bert-textcat")
 ```
 
 ### Serialization
@@ -144,19 +153,19 @@ This wrapper sets the following
 [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
 on the `Doc`, `Span` and `Token` objects:
 
-| Name                          | Type                 | Description                                                                                                                                                     |
-| ----------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `._.pytt_alignment`           | list                 | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token) or a list of indices (if called on a `Token`). |
-| `._.pytt_word_pieces`         | list                 | The word-piece IDs.                                                                                                                                             |
-| `._.pytt_word_pieces_`        | list                 | The string forms of the word-piece IDs.                                                                                                                         |
-| `._.pytt_last_hidden_state`   | `numpy`/`cupy` array | The `last_hidden_state` output from the PyTorch-Transformers model.                                                                                             |
-| `._.pytt_pooler_output`       | `numpy`/`cupy` array | The `pooler_output` output from the PyTorch-Transformers model.                                                                                                 |
-| `._.pytt_all_hidden_states`   | `numpy`/`cupy` array | The `all_hidden_states` output from the PyTorch-Transformers model.                                                                                             |
-| `._.all_attentions`           | `numpy`/`cupy` array | The `all_attentions` output from the PyTorch-Transformers model.                                                                                                |
-| `._.pytt_d_last_hidden_state` | `numpy`/`cupy` array | The gradient of the `last_hidden_state` output from the PyTorch-Transformers model.                                                                             |
-| `._.pytt_d_pooler_output`     | `numpy`/`cupy` array | The gradient of the `pooler_output` output from the PyTorch-Transformers model.                                                                                 |
-| `._.pytt_d_all_hidden_states` | `numpy`/`cupy` array | The gradient of the `all_hidden_states` output from the PyTorch-Transformers model.                                                                             |
-| `._.pytt_d_all_attentions`    | `numpy`/`cupy` array | The gradient of the `all_attentions` output from the PyTorch-Transformers model.                                                                                |
+| Name                          | Type              | Description                                                                                                                                                     |
+| ----------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `._.pytt_alignment`           | `List[List[int]]` | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token) or a list of indices (if called on a `Token`). |
+| `._.pytt_word_pieces`         | `List[int]`       | The word-piece IDs.                                                                                                                                             |
+| `._.pytt_word_pieces_`        | `List[str]`       | The string forms of the word-piece IDs.                                                                                                                         |
+| `._.pytt_last_hidden_state`   | `ndarray`         | The `last_hidden_state` output from the PyTorch-Transformers model.                                                                                             |
+| `._.pytt_pooler_output`       | `List[ndarray]`   | The `pooler_output` output from the PyTorch-Transformers model.                                                                                                 |
+| `._.pytt_all_hidden_states`   | `List[ndarray]`   | The `all_hidden_states` output from the PyTorch-Transformers model.                                                                                             |
+| `._.all_attentions`           | `List[ndarray]`   | The `all_attentions` output from the PyTorch-Transformers model.                                                                                                |
+| `._.pytt_d_last_hidden_state` | `ndarray`         | The gradient of the `last_hidden_state` output from the PyTorch-Transformers model.                                                                             |
+| `._.pytt_d_pooler_output`     | `List[ndarray]`   | The gradient of the `pooler_output` output from the PyTorch-Transformers model.                                                                                 |
+| `._.pytt_d_all_hidden_states` | `List[ndarray]`   | The gradient of the `all_hidden_states` output from the PyTorch-Transformers model.                                                                             |
+| `._.pytt_d_all_attentions`    | `List[ndarray]`   | The gradient of the `all_attentions` output from the PyTorch-Transformers model.                                                                                |
 
 The values can be accessed via the `._` attribute. For example:
 
@@ -167,7 +176,7 @@ print(doc._.pytt_word_pieces_)
 
 ### Setting up the pipeline
 
-In order to run, the `nlp` object created using `PyTT_Language` requires two
+In order to run, the `nlp` object created using `PyTT_Language` requires a few
 components to run in order: a component that assigns sentence boundaries (e.g.
 spaCy's built-in
 [`Sentencizer`](https://spacy.io/usage/linguistic-features#sbd-component)), the
@@ -193,34 +202,34 @@ examples.
 ### Tokenization alignment
 
 Transformer models are usually trained on text preprocessed with the "word
-piece" algorithm, which limits the number of distinct tokens the model needs to
-consider. Word-piece is convenient for training neural networks, but it doesn't
-produce segmentations that match up to any linguistic notion of a "word". Most
-rare words will map to multiple word-piece tokens, and occassionally the
-alignment will be many-to-many. `spacy-pytorch-transformers` calculates this
-alignment, which you can access at `doc._.pytt_alignment`. It's a list of length
-equal to the number of spaCy tokens. Each value in the list is a list of
-consecutive integers, which are indexes into the word-pieces list.
+piece" algorithm, which limits the number of distinct token-types the model
+needs to consider. Word-piece is convenient for training neural networks, but it
+doesn't produce segmentations that match up to any linguistic notion of a
+"word". Most rare words will map to multiple word-piece tokens, and
+occassionally the alignment will be many-to-many. `spacy-pytorch-transformers`
+calculates this alignment, which you can access at `doc._.pytt_alignment`. It's
+a list of length equal to the number of spaCy tokens. Each value in the list is
+a list of consecutive integers, which are indexes into the word-pieces list.
 
 If you can work on representations that aren't aligned to actual words, it's
 best to use the raw outputs of the transformer, which can be accessed at
-`doc._.last_hidden_state`. This variable gives you a tensor with one row per
-word-piece token.
+`doc._.pytt_last_hidden_state`. This variable gives you a tensor with one row
+per word-piece token.
 
 If you're working on token-level tasks such as part-of-speech tagging or
 spelling correction, you'll want to work on the token-aligned features, which
 are stored in the `doc.tensor` variable.
 
 We've taken care to calculate the aligned `doc.tensor` representation as
-faithfully as possible. When one spaCy token aligns against several word-piece
-tokens, the token's vector will be a sum of the relevant slice of the tensor,
-weighted by how many other spaCy tokens are aligned against that row. By using a
-weighted sum, we ensure that the sum of the `doc.tensor` variable corresponds to
-the sum of the raw `doc._.last_hidden_state[1:1]` values. The only information
-missing from the `doc.tensor` are the vectors for the boundary tokens. However,
-note that in many tasks, the vectors for the boundary tokens are quite important
-(see e.g. the analysis of BERT's attention by Clark et al. (2019), who found
-that these tokens are very often attended to).
+faithfully as possible, with priority given to avoid information loss. The
+alignment has been calculated such that
+`doc.tensor.sum(axis=1) == doc._.pytt_last_hidden_state.sum(axis=1)`. To make
+this work, each row of the `doc.tensor` (which corresponds to a spaCy token) is
+set to a weighted sum of the rows of the `last_hidden_state` tensor that the
+token is aligned to, where the weighting is proportional to the number of other
+spaCy tokens aligned to that row. To include the information from the (often
+important --- see Clark et al., 2019) boundary tokens, we imagine that these are
+also "aligned" to all of the tokens in the sentence.
 
 ### Batching, padding and per-sentence processing
 
@@ -228,7 +237,7 @@ Transformer models have cubic runtime and memory complexity with respect to
 sequence length. This means that longer texts need to be divided into sentences
 in order to achieve reasonable efficiency.
 
-`spacy-pytorch-transformers` handles this internally, so long as some sort of
+`spacy-pytorch-transformers` handles this internally, and requires that sort of
 sentence-boundary detection component has been added to the pipeline. We
 recommend:
 
@@ -237,24 +246,21 @@ sentencizer = nlp.create_pipe("sentencizer")
 nlp.add_pipe(sentencizer, first=True)
 ```
 
-The default rules for the sentencizer component are very simple, but you can
-also create a custom sentence-boundary detection component that works well on
-your data. See spaCy's documentation for details. If a sentencizer is available
-and the `per_sentence=True` configuration option is set, the transformer model
-will predict over sentences, and the resulting tensor features will be
-reconstructed to produce document-level annotations.
+Internally, the transformer model will predict over sentences, and the resulting
+tensor features will be reconstructed to produce document-level annotations.
 
-In order to further improve efficiency, especially for CPU processing,
+In order to further improve efficiency and reduce memory requirements,
 `spacy-pytorch-transformers` also performs length-based subbatching internally.
-The subbatching regroups batches by sequence length, to minimise the amount of
-padding required. The configuration option `batch_by_length` controls this
-behaviour. You can set it to 0 to disable the subbatching, or set it to an
-integer to require that the subbatches must be at least N sequences long.
+The subbatching regroups the batched sentences by sequence length, to minimise
+the amount of padding required. The configuration option `words_per_batch`
+controls this behaviour. You can set it to 0 to disable the subbatching, or set
+it to an integer to require a maximum limit on the number of words (including
+padding) per subbatch. The default value of 2000 words reasonably well on a
+Tesla V100.
 
-The subbatching and per-sentence processing are used instead of input
-truncation, which many transformer implementations otherwise resort to.
-Truncating inputs is usually bad, as it results in the loss of arbitrary
-information.
+Many of the pretrained transformer models have a maximum sequence length. If a
+sentence is longer than the maximum, it is truncated and the affected ending
+tokens will receive zeroed vectors.
 
 ## 🎛 API
 
@@ -383,11 +389,10 @@ tok2vec = nlp.create_pipe("pytt_tok2vec")
 The component can be configured with the following settings, usually passed in
 as the `**cfg`.
 
-| Name              | Type    | Description                                                                                                                            |
-| ----------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`.                                                                                 |
-| `batch_by_length` | int     | Minimum batch size for grouping texts into subbatches based on their length to reduce padding. Set to `0` to disable. Defaults to `1`. |
-| `per_sentence`    | bool    | Apply the model over sentences using the `doc.sents` attribute.                                                                        |
+| Name              | Type    | Description                                                                                                                                                                                                                 |
+| ----------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`.                                                                                                                                                                      |
+| `words_per_batch` | int     | Group sentences into subbatches of max `words_per_batch` in size. For instance, a batch with one 100 word sentence and one 10 word sentence will have size 200 (due to padding). Set to `0` to disable. Defaults to `2000`. |
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_nlp`
 
