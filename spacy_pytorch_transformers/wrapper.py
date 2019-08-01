@@ -40,19 +40,28 @@ class PyTT_Wrapper(PyTorchWrapper):
     def max_length(self):
         return self._model.config.max_position_embeddings
 
+    def predict(self, ids: Array):
+        ids = torch.as_tensor(ids, dtype=torch.int64)
+        model_kwargs = self.get_model_kwargs(ids)
+        is_training = self._model.training
+        self._model.training = False
+        with torch.no_grad():
+            y_var = self._model(ids, **model_kwargs)
+        self._model.training = is_training
+        return Activations.from_pytt(y_var, is_grad=False)
+ 
     def begin_update(
         self, ids: Array, drop: Dropout = None
     ) -> Tuple[Activations, Callable[..., None]]:
+        if drop is None:
+            # "drop is None" indicates prediction. It's one of the parts of
+            # Thinc's API I'm least happy with...
+            return self.predict(ids), None
         ids = torch.as_tensor(ids, dtype=torch.int64)
         is_training = self._model.training
         model_kwargs = self.get_model_kwargs(ids)
-        if drop is None:
-            self._model.eval()
-            with torch.no_grad():
-                y_var = self._model(ids, **model_kwargs)
-        else:
-            self._model.train()
-            y_var = self._model(ids, **model_kwargs)
+        self._model.train()
+        y_var = self._model(ids, **model_kwargs)
         self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
@@ -84,7 +93,6 @@ class PyTT_Wrapper(PyTorchWrapper):
                     optimizer.zero_grad()
             return None
 
-        self._model.eval()
         return output, backward_pytorch
 
     def get_model_kwargs(self, ids):
