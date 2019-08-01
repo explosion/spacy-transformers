@@ -122,21 +122,24 @@ def evaluate(nlp, texts, cats):
     fp = 0.0  # False positives
     fn = 0.0  # False negatives
     tn = 0.0  # True negatives
-    for i, doc in enumerate(nlp.pipe(texts, batch_size=8)):
-        gold = cats[i]
-        for label, score in doc.cats.items():
-            if label not in gold:
-                continue
-            if label == "NEGATIVE":
-                continue
-            if score >= 0.5 and gold[label] >= 0.5:
-                tp += 1.0
-            elif score >= 0.5 and gold[label] < 0.5:
-                fp += 1.0
-            elif score < 0.5 and gold[label] < 0.5:
-                tn += 1
-            elif score < 0.5 and gold[label] >= 0.5:
-                fn += 1
+    total_words = sum(len(text.split()) for text in texts)
+    with tqdm.tqdm(total=total_words, leave=False) as pbar:
+        for i, doc in enumerate(nlp.pipe(texts, batch_size=8)):
+            gold = cats[i]
+            for label, score in doc.cats.items():
+                if label not in gold:
+                    continue
+                if label == "NEGATIVE":
+                    continue
+                if score >= 0.5 and gold[label] >= 0.5:
+                    tp += 1.0
+                elif score >= 0.5 and gold[label] < 0.5:
+                    fp += 1.0
+                elif score < 0.5 and gold[label] < 0.5:
+                    tn += 1
+                elif score < 0.5 and gold[label] >= 0.5:
+                    fn += 1
+            pbar.update(len(doc.text.split()))
     precision = tp / (tp + fp + 1e-8)
     recall = tp / (tp + fn + 1e-8)
     if (precision + recall) == 0:
