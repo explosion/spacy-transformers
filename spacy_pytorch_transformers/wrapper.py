@@ -35,10 +35,14 @@ class PyTT_Wrapper(PyTorchWrapper):
     def nO(self):
         return self._model.config.hidden_size
 
+    @property
+    def max_length(self):
+        return self._model.config.max_position_embeddings
+
     def begin_update(
         self, ids: Array, drop: Dropout = None
     ) -> Tuple[Activations, Callable[..., None]]:
-        ids = xp2torch(self.ops.asarray(ids))
+        ids = torch.as_tensor(ids, dtype=torch.int64)
         is_training = self._model.training
         if drop is None:
             self._model.eval()
