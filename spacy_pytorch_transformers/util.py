@@ -252,12 +252,12 @@ def _get_char_map(seq):
     return char_map
 
 
-def pad_batch(batch: List[Array]) -> Array:
+def pad_batch(batch: List[Array], xp=numpy) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
-    them into a single array. Supports only 1d input arrays."""
+    them into a single array.
+    """
     max_len = max((len(seq) or 0) for seq in batch)
     padded: List[Array] = []
-    xp = get_array_module(batch[0])
     seq: Array
     for seq in batch:
         # Ugh, numpy.pad sucks.
@@ -271,35 +271,35 @@ def pad_batch(batch: List[Array]) -> Array:
 
 
 def pad_batch_activations(batch: List[Activations]) -> Activations:
-    lh = pad_batch([x.lh for x in batch])
+    xp = get_array_module(batch[0])
+    lh = pad_batch([x.lh for x in batch], xp=xp)
     lh = lh.reshape((len(batch), -1, lh.shape[-1]))
     return Activations(lh, [], [], [], is_grad=batch[0].is_grad)
 
 
 def batch_by_length(
-    seqs: Union[List[Array], List[Activations]], min_batch: int
+    seqs: Union[List[Array], List[Activations]], max_words: int
 ) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
-    must be at least min_batch length long.
+    may be at most max_words in size, defined as max sequence length * size.
     """
+    # Use negative index so we can get sort by position ascending.
     lengths_indices = [(len(seq), i) for i, seq in enumerate(seqs)]
-    lengths_indices.sort(reverse=True)
+    lengths_indices.sort()
     batches: List[List[int]] = []
     batch: List[int] = []
-    prev_length = None
     for length, i in lengths_indices:
-        if not batch or length == prev_length or len(batch) < min_batch:
+        #i = -neg_i
+        if not batch:
+            batch.append(i)
+        elif length * (len(batch)+1) <= max_words:
             batch.append(i)
         else:
             batches.append(batch)
             batch = [i]
-        prev_length = length
     if batch:
-        if len(batch) >= min_batch or not batches:
-            batches.append(batch)
-        else:
-            batches[-1].extend(batch)
+        batches.append(batch)
     # Check lengths match
     assert sum(len(b) for b in batches) == len(seqs)
     # Check no duplicates
@@ -308,6 +308,7 @@ def batch_by_length(
         seen.update(b)
     assert len(seen) == len(seqs)
     batches = [list(sorted(batch)) for batch in batches]
+    batches.reverse()
     return batches
 
 
