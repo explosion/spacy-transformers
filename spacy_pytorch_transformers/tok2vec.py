@@ -86,6 +86,10 @@ class PyTT_TokenVectorEncoder(Pipe):
         self.model = model
         self.cfg = cfg
 
+    @property
+    def token_vector_width(self):
+        return self.model._model.nO
+
     def __call__(self, doc):
         """Process a Doc and assign the extracted features.
 
