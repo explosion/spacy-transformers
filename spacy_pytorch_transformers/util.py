@@ -10,6 +10,16 @@ import numpy
 from . import _tokenizers
 
 
+# Flag to control whether to apply a fallback strategy when we don't align,
+# of making more aggressive replacements. It's not clear whether this will
+# lead to better or worse results than the ultimate fallback strategy,
+# of calling the sub-tokenizer on the spaCy tokens.
+# Probably trying harder to get alignment is good: the ultimate fallback
+# actually *changes what wordpieces we return*, so we get (potentially) different
+# results out of the transformer. The more aggressive alignment can only change
+# how we map those transformer features to tokens.
+FORCE_ALIGNMENT_WITH_REPLACEMENT = True
+
 Array = Union["numpy.ndarray", "cupy.ndarray"]
 Optimizer = Callable[[Array, Array, Optional[int]], None]
 Dropout = Optional[float]
@@ -200,13 +210,18 @@ def align_word_pieces(spacy_tokens, wp_tokens, specials=SPECIAL_TOKENS):
         return []
     # Check alignment
     if "".join(spacy_tokens).lower() != "".join(wp_tokens).lower():
-        # Force alignment
-        spacy_tokens = [alpha_re.sub("", t) for t in spacy_tokens]
-        wp_tokens = [alpha_re.sub("", t) for t in wp_tokens]
-        spacy_string = "".join(spacy_tokens).lower()
-        wp_string = "".join(wp_tokens).lower()
-        if spacy_string != wp_string:
-            return None
+        if FORCE_ALIGNMENT_WITH_AGGRESSIVE_REPLACEMENT:
+            # Force alignment
+            spacy_tokens = [alpha_re.sub("", t) for t in spacy_tokens]
+            wp_tokens = [alpha_re.sub("", t) for t in wp_tokens]
+            spacy_string = "".join(spacy_tokens).lower()
+            wp_string = "".join(wp_tokens).lower()
+            if spacy_string == wp_string:
+                return _align(spacy_tokens, wp_tokens, offset)
+        # If either we're not trying the fallback alignment, or the fallback
+        # fails, we return None. This tells the wordpiecer to align by
+        # calling the sub-tokenizer on the spaCy tokens.
+        return None
     output = _align(spacy_tokens, wp_tokens, offset)
     return output
 
