@@ -67,8 +67,9 @@ class PyTT_TokenVectorEncoder(Pipe):
             chain(
                 get_word_pieces,
                 with_length_batching(
-                    truncate_long_inputs(pytt_model, max_length),
-                    batch_by_length))
+                    truncate_long_inputs(pytt_model, max_length), batch_by_length
+                ),
+            )
         )
         setattr(model, "nO", nO)
         setattr(model, "_model", pytt_model)
@@ -155,7 +156,8 @@ class PyTT_TokenVectorEncoder(Pipe):
                 print(
                     "Mismatch between tensor shape and word pieces. This usually "
                     "means we did something wrong in the sentence reshaping, "
-                    "or possibly finding the separator tokens.")
+                    "or possibly finding the separator tokens."
+                )
                 print("# word pieces: ", len(doc._.pytt_word_pieces))
                 print("# tensor rows: ", wp_tensor.shape[0])
                 for sent in doc.sents:
@@ -237,7 +239,8 @@ def truncate_long_inputs(model, max_len):
     """Truncate inputs on the way into a model, and restore their shape on
     the way out.
     """
-    def with_truncate_forward(X, drop=0.):
+
+    def with_truncate_forward(X, drop=0.0):
         # Dim 1 should be batch, dim 2 sequence length
         if X.shape[1] < max_len:
             return model.begin_update(X, drop=drop)
@@ -250,11 +253,12 @@ def truncate_long_inputs(model, max_len):
         Y[:, :max_len] = short_lh
         outputs = Activations(Y, [], [], [])
 
-
         def with_truncate_backward(dY, sgd=None):
             dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
             dX_short = get_dX_short(dY_short, sgd=sgd)
-            dX = model.ops.allocate((dX_short.shape[0], dY.shape[1]) + dY_short.shape[2:])
+            dX = model.ops.allocate(
+                (dX_short.shape[0], dY.shape[1]) + dY_short.shape[2:]
+            )
             dX[:, :max_len] = dX_short
             return dX
 
@@ -262,7 +266,6 @@ def truncate_long_inputs(model, max_len):
 
     return wrap(with_truncate_forward, model)
 
-        
 
 def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     Input = List[Array]
@@ -275,9 +278,7 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         inputs: Input, drop: Dropout = 0.0
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
-        last_hiddens = [
-            activs.lh[i, : len(seq)] for i, seq in enumerate(inputs)
-        ]
+        last_hiddens = [activs.lh[i, : len(seq)] for i, seq in enumerate(inputs)]
         outputs = [Activations(y, [], [], []) for y in last_hiddens]
 
         def backprop_batched(d_outputs, sgd=None):
@@ -326,7 +327,9 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> Model:
         outputs: List[Activations] = [y for y in unbatched if y is not None]
         assert len(outputs) == len(unbatched)
 
-        def backprop_batched(d_outputs: Output, sgd: Optimizer = None) -> Optional[Input]:
+        def backprop_batched(
+            d_outputs: Output, sgd: Optimizer = None
+        ) -> Optional[Input]:
             d_inputs: List[Optional[Array]] = [None for _ in inputs]
             for indices, get_dX in zip(batches, backprops):
                 d_activs = pad_batch_activations([d_outputs[i] for i in indices])

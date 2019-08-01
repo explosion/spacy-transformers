@@ -305,10 +305,10 @@ def batch_by_length(
     batches: List[List[int]] = []
     batch: List[int] = []
     for length, i in lengths_indices:
-        #i = -neg_i
+        # i = -neg_i
         if not batch:
             batch.append(i)
-        elif length * (len(batch)+1) <= max_words:
+        elif length * (len(batch) + 1) <= max_words:
             batch.append(i)
         else:
             batches.append(batch)
