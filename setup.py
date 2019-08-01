@@ -30,7 +30,7 @@ def setup_package():
         license=about["__license__"],
         packages=find_packages(),
         install_requires=[
-            "spacy>=2.1.6,<2.2.0",
+            "spacy>=2.1.7,<2.2.0",
             "pytorch_transformers>=1.0.0,<1.1.0",
             "torch>=0.4.1",
             "srsly>=0.0.7,<1.1.0",
