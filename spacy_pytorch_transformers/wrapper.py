@@ -1,5 +1,6 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch
 from pytorch_transformers.optimization import AdamW
+import pytorch_transformers as pytt
 import torch.autograd
 import torch.nn.utils.clip_grad
 import torch
@@ -44,14 +45,13 @@ class PyTT_Wrapper(PyTorchWrapper):
     ) -> Tuple[Activations, Callable[..., None]]:
         ids = torch.as_tensor(ids, dtype=torch.int64)
         is_training = self._model.training
-        # Calculate "attention map"
-        mask = ids.clamp(0, 1)
+        model_kwargs = self.get_model_kwargs(ids)
         if drop is None:
             self._model.eval()
-            y_var = self._model(ids, attention_mask=mask)
+            y_var = self._model(ids, **model_kwargs)
         else:
             self._model.train()
-            y_var = self._model(ids, attention_mask=mask)
+            y_var = self._model(ids, **model_kwargs)
         self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
@@ -85,6 +85,14 @@ class PyTT_Wrapper(PyTorchWrapper):
 
         self._model.eval()
         return output, backward_pytorch
+
+    def get_model_kwargs(self, ids):
+        # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
+        if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
+            mask = ids.clamp(0, 1)
+            return {"attention_mask": mask}
+        else:
+            return {}
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
