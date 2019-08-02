@@ -272,10 +272,6 @@ Many of the pretrained transformer models have a maximum sequence length. If a
 sentence is longer than the maximum, it is truncated and the affected ending
 tokens will receive zeroed vectors.
 
-## 🕹 How it works
-
-TODO
-
 ## 🎛 API
 
 ### <kbd>class</kbd> `PyTT_Language`
