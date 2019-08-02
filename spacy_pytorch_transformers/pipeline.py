@@ -1,8 +1,8 @@
 import spacy.pipeline
 from thinc.neural.util import get_array_module
-from thinc.api import layerize, chain, flatten_add_lengths
-from thinc.t2v import Pooling, mean_pool
-from thinc.v2v import Softmax
+from thinc.api import layerize, chain, flatten_add_lengths, with_getitem
+from thinc.t2v import Pooling, mean_pool, max_pool
+from thinc.v2v import Softmax, Maxout
 
 
 class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
@@ -33,8 +33,9 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         return chain(
             get_pytt_class_tokens,
             flatten_add_lengths,
+            with_getitem(0, 
+                Softmax(nr_class, cfg["token_vector_width"])),
             Pooling(mean_pool),
-            Softmax(nr_class, cfg["token_vector_width"]),
         )
 
 
