@@ -61,8 +61,8 @@ package.
 import spacy
 
 nlp = spacy.load("en_pytt_bertbaseuncased_lg")
-doc = nlp("The dog barked. The puppy barked.")
-print(doc[0:4].similarity(doc[4:8]))
+doc = nlp("Apple shares rose on the news. Apple pie is delicious.")
+print(doc[0].similarity(doc[7]))
 print(doc._.pytt_last_hidden_state.shape)
 ```
 
@@ -130,8 +130,11 @@ models we'd rather use the `doc.tensor` attribute, since it holds a much more
 informative context-sensitive representation.
 
 ```python
-doc = nlp("The dog barked. The puppy barked.")
-print(doc[0:4].similarity(doc[4:8]))
+apple1 = nlp("Apple shares rose on the news.")
+apple2 = nlp("Apple sold fewer iPhones this quarter.")
+apple3 = nlp("Apple pie is delicious.")
+print(apple1[0].similarity(apple2[0]))
+print(apple1[0].similarity(apple3[0]))
 ```
 
 ### Serialization
