@@ -18,7 +18,7 @@ more details and background, check out
 ## Features
 
 -   Use **BERT**, **XLNet** and **GPT-2** directly in your spaCy pipeline.
--   **Fine-tune** pre-trained transformer models on your task using spaCy's API.
+-   **Fine-tune** pretrained transformer models on your task using spaCy's API.
 -   Custom component for **text classification** using transformer features.
 -   Automatic **alignment** of word pieces and outputs to linguistic tokens.
 -   Process multi-sentence documents with intelligent **per-sentence
@@ -38,11 +38,11 @@ latest version of spaCy,
 pip install spacy-pytorch-transformers
 ```
 
-We've also pre-packaged some of the pre-trained models as spaCy model packages.
+We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name                 | Pre-trained model        | Language | Author                                                     |  Size |                                            Release                                             |
+| Package name                 | Pretrained model         | Language | Author                                                     |  Size |                                            Release                                             |
 | ---------------------------- | ------------------------ | -------- | ---------------------------------------------------------- | ----: | :--------------------------------------------------------------------------------------------: |
 | `en_pytt_bertbaseuncased_lg` | `bert-base-uncased`      | English  | [Google Research](https://github.com/google-research/bert) | 406MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.0) |
 | `de_pytt_bertbasecased_lg`   | `bert-base-german-cased` | German   | [deepset](https://deepset.ai/german-bert)                  | 406MB |  [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.0)  |
@@ -137,11 +137,11 @@ print(apple_fruit.similarity(nlp("company")))
 
 ### Serialization
 
-Saving and loading pre-trained transformer models and packaging them as spaCy
+Saving and loading pretrained transformer models and packaging them as spaCy
 models ✨just works ✨ (at least, it should). The wrapper and components follow
 spaCy's API, so when you save and load the `nlp` object, it...
 
--   Writes the pre-trained weights to disk / bytes and loads them back in.
+-   Writes the pretrained weights to disk / bytes and loads them back in.
 -   Adds `"lang_factory": "pytt"` in the `meta.json` so spaCy knows how to
     initialize the `Language` class when you load the model.
 -   Adds this package and its version to the `"requirements"` in the
@@ -194,8 +194,8 @@ spaCy's built-in
 [`Sentencizer`](https://spacy.io/usage/linguistic-features#sbd-component)), the
 `PyTT_WordPiecer`, which assigns the word-piece tokens and the
 `PyTT_TokenVectorEncoder`, which assigns the token vectors. The `pytt_name`
-argument defines the name of the pre-trained model to use. The `from_pretrained`
-methods load the pre-trained model via `pytorch-transformers`.
+argument defines the name of the pretrained model to use. The `from_pretrained`
+methods load the pretrained model via `pytorch-transformers`.
 
 ```python
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
@@ -299,7 +299,7 @@ yourself – it already runs when you import the package.
 
 See [`Language.__init__`](https://spacy.io/api/language#init). Expects either a
 `pytt_name` setting in the `meta` or as a keyword argument, specifying the
-pre-trained model name. This is used to set up the model-specific tokenizer.
+pretrained model name. This is used to set up the model-specific tokenizer.
 
 #### <kbd>method</kbd> `PyTT_Language.update`
 
@@ -335,9 +335,9 @@ wordpiecer = nlp.create_pipe("wordpiecer")
 The component can be configured with the following settings, usually passed in
 as the `**cfg`.
 
-| Name        | Type    | Description                                            |
-| ----------- | ------- | ------------------------------------------------------ |
-| `pytt_name` | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
+| Name        | Type    | Description                                           |
+| ----------- | ------- | ----------------------------------------------------- |
+| `pytt_name` | unicode | Name of pretrained model, e.g. `"bert-base-uncased"`. |
 
 #### <kbd>classmethod</kbd> `PyTT_WordPiecer.from_nlp`
 
@@ -353,12 +353,12 @@ Factory to add to `Language.factories` via entry point.
 
 Initialize the component.
 
-| Name        | Type                | Description                                            |
-| ----------- | ------------------- | ------------------------------------------------------ |
-| `vocab`     | `spacy.vocab.Vocab` | The spaCy vocab to use.                                |
-| `name`      | unicode             | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
-| `**cfg`     | -                   | Optional config parameters.                            |
-| **RETURNS** | `PyTT_WordPiecer`   | The word piecer.                                       |
+| Name        | Type                | Description                                           |
+| ----------- | ------------------- | ----------------------------------------------------- |
+| `vocab`     | `spacy.vocab.Vocab` | The spaCy vocab to use.                               |
+| `name`      | unicode             | Name of pretrained model, e.g. `"bert-base-uncased"`. |
+| `**cfg`     | -                   | Optional config parameters.                           |
+| **RETURNS** | `PyTT_WordPiecer`   | The word piecer.                                      |
 
 #### <kbd>method</kbd> `PyTT_WordPiecer.predict`
 
@@ -403,7 +403,7 @@ as the `**cfg`.
 
 | Name              | Type    | Description                                                                                                                                                                                                                 |
 | ----------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pytt_name`       | unicode | Name of pre-trained model, e.g. `"bert-base-uncased"`.                                                                                                                                                                      |
+| `pytt_name`       | unicode | Name of pretrained model, e.g. `"bert-base-uncased"`.                                                                                                                                                                       |
 | `words_per_batch` | int     | Group sentences into subbatches of max `words_per_batch` in size. For instance, a batch with one 100 word sentence and one 10 word sentence will have size 200 (due to padding). Set to `0` to disable. Defaults to `2000`. |
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_nlp`
@@ -418,7 +418,7 @@ Factory to add to `Language.factories` via entry point.
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.from_pretrained`
 
-Create a `PyTT_TokenVectorEncoder` instance using pre-trained weights from a
+Create a `PyTT_TokenVectorEncoder` instance using pretrained weights from a
 PyTorch-Transformers model, even if it's not installed as a spaCy package.
 
 ```python
@@ -427,23 +427,23 @@ from spacy.tokens import Vocab
 tok2vec = PyTT_TokenVectorEncoder.from_pretrained(Vocab(), "bert-base-uncased")
 ```
 
-| Name        | Type                      | Description                                            |
-| ----------- | ------------------------- | ------------------------------------------------------ |
-| `vocab`     | `spacy.vocab.Vocab`       | The spaCy vocab to use.                                |
-| `name`      | unicode                   | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
-| `**cfg`     | -                         | Optional config parameters.                            |
-| **RETURNS** | `PyTT_TokenVectorEncoder` | The token vector encoder.                              |
+| Name        | Type                      | Description                                           |
+| ----------- | ------------------------- | ----------------------------------------------------- |
+| `vocab`     | `spacy.vocab.Vocab`       | The spaCy vocab to use.                               |
+| `name`      | unicode                   | Name of pretrained model, e.g. `"bert-base-uncased"`. |
+| `**cfg`     | -                         | Optional config parameters.                           |
+| **RETURNS** | `PyTT_TokenVectorEncoder` | The token vector encoder.                             |
 
 #### <kbd>classmethod</kbd> `PyTT_TokenVectorEncoder.Model`
 
 Create an instance of `PyTT_Wrapper`, which holds the PyTorch-Transformers
 model.
 
-| Name        | Type                 | Description                                            |
-| ----------- | -------------------- | ------------------------------------------------------ |
-| `name`      | unicode              | Name of pre-trained model, e.g. `"bert-base-uncased"`. |
-| `**cfg`     | -                    | Optional config parameters.                            |
-| **RETURNS** | `thinc.neural.Model` | The wrapped model.                                     |
+| Name        | Type                 | Description                                           |
+| ----------- | -------------------- | ----------------------------------------------------- |
+| `name`      | unicode              | Name of pretrained model, e.g. `"bert-base-uncased"`. |
+| `**cfg`     | -                    | Optional config parameters.                           |
+| **RETURNS** | `thinc.neural.Model` | The wrapped model.                                    |
 
 #### <kbd>method</kbd> `PyTT_TokenVectorEncoder.__init__`
 
