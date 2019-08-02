@@ -11,7 +11,7 @@ from .util import get_pytt_model, Activations
 from .util import Array, Dropout
 
 FINE_TUNE = True
-GRAD_CLIP_FACTOR = 100
+GRAD_CLIP_FACTOR = 1
 LEARN_RATE_FACTOR = 100
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
@@ -99,7 +99,8 @@ class PyTT_Wrapper(PyTorchWrapper):
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
             mask = ids.clamp(0, 1)
-            return {"attention_mask": mask}
+            segment_ids = torch.zeros_like(ids)
+            return {"attention_mask": mask, "token_type_ids": segment_ids}
         else:
             return {}
 
