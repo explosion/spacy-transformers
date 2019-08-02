@@ -27,5 +27,7 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The model.
         """
-        make_model = get_model_function(cfg.get("architecture", "fine_tune_class_vector"))
+        make_model = get_model_function(
+            cfg.get("architecture", "fine_tune_class_vector")
+        )
         return make_model(nr_class, exclusive_classes=exclusive_classes, **cfg)

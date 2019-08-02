@@ -1,6 +1,6 @@
 from thinc.api import layerize, chain, flatten_add_lengths, with_getitem
-from thinc.t2v import Pooling, mean_pool, max_pool
-from thinc.v2v import Softmax, Maxout
+from thinc.t2v import Pooling, mean_pool
+from thinc.v2v import Softmax
 from thinc.neural.util import get_array_module
 
 
@@ -39,8 +39,7 @@ def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     return chain(
         get_pytt_class_tokens,
         flatten_add_lengths,
-        with_getitem(0, 
-            Softmax(nr_class, cfg["token_vector_width"])),
+        with_getitem(0, Softmax(nr_class, cfg["token_vector_width"])),
         Pooling(mean_pool),
     )
 
