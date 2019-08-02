@@ -6,7 +6,9 @@ This package provides [spaCy](https://github.com/explosion/spaCy) model
 pipelines that wrap
 [HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
-state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc.
+state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc. For
+more details and background, check out
+[our blog post](https://explosion.ai/blog/spacy-pytorch-transformers).
 
 [![Azure Pipelines](https://img.shields.io/azure-devops/build/explosion-ai/public/11/master.svg?logo=azure-devops&style=flat-square)](https://dev.azure.com/explosion-ai/public/_build?definitionId=11)
 [![PyPi](https://img.shields.io/pypi/v/spacy-pytorch-transformers.svg?style=flat-square)](https://pypi.python.org/pypi/spacy-pytorch-transformers)
@@ -269,10 +271,6 @@ Tesla V100.
 Many of the pretrained transformer models have a maximum sequence length. If a
 sentence is longer than the maximum, it is truncated and the affected ending
 tokens will receive zeroed vectors.
-
-## 🕹 How it works
-
-TODO
 
 ## 🎛 API
 
