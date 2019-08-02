@@ -16,12 +16,13 @@ import unicodedata
     output_dir=("Optional output directory", "option", "o", Path),
     use_test=("Whether to use the actual test set", "flag", "E"),
     batch_size=("Number of docs per batch", "option", "bs", int),
+    learn_rate=("Learning rate", "option", "lr", float),
     max_wpb=("Max words per sub-batch", "option", "wpb", int),
     n_texts=("Number of texts to train from", "option", "n", int),
     n_iter=("Number of training epochs", "option", "i", int),
 )
 def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
-        max_wpb=1000, use_test=False):
+        learn_rate=2e-5, max_wpb=1000, use_test=False):
     random.seed(0)
     is_using_gpu = spacy.prefer_gpu()
     if is_using_gpu:
@@ -49,7 +50,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
     if use_test:
         (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(limit=n_texts)
     else:
-        (train_texts, train_cats), (dev_texts, dev_cats) = load_data()
+        (train_texts, train_cats), (eval_texts, eval_cats) = load_data()
     # If we're using a model that averages over sentence predictions (we are),
     # there are some advantages to just labelling each sentence as an example.
     # It means we can mix the sentences into different batches, so we can make
@@ -63,6 +64,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
     # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
+    optimizer.alpha = learn_rate
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
     for i in range(n_iter):
@@ -101,11 +103,11 @@ def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
         print(test_text, doc2.cats)
 
 
-def make_sentence_examples(nlp, texts, cats):
+def make_sentence_examples(nlp, texts, labels):
     """Treat each sentence of the document as an instance, using the doc labels."""
     sents = []
     sent_cats = []
-    for text, cats in zip(train_texts, train_cats):
+    for text, cats in zip(texts, labels):
         doc = nlp.make_doc(text)
         doc = nlp.get_pipe("sentencizer")(doc)
         for sent in doc.sents:
