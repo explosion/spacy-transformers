@@ -117,6 +117,9 @@ for i in range(10):
 nlp.to_disk("/bert-textcat")
 ```
 
+For a full example, see the
+[`examples/train_textcat.py` script](examples/train_textcat.py).
+
 ### Vectors and similarity
 
 The `PyTT_TokenVectorEncoder` component of the model sets custom hooks that
@@ -127,12 +130,8 @@ models we'd rather use the `doc.tensor` attribute, since it holds a much more
 informative context-sensitive representation.
 
 ```python
-doc_company = nlp("Apple shares rose sharply on the news.")
-doc_fruit = nlp("I was in Corsica when I learned this fantastic reciple for apple pie.")
-apple_co = doc_company[0]
-apple_fruit = doc_fruit[-3]
-print(apple_co.similarity(nlp("fruit")))
-print(apple_fruit.similarity(nlp("company")))
+doc = nlp("The dog barked. The puppy barked.")
+print(doc[0:4].similarity(doc[4:8]))
 ```
 
 ### Serialization
