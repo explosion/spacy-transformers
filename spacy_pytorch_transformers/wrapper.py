@@ -11,8 +11,6 @@ from .util import get_pytt_model, Activations
 from .util import Array, Dropout
 
 FINE_TUNE = True
-GRAD_CLIP_FACTOR = 1
-LEARN_RATE_FACTOR = 100
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 
@@ -86,7 +84,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                     if sgd.max_grad_norm:
                         torch.nn.utils.clip_grad.clip_grad_norm_(
                             self._model.parameters(),
-                            sgd.max_grad_norm / GRAD_CLIP_FACTOR,
+                            sgd.max_grad_norm 
                         )
                     optimizer = self._optimizer
                     optimizer.step()
@@ -107,7 +105,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
             self._model.parameters(),
-            lr=sgd.alpha / LEARN_RATE_FACTOR,
+            lr=sgd.alpha,
             betas=(sgd.b1, sgd.b2),
         )
         return optimizer
