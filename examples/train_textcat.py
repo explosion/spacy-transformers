@@ -14,10 +14,14 @@ import unicodedata
 @plac.annotations(
     model=("Model name", "positional", None, str),
     output_dir=("Optional output directory", "option", "o", Path),
-    n_texts=("Number of texts to train from", "option", "t", int),
-    n_iter=("Number of training iterations", "option", "n", int),
+    use_test=("Whether to use the actual test set", "flag", "E"),
+    batch_size=("Number of docs per batch", "option", "bs", int),
+    max_wpb=("Max words per sub-batch", "option", "wpb", int),
+    n_texts=("Number of texts to train from", "option", "n", int),
+    n_iter=("Number of training epochs", "option", "i", int),
 )
-def main(model, output_dir=None, n_iter=20, n_texts=100):
+def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
+        max_wpb=1000, use_test=False):
     random.seed(0)
     is_using_gpu = spacy.prefer_gpu()
     if is_using_gpu:
@@ -42,14 +46,18 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
 
     # load the IMDB dataset
     print("Loading IMDB data...")
-    (train_texts, train_cats), (dev_texts, dev_cats) = load_data()
-    train_texts = train_texts[:n_texts]
-    train_cats = train_cats[:n_texts]
-    dev_texts = dev_texts[:max(n_texts, 1000)]
-    dev_cats = dev_cats[:max(n_texts, 1000)]
-
+    if use_test:
+        (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(limit=n_texts)
+    else:
+        (train_texts, train_cats), (dev_texts, dev_cats) = load_data()
+    # If we're using a model that averages over sentence predictions (we are),
+    # there are some advantages to just labelling each sentence as an example.
+    # It means we can mix the sentences into different batches, so we can make
+    # more frequent updates. It also changes the loss somewhat, in a way that's
+    # not obviously better -- but it does seem to work well.
+    train_texts, train_cats = make_sentence_examples(nlp, train_texts, train_cats)
     print(
-        f"Using {n_texts} examples ({len(train_texts)} training, {len(dev_texts)} evaluation)"
+        f"Using {n_texts} examples ({len(train_texts)} training, {len(eval_texts)} evaluation)"
     )
     total_words = sum(len(text.split()) for text in train_texts)
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
@@ -57,19 +65,18 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
     optimizer = nlp.resume_training()
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
-    batch_sizes = compounding(8.0, 8.0, 1.001)
     for i in range(n_iter):
         losses = {}
         # batch up the examples using spaCy's minibatch
         random.shuffle(train_data)
-        batches = minibatch(train_data, size=batch_sizes)
+        batches = minibatch(train_data, size=batch_size)
         with tqdm.tqdm(total=total_words, leave=False) as pbar:
             for batch in batches:
                 texts, annotations = zip(*batch)
-                nlp.update(texts, annotations, sgd=optimizer, drop=0.2, losses=losses)
+                nlp.update(texts, annotations, sgd=optimizer, drop=0.1, losses=losses)
                 pbar.update(sum(len(text.split()) for text in texts))
         # evaluate on the dev data split off in load_data()
-        scores = evaluate(nlp, dev_texts, dev_cats)
+        scores = evaluate(nlp, eval_texts, eval_cats)
         print(
             "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
                 losses["pytt_textcat"],
@@ -94,6 +101,19 @@ def main(model, output_dir=None, n_iter=20, n_texts=100):
         print(test_text, doc2.cats)
 
 
+def make_sentence_examples(nlp, texts, cats):
+    """Treat each sentence of the document as an instance, using the doc labels."""
+    sents = []
+    sent_cats = []
+    for text, cats in zip(train_texts, train_cats):
+        doc = nlp.make_doc(text)
+        doc = nlp.get_pipe("sentencizer")(doc)
+        for sent in doc.sents:
+            sents.append(sent.text)
+            sent_cats.append(cats)
+    return sents, sent_cats
+
+
 white_re = re.compile(r"\s\s+")
 
 
@@ -104,17 +124,37 @@ def preprocess_text(text):
     )
 
 
-def load_data(limit=0, split=0.8):
-    """Load data from the IMDB dataset."""
-    # Partition off part of the train data for evaluation
+def load_data(*, limit=0, dev_size=2000):
+    """Load data from the IMDB dataset, splitting off a held-out set."""
+    if limit != 0:
+        limit += dev_size
     train_data, _ = thinc.extra.datasets.imdb(limit=limit)
-    random.shuffle(train_data)
-    train_data = train_data[-limit:]
-    texts, labels = zip(*train_data)
+    assert len(train_data) > dev_size
+    train_texts, train_labels = _prepare_partition(train_data, limit)
+    dev_texts = train_texts[:dev_size]
+    dev_labels = train_labels[:dev_size]
+    train_texts = train_texts[-dev_size:]
+    train_labels = train_labels[-dev_size:]
+    return (train_texts, train_labels), (dev_texts, dev_labels)
+
+
+def load_data_for_final_test(*, limit=0):
+    print(
+        "Warning: Using test data. You should use development data for most "
+        "experiments.")
+    train_data, test_data = thinc.extra.datasets.imdb()
+    train_texts, train_labels = _prepare_partition(train_data, limit)
+    test_texts, test_labels = _prepare_partition(test_data, 0)
+    return (train_texts, train_labels), (test_texts, test_labels)
+
+
+def _prepare_partition(text_label_tuples, limit):
+    random.shuffle(text_label_tuples)
+    text_label_tuples = text_label_tuples[-limit:]
+    texts, labels = zip(*text_label_tuples)
     texts = [preprocess_text(text) for text in texts]
     cats = [{"POSITIVE": bool(y), "NEGATIVE": not bool(y)} for y in labels]
-    split = int(len(train_data) * split)
-    return (texts[:split], cats[:split]), (texts[split:], cats[split:])
+    return texts, cats
 
 
 def evaluate(nlp, texts, cats):
