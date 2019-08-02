@@ -61,7 +61,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         else:
             pytt_model = PyTT_Wrapper(name)
         nO = pytt_model.nO
-        batch_by_length = cfg.get("words_per_batch", 2000)
+        batch_by_length = cfg.get("words_per_batch", 3000)
         max_length = cfg.get("max_length", 512)
         model = foreach_sentence(
             chain(
