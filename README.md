@@ -265,7 +265,7 @@ The subbatching regroups the batched sentences by sequence length, to minimise
 the amount of padding required. The configuration option `words_per_batch`
 controls this behaviour. You can set it to 0 to disable the subbatching, or set
 it to an integer to require a maximum limit on the number of words (including
-padding) per subbatch. The default value of 2000 words works reasonably well on
+padding) per subbatch. The default value of 3000 words works reasonably well on
 a Tesla V100.
 
 Many of the pretrained transformer models have a maximum sequence length. If a
