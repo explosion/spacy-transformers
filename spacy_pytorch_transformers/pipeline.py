@@ -20,7 +20,7 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         return cls(nlp.vocab, **cfg)
 
     @classmethod
-    def Model(cls, nr_class, exclusive_classes=False, **cfg):
+    def Model(cls, nr_class=1, exclusive_classes=False, **cfg):
         """Create a text classification model using a PyTorch-Transformers model
         for token vector encoding.
 
