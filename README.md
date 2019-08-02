@@ -20,7 +20,7 @@ more details and background, check out
 -   Use **BERT**, **XLNet** and **GPT-2** directly in your spaCy pipeline.
 -   **Fine-tune** pretrained transformer models on your task using spaCy's API.
 -   Custom component for **text classification** using transformer features.
--   Automatic **alignment** of word pieces and outputs to linguistic tokens.
+-   Automatic **alignment** of wordpieces and outputs to linguistic tokens.
 -   Process multi-sentence documents with intelligent **per-sentence
     prediction**.
 -   Built-in hooks for **context-sensitive vectors** and similarity.
@@ -165,19 +165,19 @@ This wrapper sets the following
 [custom extension attributes](https://spacy.io/usage/processing-pipelines#custom-components-attributes)
 on the `Doc`, `Span` and `Token` objects:
 
-| Name                          | Type              | Description                                                                                                                                                     |
-| ----------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `._.pytt_alignment`           | `List[List[int]]` | Alignment between word-pieces and spaCy tokens. Contains lists of word-piece token indices (one per spaCy token) or a list of indices (if called on a `Token`). |
-| `._.pytt_word_pieces`         | `List[int]`       | The word-piece IDs.                                                                                                                                             |
-| `._.pytt_word_pieces_`        | `List[str]`       | The string forms of the word-piece IDs.                                                                                                                         |
-| `._.pytt_last_hidden_state`   | `ndarray`         | The `last_hidden_state` output from the PyTorch-Transformers model.                                                                                             |
-| `._.pytt_pooler_output`       | `List[ndarray]`   | The `pooler_output` output from the PyTorch-Transformers model.                                                                                                 |
-| `._.pytt_all_hidden_states`   | `List[ndarray]`   | The `all_hidden_states` output from the PyTorch-Transformers model.                                                                                             |
-| `._.all_attentions`           | `List[ndarray]`   | The `all_attentions` output from the PyTorch-Transformers model.                                                                                                |
-| `._.pytt_d_last_hidden_state` | `ndarray`         | The gradient of the `last_hidden_state` output from the PyTorch-Transformers model.                                                                             |
-| `._.pytt_d_pooler_output`     | `List[ndarray]`   | The gradient of the `pooler_output` output from the PyTorch-Transformers model.                                                                                 |
-| `._.pytt_d_all_hidden_states` | `List[ndarray]`   | The gradient of the `all_hidden_states` output from the PyTorch-Transformers model.                                                                             |
-| `._.pytt_d_all_attentions`    | `List[ndarray]`   | The gradient of the `all_attentions` output from the PyTorch-Transformers model.                                                                                |
+| Name                          | Type              | Description                                                                                                                                                   |
+| ----------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `._.pytt_alignment`           | `List[List[int]]` | Alignment between wordpieces and spaCy tokens. Contains lists of wordpiece token indices (one per spaCy token) or a list of indices (if called on a `Token`). |
+| `._.pytt_word_pieces`         | `List[int]`       | The wordpiece IDs.                                                                                                                                            |
+| `._.pytt_word_pieces_`        | `List[str]`       | The string forms of the wordpiece IDs.                                                                                                                        |
+| `._.pytt_last_hidden_state`   | `ndarray`         | The `last_hidden_state` output from the PyTorch-Transformers model.                                                                                           |
+| `._.pytt_pooler_output`       | `List[ndarray]`   | The `pooler_output` output from the PyTorch-Transformers model.                                                                                               |
+| `._.pytt_all_hidden_states`   | `List[ndarray]`   | The `all_hidden_states` output from the PyTorch-Transformers model.                                                                                           |
+| `._.all_attentions`           | `List[ndarray]`   | The `all_attentions` output from the PyTorch-Transformers model.                                                                                              |
+| `._.pytt_d_last_hidden_state` | `ndarray`         | The gradient of the `last_hidden_state` output from the PyTorch-Transformers model.                                                                           |
+| `._.pytt_d_pooler_output`     | `List[ndarray]`   | The gradient of the `pooler_output` output from the PyTorch-Transformers model.                                                                               |
+| `._.pytt_d_all_hidden_states` | `List[ndarray]`   | The gradient of the `all_hidden_states` output from the PyTorch-Transformers model.                                                                           |
+| `._.pytt_d_all_attentions`    | `List[ndarray]`   | The gradient of the `all_attentions` output from the PyTorch-Transformers model.                                                                              |
 
 The values can be accessed via the `._` attribute. For example:
 
@@ -192,7 +192,7 @@ In order to run, the `nlp` object created using `PyTT_Language` requires a few
 components to run in order: a component that assigns sentence boundaries (e.g.
 spaCy's built-in
 [`Sentencizer`](https://spacy.io/usage/linguistic-features#sbd-component)), the
-`PyTT_WordPiecer`, which assigns the word-piece tokens and the
+`PyTT_WordPiecer`, which assigns the wordpiece tokens and the
 `PyTT_TokenVectorEncoder`, which assigns the token vectors. The `pytt_name`
 argument defines the name of the pretrained model to use. The `from_pretrained`
 methods load the pretrained model via `pytorch-transformers`.
@@ -213,20 +213,20 @@ examples.
 
 ### Tokenization alignment
 
-Transformer models are usually trained on text preprocessed with the
-"word-piece" algorithm, which limits the number of distinct token-types the
-model needs to consider. Word-piece is convenient for training neural networks,
-but it doesn't produce segmentations that match up to any linguistic notion of a
-"word". Most rare words will map to multiple word-piece tokens, and occasionally
-the alignment will be many-to-many. `spacy-pytorch-transformers` calculates this
-alignment, which you can access at `doc._.pytt_alignment`. It's a list of length
-equal to the number of spaCy tokens. Each value in the list is a list of
-consecutive integers, which are indexes into the word-pieces list.
+Transformer models are usually trained on text preprocessed with the "wordpiece"
+algorithm, which limits the number of distinct token-types the model needs to
+consider. Wordpiece is convenient for training neural networks, but it doesn't
+produce segmentations that match up to any linguistic notion of a "word". Most
+rare words will map to multiple wordpiece tokens, and occasionally the alignment
+will be many-to-many. `spacy-pytorch-transformers` calculates this alignment,
+which you can access at `doc._.pytt_alignment`. It's a list of length equal to
+the number of spaCy tokens. Each value in the list is a list of consecutive
+integers, which are indexes into the wordpieces list.
 
 If you can work on representations that aren't aligned to actual words, it's
 best to use the raw outputs of the transformer, which can be accessed at
 `doc._.pytt_last_hidden_state`. This variable gives you a tensor with one row
-per word-piece token.
+per wordpiece token.
 
 If you're working on token-level tasks such as part-of-speech tagging or
 spelling correction, you'll want to work on the token-aligned features, which
@@ -316,11 +316,11 @@ Update the models in the pipeline.
 
 ### <kbd>class</kbd> `PyTT_WordPiecer`
 
-spaCy pipeline component to assign PyTorch-Transformers word-piece tokenization
+spaCy pipeline component to assign PyTorch-Transformers wordpiece tokenization
 to the Doc, which can then be used by the token vector encoder. Note that this
 component doesn't modify spaCy's tokenization. It only sets extension attributes
 `pytt_word_pieces_`, `pytt_word_pieces` and `pytt_alignment` (alignment between
-word-piece tokens and spaCy tokens).
+wordpiece tokens and spaCy tokens).
 
 The component is available as `pytt_wordpiecer` and registered via an entry
 point, so it can also be created using
@@ -347,7 +347,7 @@ Factory to add to `Language.factories` via entry point.
 | ----------- | ------------------------- | ----------------------------------------------- |
 | `nlp`       | `spacy.language.Language` | The `nlp` object the component is created with. |
 | `**cfg`     | -                         | Optional config parameters.                     |
-| **RETURNS** | `PyTT_WordPiecer`         | The word piecer.                                |
+| **RETURNS** | `PyTT_WordPiecer`         | The wordpiecer.                                 |
 
 #### <kbd>method</kbd> `PyTT_WordPiecer.__init__`
 
@@ -358,12 +358,11 @@ Initialize the component.
 | `vocab`     | `spacy.vocab.Vocab` | The spaCy vocab to use.                               |
 | `name`      | unicode             | Name of pretrained model, e.g. `"bert-base-uncased"`. |
 | `**cfg`     | -                   | Optional config parameters.                           |
-| **RETURNS** | `PyTT_WordPiecer`   | The word piecer.                                      |
+| **RETURNS** | `PyTT_WordPiecer`   | The wordpiecer.                                       |
 
 #### <kbd>method</kbd> `PyTT_WordPiecer.predict`
 
-Run the word-piece tokenizer on a batch of docs and return the extracted
-strings.
+Run the wordpiece tokenizer on a batch of docs and return the extracted strings.
 
 | Name        | Type     | Description                                                                      |
 | ----------- | -------- | -------------------------------------------------------------------------------- |
@@ -383,10 +382,10 @@ Assign the extracted tokens and IDs to the `Doc` objects.
 
 spaCy pipeline component to use PyTorch-Transformers models. The component
 assigns the output of the transformer to extension attributes. We also calculate
-an alignment between the word-piece tokens and the spaCy tokenization, so that
-we can use the last hidden states to set the `doc.tensor` attribute. When
-multiple word-piece tokens align to the same spaCy token, the spaCy token
-receives the sum of their values.
+an alignment between the wordpiece tokens and the spaCy tokenization, so that we
+can use the last hidden states to set the `doc.tensor` attribute. When multiple
+wordpiece tokens align to the same spaCy token, the spaCy token receives the sum
+of their values.
 
 The component is available as `pytt_tok2vec` and registered via an entry point,
 so it can also be created using
