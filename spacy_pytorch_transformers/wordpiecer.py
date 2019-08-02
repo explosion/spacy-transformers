@@ -135,7 +135,6 @@ class PyTT_WordPiecer(Pipe):
                 doc_word_pieces.extend(wp_tokens)
                 doc_word_piece_ids.extend(self.model.convert_tokens_to_ids(wp_tokens))
             assert len(doc_alignment) == len(doc)
-            flat_aligned = flatten_list(doc_alignment) 
             max_aligned = max(flatten_list(doc_alignment), default=0)
             assert max_aligned <= len(doc_word_pieces)
             doc._.pytt_word_pieces = doc_word_piece_ids

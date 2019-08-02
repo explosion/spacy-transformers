@@ -47,7 +47,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             y_var = self._model(ids, **model_kwargs)
         self._model.training = is_training
         return Activations.from_pytt(y_var, is_grad=False)
- 
+
     def begin_update(
         self, ids: Array, drop: Dropout = 0.0
     ) -> Tuple[Activations, Callable[..., None]]:
