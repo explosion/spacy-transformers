@@ -211,15 +211,15 @@ examples.
 
 ### Tokenization alignment
 
-Transformer models are usually trained on text preprocessed with the "word
-piece" algorithm, which limits the number of distinct token-types the model
-needs to consider. Word-piece is convenient for training neural networks, but it
-doesn't produce segmentations that match up to any linguistic notion of a
-"word". Most rare words will map to multiple word-piece tokens, and
-occassionally the alignment will be many-to-many. `spacy-pytorch-transformers`
-calculates this alignment, which you can access at `doc._.pytt_alignment`. It's
-a list of length equal to the number of spaCy tokens. Each value in the list is
-a list of consecutive integers, which are indexes into the word-pieces list.
+Transformer models are usually trained on text preprocessed with the
+"word-piece" algorithm, which limits the number of distinct token-types the
+model needs to consider. Word-piece is convenient for training neural networks,
+but it doesn't produce segmentations that match up to any linguistic notion of a
+"word". Most rare words will map to multiple word-piece tokens, and occasionally
+the alignment will be many-to-many. `spacy-pytorch-transformers` calculates this
+alignment, which you can access at `doc._.pytt_alignment`. It's a list of length
+equal to the number of spaCy tokens. Each value in the list is a list of
+consecutive integers, which are indexes into the word-pieces list.
 
 If you can work on representations that aren't aligned to actual words, it's
 best to use the raw outputs of the transformer, which can be accessed at
@@ -265,8 +265,8 @@ The subbatching regroups the batched sentences by sequence length, to minimise
 the amount of padding required. The configuration option `words_per_batch`
 controls this behaviour. You can set it to 0 to disable the subbatching, or set
 it to an integer to require a maximum limit on the number of words (including
-padding) per subbatch. The default value of 2000 words reasonably well on a
-Tesla V100.
+padding) per subbatch. The default value of 2000 words works reasonably well on
+a Tesla V100.
 
 Many of the pretrained transformer models have a maximum sequence length. If a
 sentence is longer than the maximum, it is truncated and the affected ending
