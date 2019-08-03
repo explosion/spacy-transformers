@@ -1,6 +1,7 @@
 from thinc.api import layerize, chain, flatten_add_lengths, with_getitem
-from thinc.t2v import Pooling, mean_pool
-from thinc.v2v import Softmax
+from thinc.t2v import Pooling, mean_pool, sum_pool, max_pool
+from thinc.v2v import Softmax, Affine, Model, Maxout
+from thinc.misc import LayerNorm
 from thinc.neural.util import get_array_module
 
 
@@ -39,8 +40,12 @@ def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     return chain(
         get_pytt_class_tokens,
         flatten_add_lengths,
-        with_getitem(0, Softmax(nr_class, cfg["token_vector_width"])),
+        with_getitem(0, chain(
+                Affine(cfg["token_vector_width"], cfg["token_vector_width"]),
+                tanh)),
         Pooling(mean_pool),
+        Affine(2, cfg["token_vector_width"], drop_factor=0),
+        softmax
     )
 
 @register_model("fine_tune_pooler_output")
@@ -100,12 +105,15 @@ def get_pytt_pooler_output(docs, drop=0.0):
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
+        total_grads = []
         for doc, dY in zip(docs, d_outputs):
             if doc._.pytt_d_pooler_output.size == 0:
                 xp = get_array_module(doc._.pytt_pooler_output)
                 grads = xp.zeros(doc._.pytt_pooler_output.shape, dtype="f")
                 doc._.pytt_d_pooler_output = grads
             doc._.pytt_d_pooler_output += dY
+            xp = get_array_module(dY)
+            total_grads.append(float(xp.abs(dY).sum()))
         return None
 
     return outputs, backprop_pytt_pooler_output
@@ -130,3 +138,25 @@ def get_pytt_last_hidden(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_last_hidden
+
+
+@layerize
+def tanh(X, drop=0.):
+    xp = get_array_module(X)
+    Y = xp.tanh(X)
+
+    def backprop_tanh(dY, sgd=None):
+        one = dY.dtype.type(1)
+        return dY * (one - Y*Y)
+
+    return Y, backprop_tanh
+
+@layerize
+def softmax(X, drop=0.):
+    ops = Model.ops
+    Y = ops.softmax(X)
+
+    def backprop_softmax(dY, sgd=None):
+        return ops.backprop_softmax(Y, dY)
+
+    return Y, backprop_softmax
