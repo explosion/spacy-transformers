@@ -68,23 +68,34 @@ class Activations:
         """Concatenate activations from subsequences."""
         xp = get_array_module(sub_acts[0].lh)
         lh: Array = xp.vstack([x.lh for x in sub_acts])
-        return cls(lh, [], [], [], is_grad=sub_acts[0].is_grad)
+        # Transpose the lists, so that the inner list items refer
+        # to the subsequences. Then we can vstack those.
+        po = list(map(xp.vstack, zip(*[x.po for x in sub_acts])))
+        ah = list(map(xp.vstack, zip(*[x.ah for x in sub_acts])))
+        aa = list(map(xp.vstack, zip(*[x.aa for x in sub_acts])))
+        return cls(lh, po, ah, aa, is_grad=sub_acts[0].is_grad)
 
     def __len__(self) -> int:
         return len(self.lh)
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.lh[x, y]
-        # TODO: Support other output fields
-        return Activations(lh, [], [], [], is_grad=self.is_grad)
+        po = [self.po[i][y] for i in range(len(self.po))]
+        ah = [self.ah[i][x, y] for i in range(len(self.ah))]
+        aa = [self.aa[i][x, y] for i in range(len(self.aa))]
+        return Activations(lh, po, ah, aa, is_grad=self.is_grad)
 
     def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
-        last_hiddens = ops.unflatten(self.lh, lengths)
-        # TODO: Support other output fields
-        return [
-            Activations(lh, [], [], [], is_grad=self.is_grad) for lh in last_hiddens
-        ]
+        lh = ops.unflatten(self.lh, lengths)
+        # Transpose the lists, so that the outer list refers to the subsequences
+        po = list(zip(*[ops.unflatten(x, lengths) for x in self.po]))
+        ah = list(zip(*[ops.unflatten(x, lengths) for x in self.ah]))
+        aa = list(zip(*[ops.unflatten(x, lengths) for x in self.aa]))
+        assert len(lh) == len(po) == len(ah) == len(aa)
+        # Make an Activations object for each subsequence.
+        all_args = zip(lh, po, ah, aa)
+        return [Activations(*args, is_grad=self.is_grad) for args in all_args]
 
     @property
     def has_lh(self) -> bool:
@@ -176,7 +187,11 @@ def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations
     xp = get_array_module(batch[0])
     lh = pad_batch([x.lh for x in batch], xp=xp, to=to)
     lh = lh.reshape((len(batch), -1, lh.shape[-1]))
-    return Activations(lh, [], [], [], is_grad=batch[0].is_grad)
+    # Transpose the lists, and then pad_batch the items
+    po = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.po for x in batch])]
+    ah = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.ah for x in batch])]
+    aa = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.aa for x in batch])]
+    return Activations(lh, po, ah, aa, is_grad=batch[0].is_grad)
 
 
 def batch_by_length(
