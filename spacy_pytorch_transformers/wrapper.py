@@ -54,7 +54,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         if drop is None:
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
-            return self.predict(ids), None
+            return self.predict(ids), lambda dY, sgd=None: None
         ids = torch.as_tensor(ids, dtype=torch.int64)
         is_training = self._model.training
         model_kwargs = self.get_model_kwargs(ids)
