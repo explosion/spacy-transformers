@@ -50,16 +50,17 @@ def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
     if use_test:
         (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(limit=n_texts)
     else:
-        (train_texts, train_cats), (eval_texts, eval_cats) = load_data()
+        (train_texts, train_cats), (eval_texts, eval_cats) = load_data(limit=n_texts)
     # If we're using a model that averages over sentence predictions (we are),
     # there are some advantages to just labelling each sentence as an example.
     # It means we can mix the sentences into different batches, so we can make
     # more frequent updates. It also changes the loss somewhat, in a way that's
     # not obviously better -- but it does seem to work well.
-    train_texts, train_cats = make_sentence_examples(nlp, train_texts, train_cats)
     print(
-        f"Using {n_texts} examples ({len(train_texts)} training, {len(eval_texts)} evaluation)"
+        f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation)"
     )
+    train_texts, train_cats = make_sentence_examples(nlp, train_texts, train_cats)
+    print(f"Extracted {len(train_texts)} training sents")
     total_words = sum(len(text.split()) for text in train_texts)
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
     # Initialize the TextCategorizer, and create an optimizer.
@@ -130,13 +131,14 @@ def load_data(*, limit=0, dev_size=2000):
     """Load data from the IMDB dataset, splitting off a held-out set."""
     if limit != 0:
         limit += dev_size
+    assert dev_size != 0
     train_data, _ = thinc.extra.datasets.imdb(limit=limit)
     assert len(train_data) > dev_size
-    train_texts, train_labels = _prepare_partition(train_data, limit)
-    dev_texts = train_texts[:dev_size]
-    dev_labels = train_labels[:dev_size]
-    train_texts = train_texts[-dev_size:]
-    train_labels = train_labels[-dev_size:]
+    random.shuffle(train_data)
+    dev_data = train_data[:dev_size]
+    train_data = train_data[dev_size:]
+    train_texts, train_labels = _prepare_partition(train_data)
+    dev_texts, dev_labels = _prepare_partition(dev_data)
     return (train_texts, train_labels), (dev_texts, dev_labels)
 
 
@@ -145,14 +147,14 @@ def load_data_for_final_test(*, limit=0):
         "Warning: Using test data. You should use development data for most "
         "experiments.")
     train_data, test_data = thinc.extra.datasets.imdb()
-    train_texts, train_labels = _prepare_partition(train_data, limit)
-    test_texts, test_labels = _prepare_partition(test_data, 0)
+    random.shuffle(train_data)
+    train_data = train_data[-limit:]
+    train_texts, train_labels = _prepare_partition(train_data)
+    test_texts, test_labels = _prepare_partition(test_data)
     return (train_texts, train_labels), (test_texts, test_labels)
 
 
-def _prepare_partition(text_label_tuples, limit):
-    random.shuffle(text_label_tuples)
-    text_label_tuples = text_label_tuples[-limit:]
+def _prepare_partition(text_label_tuples):
     texts, labels = zip(*text_label_tuples)
     texts = [preprocess_text(text) for text in texts]
     cats = [{"POSITIVE": bool(y), "NEGATIVE": not bool(y)} for y in labels]
