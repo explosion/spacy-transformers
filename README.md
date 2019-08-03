@@ -93,9 +93,6 @@ representations, and then learn a text categorizer on top as a task-specific
 TRAIN_DATA = [
     ("text1", {"cats": {"POSITIVE": 1.0, "NEGATIVE": 0.0}})
 ]
-DEV_DATA = [
-    ("text2", {"cats": {"POSITIVE": 0.0, "NEGATIVE": 1.0}})
-]
 ```
 
 ```python
@@ -122,8 +119,7 @@ for i in range(10):
     for batch in minibatch(TRAIN_DATA, size=8):
         texts, cats = zip(*batch)
         nlp.update(texts, cats, sgd=optimizer, losses=losses)
-    scores = nlp.evaluate(DEV_DATA)
-    print(i, scores, losses)
+    print(i, losses)
 nlp.to_disk("/bert-textcat")
 ```
 
