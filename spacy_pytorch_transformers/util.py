@@ -148,11 +148,15 @@ def get_pytt_tokenizer(name):
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
-def pad_batch(batch: List[Array], xp=numpy) -> Array:
+def pad_batch(batch: List[Array], *, xp=numpy, to: int=0) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
     them into a single array.
     """
-    max_len = max((len(seq) or 0) for seq in batch)
+    max_len = max((len(seq) for seq in batch), default=0)
+    if to < 1:
+        to = max_len
+    elif max_len > to:
+        raise ValueError(f"Cannot pad_batch with max len {max_len} to {to}.")
     padded: List[Array] = []
     seq: Array
     for seq in batch:
@@ -161,14 +165,16 @@ def pad_batch(batch: List[Array], xp=numpy) -> Array:
             pad_desc = [[0, 0]]
         else:
             pad_desc = [[0, 0] for _ in seq.shape]
-        pad_desc[0][1] = max_len - len(seq)
+        pad_desc[0][1] = to - len(seq)
         padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
     return xp.vstack(padded)
 
 
-def pad_batch_activations(batch: List[Activations]) -> Activations:
+def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations:
+    if not batch:
+        return Activations.blank()
     xp = get_array_module(batch[0])
-    lh = pad_batch([x.lh for x in batch], xp=xp)
+    lh = pad_batch([x.lh for x in batch], xp=xp, to=to)
     lh = lh.reshape((len(batch), -1, lh.shape[-1]))
     return Activations(lh, [], [], [], is_grad=batch[0].is_grad)
 
