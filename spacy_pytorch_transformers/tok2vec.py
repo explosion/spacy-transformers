@@ -126,12 +126,15 @@ class PyTT_TokenVectorEncoder(Pipe):
             for doc in docs:
                 gradients.append(
                     Activations(
-                        doc._.pytt_d_last_hidden_state, [], [], [], is_grad=True
+                        doc._.pytt_d_last_hidden_state,
+                        doc._.pytt_d_pooler_output,
+                        [], [], is_grad=True
                     )
                 )
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
+                doc._.pytt_d_pooler_output.fill(0)
             return None
 
         return outputs, finish_update
@@ -153,9 +156,17 @@ class PyTT_TokenVectorEncoder(Pipe):
         activations (iterable): A batch of activations.
         """
         for doc, doc_acts in zip(docs, activations):
+            xp = get_array_module(doc_acts.lh)
             wp_tensor = doc_acts.lh
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
+            doc._.pytt_pooler_output = doc_acts.po
+            doc._.pytt_all_hidden_states = doc_acts.ah
+            doc._.pytt_all_attentions = doc_acts.aa
+            doc._.pytt_d_last_hidden_state = xp.zeros((0,), dtype=wp_tensor.dtype)
+            doc._.pytt_d_pooler_output = xp.zeros((0,), dtype=wp_tensor.dtype)
+            doc._.pytt_d_all_hidden_states = []
+            doc._.pytt_d_all_attentions = []
             if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):
                 print("# word pieces: ", len(doc._.pytt_word_pieces))
                 print("# tensor rows: ", wp_tensor.shape[0])
