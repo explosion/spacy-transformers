@@ -4,7 +4,7 @@
 
 This package provides [spaCy](https://github.com/explosion/spaCy) model
 pipelines that wrap
-[HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
+[Hugging Face's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
 state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc. For
 more details and background, check out
