@@ -172,6 +172,9 @@ class PyTT_TokenVectorEncoder(Pipe):
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
+            # TODO: Obviously incrementing the rows individually is bad. Need
+            # to make this more efficient. Maybe just copy to CPU, do our stuff,
+            # copy back to GPU?
             align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
             for word_piece_slice in doc._.pytt_alignment:
                 for i in word_piece_slice:
@@ -281,14 +284,10 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         inputs: Input, drop: Dropout = 0.0
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
-        last_hiddens = [activs.lh[i, : len(seq)] for i, seq in enumerate(inputs)]
-        outputs = [Activations(y, [], [], []) for y in last_hiddens]
+        outputs = [activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)]
 
         def backprop_batched(d_outputs, sgd=None):
-            d_last_hiddens = [x.lh for x in d_outputs]
-            dY = pad_batch(d_last_hiddens)
-            dY = dY.reshape(len(d_outputs), -1, dY.shape[-1])
-            d_activs = Activations(dY, [], [], [], is_grad=True)
+            d_activs = pad_batch_activations(d_outputs)
             dX = get_dX(d_activs, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]
