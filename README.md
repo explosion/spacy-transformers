@@ -102,6 +102,11 @@ DEV_DATA = [
 import spacy
 from spacy.util import minibatch
 import random
+import torch
+
+is_using_gpu = spacy.prefer_gpu()
+if is_using_gpu:
+    torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 nlp = spacy.load("en_pytt_bertbaseuncased_lg")
 print(nlp.pipe_names) # ["sentencizer", "pytt_wordpiecer", "pytt_tok2vec"]
