@@ -38,10 +38,10 @@ latest version of spaCy,
 pip install spacy-pytorch-transformers
 ```
 
-For GPU installation, find CUDA version using `$nvcc --version` and add the
-[CUDA version in brackets](https://spacy.io/usage/#gpu), e.g.
+For GPU installation, find your CUDA version using `nvcc --version` and add the
+[version in brackets](https://spacy.io/usage/#gpu), e.g.
 `spacy-pytorch-transformers[cuda92]` for CUDA9.2 or
-`spacy-pytorch-transformers[cuda100]` for CUDA10.0
+`spacy-pytorch-transformers[cuda100]` for CUDA10.0.
 
 We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
