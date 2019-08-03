@@ -241,21 +241,18 @@ def get_last_hidden_state(activations, drop=0.0):
     return activations.lh, backprop_last_hidden_state
 
 
-def truncate_long_inputs(model, max_len):
+def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
     """Truncate inputs on the way into a model, and restore their shape on
     the way out.
     """
 
-    def with_truncate_forward(X, drop=0.0):
+    def with_truncate_forward(X: Array, drop: Dropout=0.0) -> Tuple[Activations, Callable]:
         # Dim 1 should be batch, dim 2 sequence length
         if X.shape[1] < max_len:
             return model.begin_update(X, drop=drop)
         X_short = X[:, :max_len]
         Y_short, get_dX_short = model.begin_update(X_short, drop=drop)
-        short_lh = Y_short.lh
-        Y = model.ops.allocate((short_lh.shape[0], X.shape[1]) + short_lh.shape[2:])
-        Y[:, :max_len] = short_lh
-        outputs = Activations(Y, [], [], [])
+        outputs = pad_batch_activations([Y_short], to=X.shape[1])
 
         def with_truncate_backward(dY, sgd=None):
             dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
