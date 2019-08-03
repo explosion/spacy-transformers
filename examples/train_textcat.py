@@ -6,7 +6,7 @@ from pathlib import Path
 import thinc.extra.datasets
 import spacy
 import torch
-from spacy.util import minibatch, compounding
+from spacy.util import minibatch
 import tqdm
 import unicodedata
 
@@ -21,8 +21,16 @@ import unicodedata
     n_texts=("Number of texts to train from", "option", "n", int),
     n_iter=("Number of training epochs", "option", "i", int),
 )
-def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
-        learn_rate=2e-5, max_wpb=1000, use_test=False):
+def main(
+    model,
+    output_dir=None,
+    n_iter=20,
+    n_texts=100,
+    batch_size=8,
+    learn_rate=2e-5,
+    max_wpb=1000,
+    use_test=False,
+):
     random.seed(0)
     is_using_gpu = spacy.prefer_gpu()
     if is_using_gpu:
@@ -34,12 +42,7 @@ def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
 
     nlp = spacy.load(model)
     print(f"Loaded model '{model}'")
-    textcat = nlp.create_pipe(
-        "pytt_textcat",
-        config={
-            "exclusive_classes": True,
-        },
-    )
+    textcat = nlp.create_pipe("pytt_textcat", config={"exclusive_classes": True})
     # add label to text classifier
     textcat.add_label("POSITIVE")
     textcat.add_label("NEGATIVE")
@@ -48,7 +51,9 @@ def main(model, output_dir=None, n_iter=20, n_texts=100, batch_size=8,
     # load the IMDB dataset
     print("Loading IMDB data...")
     if use_test:
-        (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(limit=n_texts)
+        (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(
+            limit=n_texts
+        )
     else:
         (train_texts, train_cats), (eval_texts, eval_cats) = load_data()
     # If we're using a model that averages over sentence predictions (we are),
@@ -142,8 +147,8 @@ def load_data(*, limit=0, dev_size=2000):
 
 def load_data_for_final_test(*, limit=0):
     print(
-        "Warning: Using test data. You should use development data for most "
-        "experiments.")
+        "Warning: Using test data. You should use development data for most experiments."
+    )
     train_data, test_data = thinc.extra.datasets.imdb()
     train_texts, train_labels = _prepare_partition(train_data, limit)
     test_texts, test_labels = _prepare_partition(test_data, 0)
