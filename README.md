@@ -32,17 +32,16 @@ Installing the package from pip will automatically install all dependencies,
 including PyTorch and spaCy. Make sure you install this package **before** you
 install the models. Also note that this package requires **Python 3.6+** and the
 latest version of spaCy,
-[v2.1.7](https://github.com/explosion/spaCy/releases/tag/v2.1.7) or above. 
+[v2.1.7](https://github.com/explosion/spaCy/releases/tag/v2.1.7) or above.
 
 ```bash
 pip install spacy-pytorch-transformers
 ```
-*GPU installation*:
 
--  Find CUDA version using:
-`$nvcc --version`
-
-- Add your [CUDA version in brackets](https://spacy.io/usage/#gpu), e.g. `spacy-pytorch-transformers[cuda92]` for CUDA9.2 or `spacy-pytorch-transformers[cuda100]` for CUDA10.0
+For GPU installation, find CUDA version using `$nvcc --version` and add the
+[CUDA version in brackets](https://spacy.io/usage/#gpu), e.g.
+`spacy-pytorch-transformers[cuda92]` for CUDA9.2 or
+`spacy-pytorch-transformers[cuda100]` for CUDA10.0
 
 We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
