@@ -1,5 +1,5 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch
-from pytorch_transformers.optimization import AdamW
+from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
 import pytorch_transformers as pytt
 import torch.autograd
 import torch.nn.utils.clip_grad
@@ -19,6 +19,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     _model: Any
     _optimizer: Any
+    _lr_schedule: Any
 
     @classmethod
     def from_pretrained(cls, name):
@@ -71,7 +72,8 @@ class PyTT_Wrapper(PyTorchWrapper):
                 dy_for_bwd.append(xp2torch(d_output.lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                raise ValueError("Gradients on all hidden states not supported yet.")
+                dy_for_bwd.append(xp2torch(d_output.po))
+                y_for_bwd.append(y_var[1])
             if d_output.has_ah:
                 raise ValueError("Gradients on all hidden states not supported yet.")
             if d_output.has_aa:
@@ -81,12 +83,17 @@ class PyTT_Wrapper(PyTorchWrapper):
                 if sgd is not None:
                     if self._optimizer is None:
                         self._optimizer = self._create_optimizer(sgd)
+
+                    if getattr(self, "_lr_schedule", None) is None:
+                        self._lr_schedule = WarmupLinearSchedule(self._optimizer,
+                            warmup_steps=50, t_total=500)
                     if sgd.max_grad_norm:
                         torch.nn.utils.clip_grad.clip_grad_norm_(
                             self._model.parameters(),
                             sgd.max_grad_norm 
                         )
                     optimizer = self._optimizer
+                    self._lr_schedule.step()
                     optimizer.step()
                     optimizer.zero_grad()
             return None
@@ -108,4 +115,5 @@ class PyTT_Wrapper(PyTorchWrapper):
             lr=sgd.alpha,
             betas=(sgd.b1, sgd.b2),
         )
+
         return optimizer
