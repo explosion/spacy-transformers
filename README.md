@@ -121,7 +121,7 @@ for i in range(10):
     losses = {}
     for batch in minibatch(TRAIN_DATA, size=8):
         texts, cats = zip(*batch)
-        nlp.update(texts, cats, optimizer=optimizer, losses=losses)
+        nlp.update(texts, cats, sgd=optimizer, losses=losses)
     scores = nlp.evaluate(DEV_DATA)
     print(i, scores, losses)
 nlp.to_disk("/bert-textcat")
