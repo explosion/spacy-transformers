@@ -4,6 +4,7 @@ import torch
 import spacy
 import spacy.util
 import tqdm
+import numpy
 from spacy.gold import GoldParse
 
 from collections import Counter
@@ -13,6 +14,9 @@ from spacy.util import minibatch
 from spacy_pytorch_transformers._extra.hyper_params import get_hyper_params
 from spacy_pytorch_transformers._extra.glue_tasks import read_train_data, read_dev_data
 from spacy_pytorch_transformers._extra.glue_tasks import describe_task
+from spacy_pytorch_transformers._extra.metrics import compute_metrics
+
+from pytorch_transformers import WarmupLinearSchedule
 
 
 def create_model(model_name, *, task_type, task_name, labels):
@@ -22,6 +26,9 @@ def create_model(model_name, *, task_type, task_name, labels):
         textcat.add_label(label)
     nlp.add_pipe(textcat)
     optimizer = nlp.resume_training()
+    optimizer.alpha = HP.learning_rate
+    optimizer.max_grad_norm = HP.max_grad_norm
+    optimizer.eps = HP.adam_epsilon
     return nlp, optimizer
 
 
@@ -33,6 +40,7 @@ def train_epoch(nlp, optimizer, train_data):
     batches = minibatch(train_data, size=HP.batch_size)
     tok2vec = nlp.get_pipe("pytt_tok2vec")
     textcat = nlp.get_pipe("pytt_textcat")
+    print(train_data[0][0]._.pytt_word_pieces_)
     for batch in batches:
         docs, golds = zip(*batch)
         tokvecs, backprop_tok2vec = tok2vec.begin_update(docs, drop=HP.dropout)
@@ -52,15 +60,25 @@ def evaluate(nlp, task, docs_golds):
     textcat = nlp.get_pipe("pytt_textcat")
     right = 0
     total = 0
+    guesses = []
+    truths = []
+    labels = textcat.labels
     for batch in minibatch(docs_golds, size=HP.eval_batch_size):
         docs, golds = zip(*batch)
         docs = list(textcat.pipe(tok2vec.pipe(docs)))
         for doc, gold in zip(docs, golds):
             guess, _ = max(doc.cats.items(), key=lambda it: it[1])
             truth, _ = max(gold.cats.items(), key=lambda it: it[1])
+            guesses.append(labels.index(guess))
+            truths.append(labels.index(truth))
             right += guess == truth
             total += 1
-    return {"accuracy": right / total, "total": total, "right": right}
+    metrics = compute_metrics(
+        task, numpy.array(guesses), numpy.array(truths))
+    metrics["accuracy"] = right / total
+    metrics["right"] = right
+    metrics["total"] = total
+    return metrics
 
 
 def process_data(nlp, task, examples):
@@ -80,6 +98,8 @@ def process_data(nlp, task, examples):
             if token.text == "\n":
                 token.is_sent_start = True
         doc = wordpiecer(doc)
+        for token in doc[1:]:
+            token.is_sent_start = False
         cats = {label: 0.0 for label in textcat.labels}
         cats[eg.label] = 1.0
         gold = GoldParse(doc, cats=cats)
@@ -108,9 +128,9 @@ def main(
     spacy.util.fix_random_seed(HP.seed)
     torch.manual_seed(HP.seed)
     if not dont_gpu:
-        is_gpu = spacy.prefer_gpu()
-        if is_gpu:
-            HP.device = torch.device("cuda")
+        is_using_gpu = spacy.prefer_gpu()
+        if is_using_gpu:
+            torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
     raw_train_data = read_train_data(data_dir, task)
     raw_dev_data = read_dev_data(data_dir, task)
@@ -119,6 +139,8 @@ def main(
     dev_data = process_data(nlp, task, raw_dev_data)
 
     total_words = sum(len(doc) for doc, gold in train_data)
+    max_steps = len(train_data) * HP.num_train_epochs
+    scheduler = None
     for i in range(HP.num_train_epochs):
         # Train and evaluate
         losses = Counter()
@@ -126,6 +148,10 @@ def main(
             for batch, loss in train_epoch(nlp, optimizer, train_data):
                 pbar.update(sum(len(doc) for doc, gold in batch))
                 losses.update(loss)
+                if scheduler is None:
+                    pytt_opt = nlp.get_pipe("pytt_tok2vec").model._model._optimizer
+                    scheduler = WarmupLinearSchedule(pytt_opt, warmup_steps=HP.warmup_steps, t_total=max_steps)
+                scheduler.step()
         accuracies = evaluate(nlp, task, dev_data)
         print_progress(losses, accuracies)
 
