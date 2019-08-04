@@ -2,6 +2,7 @@ import plac
 import random
 import torch
 import spacy
+import spacy.util
 import tqdm
 from spacy.gold import GoldParse
 
@@ -9,7 +10,7 @@ from collections import Counter
 from pathlib import Path
 from spacy.util import minibatch
 
-from spacy_pytorch_transformers._extra.util import get_hyper_params
+from spacy_pytorch_transformers._extra.hyper_params import get_hyper_params
 from spacy_pytorch_transformers._extra.glue_tasks import read_train_data, read_dev_data
 from spacy_pytorch_transformers._extra.glue_tasks import describe_task
 
@@ -55,11 +56,11 @@ def evaluate(nlp, task, docs_golds):
         docs, golds = zip(*batch)
         docs = list(textcat.pipe(tok2vec.pipe(docs)))
         for doc, gold in zip(docs, golds):
-            guess = max(doc.cats.items(), key=lambda it: it[1])
-            truth = max(gold.cats.items(), key=lambda it: it[1])
+            guess, _ = max(doc.cats.items(), key=lambda it: it[1])
+            truth, _ = max(gold.cats.items(), key=lambda it: it[1])
             right += guess == truth
             total += 1
-    return {"accuracy": right / total, "total": total}
+    return {"accuracy": right / total, "total": total, "right": right}
 
 
 def process_data(nlp, task, examples):
@@ -74,11 +75,11 @@ def process_data(nlp, task, examples):
         assert "\n" not in eg.text_a
         assert "\n" not in eg.text_b
         doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
-        doc = wordpiecer(doc)
         # Set "sentence boundary"
         for token in doc:
             if token.text == "\n":
                 token.is_sent_start = True
+        doc = wordpiecer(doc)
         cats = {label: 0.0 for label in textcat.labels}
         cats[eg.label] = 1.0
         gold = GoldParse(doc, cats=cats)
@@ -93,38 +94,39 @@ def print_progress(losses, scores):
 
 
 def main(
-    model_name: ("Model package", "positional", "model", str),
+    model_name: ("Model package", "positional", None, str),
     task: ("Task name", "positional", None, str),
     data_dir: ("Path to data directory", "positional", None, Path),
     output_dir: ("Path to output directory", "positional", None, Path),
     hyper_params: ("Path to hyper params file", "positional", None, Path) = None,
     dont_gpu: ("Dont use GPU, even if available", "flag", "G") = False,
 ):
+    print(locals())
     global HP
     HP = get_hyper_params(hyper_params)
 
-    spacy.utils.fix_random_seed(HP.seed)
+    spacy.util.fix_random_seed(HP.seed)
     torch.manual_seed(HP.seed)
     if not dont_gpu:
         is_gpu = spacy.prefer_gpu()
         if is_gpu:
             HP.device = torch.device("cuda")
 
-    raw_train_data = read_train_data(task, data_dir)
-    raw_dev_data = read_dev_data(task, data_dir)
+    raw_train_data = read_train_data(data_dir, task)
+    raw_dev_data = read_dev_data(data_dir, task)
     nlp, optimizer = create_model(model_name, **describe_task(task))
     train_data = process_data(nlp, task, raw_train_data)
     dev_data = process_data(nlp, task, raw_dev_data)
 
     total_words = sum(len(doc) for doc, gold in train_data)
-    for i in range(HP.nr_epoch):
+    for i in range(HP.num_train_epochs):
         # Train and evaluate
         losses = Counter()
         with tqdm.tqdm(total=total_words, leave=False) as pbar:
             for batch, loss in train_epoch(nlp, optimizer, train_data):
                 pbar.update(sum(len(doc) for doc, gold in batch))
                 losses.update(loss)
-        accuracies = evaluate(nlp, dev_data)
+        accuracies = evaluate(nlp, task, dev_data)
         print_progress(losses, accuracies)
 
 
