@@ -10,19 +10,6 @@ from pathlib import Path
 from typing import Iterator, List, Tuple, Callable
 
 
-def read_train_data(data_dir: Path, task: str) -> List[InputExample]:
-    return PROCESSORS[task]().get_train_examples(data_dir)
-
-
-def read_dev_data(data_dir: Path, task: str) -> List[InputExample]:
-    return PROCESSORS[task]().get_dev_examples(data_dir)
-
-
-def describe_task(task: str) -> dict:
-    T = PROCESSORS[task]()
-    return dict(task_name=T.name, task_type=T.task, labels=T.labels)
-
-
 @dataclass
 class InputExample:
     """A single training/test example for simple sequence classification.
@@ -42,7 +29,19 @@ class InputExample:
     label: str = ""
 
 
-@dataclass
+def read_train_data(data_dir: Path, task: str) -> List[InputExample]:
+    return PROCESSORS[task]().get_train_examples(data_dir)
+
+
+def read_dev_data(data_dir: Path, task: str) -> List[InputExample]:
+    return PROCESSORS[task]().get_dev_examples(data_dir)
+
+
+def describe_task(task: str) -> dict:
+    T = PROCESSORS[task]()
+    return dict(task_name=T.name, task_type=T.task, labels=T.labels)
+
+
 class DataProcessor:
     """Base class for data converters for sequence classification data sets."""
     name: str
@@ -129,6 +128,7 @@ class MnliMismatchedProcessor(DataProcessor):
         return InputExample(guid, line[8], line[9], line[-1])
 
 
+@dataclass
 class ColaProcessor(DataProcessor):
     name = "cola"
     task = "classification"
@@ -139,7 +139,7 @@ class ColaProcessor(DataProcessor):
 
     def create_example(self, i, set_type, line):
         guid = f"{set_type}-{i}"
-        return InputExample(guid, line[3], None, line[1])
+        return InputExample(guid, line[3], "", line[1])
 
 
 class Sst2Processor(DataProcessor):
@@ -153,7 +153,7 @@ class Sst2Processor(DataProcessor):
 
     def create_example(self, i, set_type, line):
         guid = f"{set_type}-{i}" 
-        return InputExample(guid, line[0], None, line[1])
+        return InputExample(guid, line[0], "", line[1])
 
 
 class StsbProcessor(DataProcessor):
@@ -236,7 +236,7 @@ class WnliProcessor(DataProcessor):
         return InputExample(guid, line[1], line[2], line[-1])
 
 
-PROCESSORS = [
+PROCESSORS_LIST = [
     ColaProcessor,
     MnliProcessor,
     MnliMismatchedProcessor,
@@ -248,3 +248,5 @@ PROCESSORS = [
     RteProcessor,
     WnliProcessor,
 ]
+
+PROCESSORS = {proc.name: proc for proc in PROCESSORS_LIST}
