@@ -106,6 +106,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         optimizer = AdamW(
             self._model.parameters(),
             lr=sgd.alpha,
+            eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
         )
         return optimizer
