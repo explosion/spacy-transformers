@@ -219,6 +219,28 @@ print(nlp.pipe_names)  # ['sentencizer', 'pytt_wordpiecer', 'pytt_tok2vec']
 You can also use the [`init_model.py`](examples/init_model.py) script in the
 examples.
 
+#### Loading models from a path
+
+Pytorch-Transformers models can also be loaded from a file path instead of just
+a name. For instance, let's say you want to use Allen AI's
+[`scibert`](https://github.com/allenai/scibert). First, download the PyTorch
+model files, unpack them them, unpack the `weights.tar`, rename the
+`bert_config.json` to `config.json` and put everything into one directory. Your
+directory should now have a `pytorch_model.bin`, `vocab.txt` and `config.json`.
+You can then initialize the `nlp` object like this:
+
+```python
+from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
+
+name = "scibert-scivocab-uncased"
+path = "/path/to/scibert_scivocab_uncased"
+
+nlp = PyTT_Language(pytt_name=name, meta={"lang": "en"})
+nlp.add_pipe(nlp.create_pipe("sentencizer"))
+nlp.add_pipe(PyTT_WordPiecer.from_pretrained(nlp.vocab, path))
+nlp.add_pipe(PyTT_TokenVectorEncoder.from_pretrained(nlp.vocab, path))
+```
+
 ### Tokenization alignment
 
 Transformer models are usually trained on text preprocessed with the "wordpiece"
