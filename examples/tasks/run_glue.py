@@ -3,56 +3,93 @@ import random
 import torch
 import spacy
 import tqdm
+from spacy.gold import GoldParse
 
 from collections import Counter
 from pathlib import Path
 from spacy.util import minibatch
 
 from spacy_pytorch_transformers._extra.util import get_hyper_params
+from spacy_pytorch_transformers._extra.glue_tasks import read_train_data, read_dev_data
+from spacy_pytorch_transformers._extra.glue_tasks import describe_task
 
 
-def load_data(nlp, task, data_dir):
-    train_data = []
-    dev_data = []
-    return train_data, dev_data
-
-
-def create_model(model_name, train_data):
-    nlp = None
-    optimizer = None
+def create_model(model_name, *, task_type, task_name, labels):
+    nlp = spacy.load(model_name)
+    textcat = nlp.create_pipe("pytt_textcat")
+    for label in labels:
+        textcat.add_label(label)
+    nlp.add_pipe(textcat)
+    optimizer = nlp.resume_training()
     return nlp, optimizer
 
 
 def train_epoch(nlp, optimizer, train_data):
+    # This isn't the recommended code -- but it's the easiest way to do the
+    # experiment for now.
     global HP
     random.shuffle(train_data)
     batches = minibatch(train_data, size=HP.batch_size)
+    tok2vec = nlp.get_pipe("pytt_tok2vec")
+    textcat = nlp.get_pipe("pytt_textcat")
     for batch in batches:
-        texts, annotations = zip(*batch)
+        docs, golds = zip(*batch)
+        tokvecs, backprop_tok2vec = tok2vec.begin_update(docs, drop=HP.dropout)
         losses = {}
-        nlp.update(texts, annotations, sgd=optimizer, drop=HP.dropout, losses=losses)
+        tok2vec.set_annotations(docs, tokvecs)
+        textcat.update(docs, golds, sgd=optimizer, losses=losses)
+        backprop_tok2vec(docs, sgd=optimizer)
         yield batch, losses
+        for doc in docs:
+            doc.tensor = None
+            doc._.pytt_last_hidden_state = None
+            doc._.pytt_d_last_hidden_state = None
 
 
-def evaluate(nlp, task, examples):
-    results  = {}
-    return results
+def evaluate(nlp, task, docs_golds):
+    tok2vec = nlp.get_pipe("pytt_tok2vec")
+    textcat = nlp.get_pipe("pytt_textcat")
+    right = 0
+    total = 0
+    for batch in minibatch(docs_golds, size=HP.eval_batch_size):
+        docs, golds = zip(*batch)
+        docs = list(textcat.pipe(tok2vec.pipe(docs)))
+        for doc, gold in zip(docs, golds):
+            guess = max(doc.cats.items(), key=lambda it: it[1])
+            truth = max(gold.cats.items(), key=lambda it: it[1])
+            right += guess == truth
+            total += 1
+    return {"accuracy": right / total, "total": total}
 
 
-def print_progress(train_metrics, dev_metrics):
-    pass
+def process_data(nlp, task, examples):
+    """Set-up Doc and GoldParse objects from the examples. This makes it easier
+    to set up text-pair tasks, and also easy to handle datasets with non-real
+    tokenization."""
+    wordpiecer = nlp.get_pipe("pytt_wordpiecer")
+    textcat = nlp.get_pipe("pytt_textcat")
+    docs = []
+    golds = []
+    for eg in examples:
+        assert "\n" not in eg.text_a
+        assert "\n" not in eg.text_b
+        doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
+        doc = wordpiecer(doc)
+        # Set "sentence boundary"
+        for token in doc:
+            if token.text == "\n":
+                token.is_sent_start = True
+        cats = {label: 0.0 for label in textcat.labels}
+        cats[eg.label] = 1.0
+        gold = GoldParse(doc, cats=cats)
+        docs.append(doc)
+        golds.append(gold)
+    return list(zip(docs, golds))
 
 
-def maybe_save_checkpoint(args, nlp, results):
-    pass
-
-
-def count_words(data):
-    """Make a rough word count, for progress tracking."""
-    n = 0
-    for text, labels in data:
-        n += len(text.split())
-    return n
+def print_progress(losses, scores):
+    print("Losses", losses)
+    print("Scores", scores)
 
 
 def main(
@@ -64,7 +101,7 @@ def main(
     dont_gpu: ("Dont use GPU, even if available", "flag", "G") = False,
 ):
     global HP
-    HP = get_hyper_params(hyper_params) 
+    HP = get_hyper_params(hyper_params)
 
     spacy.utils.fix_random_seed(HP.seed)
     torch.manual_seed(HP.seed)
@@ -73,23 +110,22 @@ def main(
         if is_gpu:
             HP.device = torch.device("cuda")
 
-    train_data, dev_data = load_data(task, data_dir)
-    nlp, optimizer = create_model(model_name, train_data)
-    
-    total_words = count_words(train_data)
-    results = []
+    raw_train_data = read_train_data(task, data_dir)
+    raw_dev_data = read_dev_data(task, data_dir)
+    nlp, optimizer = create_model(model_name, **describe_task(task))
+    train_data = process_data(nlp, task, raw_train_data)
+    dev_data = process_data(nlp, task, raw_dev_data)
+
+    total_words = sum(len(doc) for doc, gold in train_data)
     for i in range(HP.nr_epoch):
         # Train and evaluate
         losses = Counter()
         with tqdm.tqdm(total=total_words, leave=False) as pbar:
             for batch, loss in train_epoch(nlp, optimizer, train_data):
-                pbar.update(count_words(batch))
+                pbar.update(sum(len(doc) for doc, gold in batch))
                 losses.update(loss)
         accuracies = evaluate(nlp, dev_data)
-        # Track progress and save checkpoints
         print_progress(losses, accuracies)
-        results.append((losses, accuracies))
-        maybe_save_checkpoint(nlp, results)
 
 
 if __name__ == "__main__":
