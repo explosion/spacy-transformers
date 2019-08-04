@@ -10,6 +10,19 @@ from pathlib import Path
 from typing import Iterator, List, Tuple, Callable
 
 
+def read_train_data(data_dir: Path, task: str) -> List[InputExample]:
+    return PROCESSORS[task]().get_train_examples(data_dir)
+
+
+def read_dev_data(data_dir: Path, task: str) -> List[InputExample]:
+    return PROCESSORS[task]().get_dev_examples(data_dir)
+
+
+def describe_task(task: str) -> dict:
+    T = PROCESSORS[task]()
+    return dict(task_name=T.name, task_type=T.task, labels=T.labels)
+
+
 @dataclass
 class InputExample:
     """A single training/test example for simple sequence classification.
@@ -97,7 +110,7 @@ class MnliProcessor(DataProcessor):
     train_filename = "train.tsv"
     dev_filename = "dev_matched.tsv"
 
-    def _create_example(self, i, set_type, line):
+    def create_example(self, i, set_type, line):
         guid = f"{set_type}-{line[0]}"
         return InputExample(guid, line[8], line[9], line[-1])
 
@@ -113,9 +126,6 @@ class MnliMismatchedProcessor(DataProcessor):
 
     def create_example(self, i, set_type, line):
         guid = f"{set_type}-{line[0]}"
-        text_a = line[8]
-        text_b = line[9]
-        label = line[-1]
         return InputExample(guid, line[8], line[9], line[-1])
 
 
