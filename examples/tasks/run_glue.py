@@ -21,7 +21,8 @@ from pytorch_transformers import WarmupLinearSchedule
 
 def create_model(model_name, *, task_type, task_name, labels):
     nlp = spacy.load(model_name)
-    textcat = nlp.create_pipe("pytt_textcat")
+    textcat = nlp.create_pipe("pytt_textcat", config={
+        "architecture": HP.textcat_arch})
     for label in labels:
         textcat.add_label(label)
     nlp.add_pipe(textcat)
@@ -50,9 +51,7 @@ def train_epoch(nlp, optimizer, train_data):
         backprop_tok2vec(docs, sgd=optimizer)
         yield batch, losses
         for doc in docs:
-            doc.tensor = None
-            doc._.pytt_last_hidden_state = None
-            doc._.pytt_d_last_hidden_state = None
+            free_tensors(doc)
 
 
 def evaluate(nlp, task, docs_golds):
@@ -73,6 +72,7 @@ def evaluate(nlp, task, docs_golds):
             truths.append(labels.index(truth))
             right += guess == truth
             total += 1
+            free_tensors(doc)
     metrics = compute_metrics(
         task, numpy.array(guesses), numpy.array(truths))
     metrics["accuracy"] = right / total
@@ -106,6 +106,17 @@ def process_data(nlp, task, examples):
         docs.append(doc)
         golds.append(gold)
     return list(zip(docs, golds))
+
+def free_tensors(doc):
+    doc.tensor = None
+    doc._.pytt_last_hidden_state = None
+    doc._.pytt_pooler_output = None
+    doc._.pytt_all_hidden_states = []
+    doc._.pytt_all_attentions = []
+    doc._.pytt_d_last_hidden_state = None
+    doc._.pytt_d_pooler_output = None
+    doc._.pytt_d_all_hidden_states = []
+    doc._.pytt_d_all_attentions = []
 
 
 def print_progress(losses, scores):
