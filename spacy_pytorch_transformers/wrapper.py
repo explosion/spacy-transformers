@@ -72,7 +72,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                 dy_for_bwd.append(xp2torch(d_output.lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                dy_for_bwd.append(xp2torch(d_output.po))
+                dy_for_bwd.append(xp2torch(d_output.po).reshape((d_output.po.shape[0], d_output.po.shape[2])))
                 y_for_bwd.append(y_var[1])
             if d_output.has_ah:
                 raise ValueError("Gradients on all hidden states not supported yet.")
