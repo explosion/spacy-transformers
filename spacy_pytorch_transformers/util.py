@@ -264,3 +264,18 @@ def flatten_list(nested: List[List[Any]]) -> List[Any]:
 
 def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
+
+
+def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
+    """Generate a series, starting from an initial rate, and then with a warmup
+    period, and then a linear decline. Used for learning rates.
+    """
+    step = 0
+    lr = initial_rate
+    while True:
+        if step < warmup_steps:
+            factor = step / max(1, warmup_steps)
+        else:
+            factor = max(0., (total_steps - step) / max(1., total_steps - warmup_steps))
+        yield factor * initial_rate
+        step += 1
