@@ -128,7 +128,9 @@ class PyTT_TokenVectorEncoder(Pipe):
                     Activations(
                         doc._.pytt_d_last_hidden_state,
                         doc._.pytt_d_pooler_output,
-                        [], [], is_grad=True
+                        [],
+                        [],
+                        is_grad=True,
                     )
                 )
             backprop(gradients, sgd=sgd)
@@ -257,7 +259,9 @@ def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
     the way out.
     """
 
-    def with_truncate_forward(X: Array, drop: Dropout=0.0) -> Tuple[Activations, Callable]:
+    def with_truncate_forward(
+        X: Array, drop: Dropout = 0.0
+    ) -> Tuple[Activations, Callable]:
         # Dim 1 should be batch, dim 2 sequence length
         if X.shape[1] < max_len:
             return model.begin_update(X, drop=drop)
@@ -292,7 +296,9 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         inputs: Input, drop: Dropout = 0.0
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
-        outputs = [activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)]
+        outputs = [
+            activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)
+        ]
 
         def backprop_batched(d_outputs, sgd=None):
             d_activs = pad_batch_activations(d_outputs)
