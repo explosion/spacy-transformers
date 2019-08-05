@@ -39,7 +39,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         name (unicode): Name of pre-trained model, e.g. 'bert-base-uncased'.
         RETURNS (PyTT_TokenVectorEncoder): The token vector encoder.
         """
-        cfg["_from_pretrained"] = True
+        cfg["from_pretrained"] = True
         cfg["pytt_name"] = name
         model = cls.Model(**cfg)
         self = cls(vocab, model=model, **cfg)
@@ -56,9 +56,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         name = cfg.get("pytt_name")
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
-        if cfg.get("_from_pretrained"):
+        if cfg.get("from_pretrained"):
             pytt_model = PyTT_Wrapper.from_pretrained(name)
-            pytt_model["_from_pretrained"] = False
         else:
             pytt_model = PyTT_Wrapper(name)
         nO = pytt_model.nO
