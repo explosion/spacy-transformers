@@ -3,7 +3,7 @@ import random
 import torch
 import spacy
 import spacy.util
-import tqdm
+import tqdm 
 import numpy
 from spacy.gold import GoldParse
 
@@ -11,12 +11,11 @@ from collections import Counter
 from pathlib import Path
 from spacy.util import minibatch
 
+from spacy_pytorch_transformers.util import warmup_linear_rates
 from spacy_pytorch_transformers._extra.hyper_params import get_hyper_params
 from spacy_pytorch_transformers._extra.glue_tasks import read_train_data, read_dev_data
 from spacy_pytorch_transformers._extra.glue_tasks import describe_task
 from spacy_pytorch_transformers._extra.metrics import compute_metrics
-
-from pytorch_transformers import WarmupLinearSchedule
 
 
 def create_model(model_name, *, task_type, task_name, labels):
@@ -41,7 +40,6 @@ def train_epoch(nlp, optimizer, train_data):
     batches = minibatch(train_data, size=HP.batch_size)
     tok2vec = nlp.get_pipe("pytt_tok2vec")
     textcat = nlp.get_pipe("pytt_textcat")
-    print(train_data[0][0]._.pytt_word_pieces_)
     for batch in batches:
         docs, golds = zip(*batch)
         tokvecs, backprop_tok2vec = tok2vec.begin_update(docs, drop=HP.dropout)
@@ -107,6 +105,7 @@ def process_data(nlp, task, examples):
         golds.append(gold)
     return list(zip(docs, golds))
 
+
 def free_tensors(doc):
     doc.tensor = None
     doc._.pytt_last_hidden_state = None
@@ -132,7 +131,6 @@ def main(
     hyper_params: ("Path to hyper params file", "positional", None, Path) = None,
     dont_gpu: ("Dont use GPU, even if available", "flag", "G") = False,
 ):
-    print(locals())
     global HP
     HP = get_hyper_params(hyper_params)
 
@@ -140,29 +138,29 @@ def main(
     torch.manual_seed(HP.seed)
     if not dont_gpu:
         is_using_gpu = spacy.prefer_gpu()
+        print("Use gpu?", is_using_gpu)
         if is_using_gpu:
             torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
+    print("Procress training data")
     raw_train_data = read_train_data(data_dir, task)
     raw_dev_data = read_dev_data(data_dir, task)
     nlp, optimizer = create_model(model_name, **describe_task(task))
     train_data = process_data(nlp, task, raw_train_data)
     dev_data = process_data(nlp, task, raw_dev_data)
 
-    total_words = sum(len(doc) for doc, gold in train_data)
-    max_steps = len(train_data) * HP.num_train_epochs
-    scheduler = None
+    nr_batch = len(train_data) // HP.batch_size
+    nr_step = nr_batch * HP.num_train_epochs
+    learn_rates = warmup_linear_rates(HP.learning_rate, HP.warmup_steps, nr_step)
+    optimizer.alpha = next(learn_rates)
+    progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch)
+    print("Training. Initial learn rate:", optimizer.alpha)
     for i in range(HP.num_train_epochs):
         # Train and evaluate
         losses = Counter()
-        with tqdm.tqdm(total=total_words, leave=False) as pbar:
-            for batch, loss in train_epoch(nlp, optimizer, train_data):
-                pbar.update(sum(len(doc) for doc, gold in batch))
-                losses.update(loss)
-                if scheduler is None:
-                    pytt_opt = nlp.get_pipe("pytt_tok2vec").model._model._optimizer
-                    scheduler = WarmupLinearSchedule(pytt_opt, warmup_steps=HP.warmup_steps, t_total=max_steps)
-                scheduler.step()
+        for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
+            losses.update(loss)
+            optimizer.alpha = next(learn_rates)
         accuracies = evaluate(nlp, task, dev_data)
         print_progress(losses, accuracies)
 
