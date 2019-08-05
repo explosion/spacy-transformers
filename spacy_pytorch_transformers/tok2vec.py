@@ -61,8 +61,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         else:
             pytt_model = PyTT_Wrapper(name)
         nO = pytt_model.nO
-        batch_by_length = cfg.get("words_per_batch", 3000)
-        max_length = cfg.get("max_length", 512)
+        batch_by_length = cfg.get("words_per_batch", 0)
+        max_length = cfg.get("max_length", 128)
         model = foreach_sentence(
             chain(
                 get_word_pieces,
@@ -161,6 +161,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
             doc._.pytt_pooler_output = doc_acts.po
+            assert doc_acts.po.shape == (1, wp_tensor.shape[-1]), doc_acts.po.shape
             doc._.pytt_all_hidden_states = doc_acts.ah
             doc._.pytt_all_attentions = doc_acts.aa
             doc._.pytt_d_last_hidden_state = xp.zeros((0,), dtype=wp_tensor.dtype)
@@ -241,6 +242,9 @@ def get_word_pieces(sents, drop=0.0):
         else:
             # Empty slice.
             outputs.append(sent.doc._.pytt_word_pieces[0:0])
+    for wp in outputs:
+        for v in wp:
+            assert v != 0, wp
     return outputs, None
 
 
@@ -293,9 +297,15 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
         outputs = [activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)]
+        assert activs.po.shape[0] == len(inputs)
+        shapes = (activs.lh.shape, activs.po.shape)
 
         def backprop_batched(d_outputs, sgd=None):
             d_activs = pad_batch_activations(d_outputs)
+            if d_activs.has_lh:
+                assert d_activs.lh.shape == shapes[0]
+            if d_activs.has_po:
+                assert d_activs.po.shape == shapes[1]
             dX = get_dX(d_activs, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]
