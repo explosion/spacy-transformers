@@ -13,7 +13,8 @@ FIELDS = dict(
     num_train_epochs=int,
     max_steps=int,
     warmup_steps=int,
-    seed=int
+    seed=int,
+    textcat_arch=str
 )
 
 
