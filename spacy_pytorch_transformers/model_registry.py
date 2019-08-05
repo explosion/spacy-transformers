@@ -44,8 +44,7 @@ def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
                 Affine(cfg["token_vector_width"], cfg["token_vector_width"]),
                 tanh)),
         Pooling(mean_pool),
-        Affine(2, cfg["token_vector_width"], drop_factor=0),
-        softmax
+        Softmax(2, cfg["token_vector_width"])
     )
 
 @register_model("fine_tune_pooler_output")
@@ -58,7 +57,8 @@ def fine_tune_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
     return chain(
         get_pytt_pooler_output,
         flatten_add_lengths,
-        with_getitem(0, Softmax(nr_class, cfg["token_vector_width"])),
+        with_getitem(0,
+            Softmax(nr_class, cfg["token_vector_width"])),
         Pooling(mean_pool),
     )
 
@@ -112,8 +112,6 @@ def get_pytt_pooler_output(docs, drop=0.0):
                 grads = xp.zeros(doc._.pytt_pooler_output.shape, dtype="f")
                 doc._.pytt_d_pooler_output = grads
             doc._.pytt_d_pooler_output += dY
-            xp = get_array_module(dY)
-            total_grads.append(float(xp.abs(dY).sum()))
         return None
 
     return outputs, backprop_pytt_pooler_output
