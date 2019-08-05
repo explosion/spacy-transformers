@@ -47,12 +47,18 @@ class Activations:
         # po: pooler_output
         # ah: all_hidden
         # aa: all_attention
-        lh, po, ah, aa = fields
+        if len(fields) != 4:
+            lh = fields[0]
+            po = tuple()
+            ah = []
+            aa = []
+        else:
+            lh, po, ah, aa = fields
         # Convert last_hidden_state to xp
         lh = torch2xp(lh)
         xp = get_array_module(lh)
         # Normalize "None" value for pooler output
-        if isinstance(po, tuple) and all(x is None for x in po):
+        if isinstance(po, tuple):
             po = xp.zeros((0,), dtype=lh.dtype)
         else:
             po = torch2xp(po)
