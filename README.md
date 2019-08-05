@@ -71,6 +71,11 @@ print(doc[0].similarity(doc[7]))
 print(doc._.pytt_last_hidden_state.shape)
 ```
 
+> 💡 If you're seeing an error like `No module named 'spacy.lang.pytt'`,
+> double-check that `spacy-pytorch-transformers` is installed. It needs to be
+> available so it can register its language entry points. Also make sure that
+> you're running spaCy v2.1.7 or higher.
+
 ## 📖 Usage
 
 ### Transfer learning
