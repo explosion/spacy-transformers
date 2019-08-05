@@ -90,6 +90,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                             sgd.max_grad_norm 
                         )
                     optimizer = self._optimizer
+                    optimizer.lr = sgd.alpha
                     optimizer.step()
                     optimizer.zero_grad()
             return None
