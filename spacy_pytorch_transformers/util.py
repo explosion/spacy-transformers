@@ -61,7 +61,7 @@ class Activations:
         if isinstance(po, tuple):
             po = xp.zeros((0,), dtype=lh.dtype)
         else:
-            po = torch2xp(po)
+            po = torch2xp(po).reshape((po.shape[0], 1, po.shape[-1]))
         ah = list(map(torch2xp, ah))
         aa = list(map(torch2xp, aa))
         return cls(lh, po, ah, aa, is_grad=is_grad)
@@ -84,7 +84,7 @@ class Activations:
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.lh[x, y]
-        po = self.po[y]
+        po = self.po[x]
         ah = [self.ah[i][x, y] for i in range(len(self.ah))]
         aa = [self.aa[i][x, y] for i in range(len(self.aa))]
         return Activations(lh, po, ah, aa, is_grad=self.is_grad)
@@ -198,7 +198,7 @@ def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations
     lh = pad_batch([x.lh for x in batch], xp=xp, to=to)
     if lh.size:
         lh = lh.reshape((len(batch), -1, lh.shape[-1]))
-    po = pad_batch([x.po for x in batch], xp=xp, to=to)
+    po = pad_batch([x.po for x in batch], xp=xp)
     if po.size:
         po = po.reshape((len(batch), -1, po.shape[-1]))
     # Transpose the lists, and then pad_batch the items
