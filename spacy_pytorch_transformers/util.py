@@ -28,37 +28,40 @@ SPECIAL_TOKENS: Sequence[str] = (
 @dataclass
 class Activations:
     lh: Array
-    po: List[Array]
+    po: Array
     ah: List[Array]
     aa: List[Array]
     is_grad: bool = False
 
     @classmethod
-    def blank(cls, is_grad=False):
-        return cls(numpy.zeros((0, 0), dtype="f"), [], [], [], is_grad=is_grad)
+    def blank(cls, *, xp=numpy, is_grad=False):
+        zeros = xp.zeros((0,), dtype="f")
+        return cls(zeros, zeros, [], [], is_grad=is_grad)
 
     @classmethod
     def from_pytt(cls, fields, *, is_grad=False) -> "Activations":
         """Create Activations from the output tuples produced by PyTorch Transformers.
         Includes converting torch tensors to xp, and handling missing values.
         """
-        fields = list(fields)
-        # Make sure we have 4 elements
-        while len(fields) < 4:
-            fields.append([])
-        # Normalize None to []
-        fields = [f if f is not None else f for f in fields]
         # lh: last hidden
         # po: pooler_output
         # ah: all_hidden
         # aa: all_attention
-        lh, po, ah, aa = fields
+        if len(fields) != 4:
+            lh = fields[0]
+            po = tuple()
+            ah = []
+            aa = []
+        else:
+            lh, po, ah, aa = fields
         # Convert last_hidden_state to xp
         lh = torch2xp(lh)
+        xp = get_array_module(lh)
         # Normalize "None" value for pooler output
-        if isinstance(po, tuple) and all(x is None for x in po):
-            po = []
-        po = list(map(torch2xp, po))
+        if isinstance(po, tuple):
+            po = xp.zeros((0,), dtype=lh.dtype)
+        else:
+            po = torch2xp(po)
         ah = list(map(torch2xp, ah))
         aa = list(map(torch2xp, aa))
         return cls(lh, po, ah, aa, is_grad=is_grad)
@@ -68,23 +71,41 @@ class Activations:
         """Concatenate activations from subsequences."""
         xp = get_array_module(sub_acts[0].lh)
         lh: Array = xp.vstack([x.lh for x in sub_acts])
-        return cls(lh, [], [], [], is_grad=sub_acts[0].is_grad)
+        po: Array = xp.vstack([x.po for x in sub_acts])
+        # Transpose the lists, so that the inner list items refer
+        # to the subsequences. Then we can vstack those.
+        ah = list(map(xp.vstack, zip(*[x.ah for x in sub_acts])))
+        #aa = list(map(xp.vstack, zip(*[x.aa for x in sub_acts])))
+        aa = []
+        return cls(lh, po, ah, aa, is_grad=sub_acts[0].is_grad)
 
     def __len__(self) -> int:
         return len(self.lh)
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.lh[x, y]
-        # TODO: Support other output fields
-        return Activations(lh, [], [], [], is_grad=self.is_grad)
+        po = self.po[y]
+        ah = [self.ah[i][x, y] for i in range(len(self.ah))]
+        aa = [self.aa[i][x, y] for i in range(len(self.aa))]
+        return Activations(lh, po, ah, aa, is_grad=self.is_grad)
 
     def split(self, ops: Any, lengths: List[int]) -> List["Activations"]:
         """Split into a list of Activation objects."""
-        last_hiddens = ops.unflatten(self.lh, lengths)
-        # TODO: Support other output fields
-        return [
-            Activations(lh, [], [], [], is_grad=self.is_grad) for lh in last_hiddens
-        ]
+        lh = ops.unflatten(self.lh, lengths)
+        po = ops.unflatten(self.po, lengths)
+        # Transpose the lists, so that the outer list refers to the subsequences
+        if self.ah:
+            ah = list(zip(*[ops.unflatten(x, lengths) for x in self.ah]))
+        else:
+            ah = [[] for _ in lengths]
+        if self.aa:
+            aa = list(zip(*[ops.unflatten(x, lengths) for x in self.aa]))
+        else:
+            aa = [[] for _ in lengths]
+        assert len(lh) == len(po) == len(ah) == len(aa)
+        # Make an Activations object for each subsequence.
+        all_args = zip(lh, po, ah, aa)
+        return [Activations(*args, is_grad=self.is_grad) for args in all_args]
 
     @property
     def has_lh(self) -> bool:
@@ -92,7 +113,7 @@ class Activations:
 
     @property
     def has_po(self) -> bool:
-        return bool(sum(len(x) for x in self.po))
+        return bool(self.po.size)
 
     @property
     def has_ah(self) -> bool:
@@ -148,11 +169,15 @@ def get_pytt_tokenizer(name):
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
-def pad_batch(batch: List[Array], xp=numpy) -> Array:
+def pad_batch(batch: List[Array], *, xp=numpy, to: int=0) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
     them into a single array.
     """
-    max_len = max((len(seq) or 0) for seq in batch)
+    max_len = max((len(seq) for seq in batch), default=0)
+    if to < 1:
+        to = max_len
+    elif max_len > to:
+        raise ValueError(f"Cannot pad_batch with max len {max_len} to {to}.")
     padded: List[Array] = []
     seq: Array
     for seq in batch:
@@ -161,16 +186,25 @@ def pad_batch(batch: List[Array], xp=numpy) -> Array:
             pad_desc = [[0, 0]]
         else:
             pad_desc = [[0, 0] for _ in seq.shape]
-        pad_desc[0][1] = max_len - len(seq)
+        pad_desc[0][1] = to - len(seq)
         padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
     return xp.vstack(padded)
 
 
-def pad_batch_activations(batch: List[Activations]) -> Activations:
+def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations:
+    if not batch:
+        return Activations.blank()
     xp = get_array_module(batch[0])
-    lh = pad_batch([x.lh for x in batch], xp=xp)
-    lh = lh.reshape((len(batch), -1, lh.shape[-1]))
-    return Activations(lh, [], [], [], is_grad=batch[0].is_grad)
+    lh = pad_batch([x.lh for x in batch], xp=xp, to=to)
+    if lh.size:
+        lh = lh.reshape((len(batch), -1, lh.shape[-1]))
+    po = pad_batch([x.po for x in batch], xp=xp, to=to)
+    if po.size:
+        po = po.reshape((len(batch), -1, po.shape[-1]))
+    # Transpose the lists, and then pad_batch the items
+    ah = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.ah for x in batch])]
+    aa = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.aa for x in batch])]
+    return Activations(lh, po, ah, aa, is_grad=batch[0].is_grad)
 
 
 def batch_by_length(

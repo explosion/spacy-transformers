@@ -126,12 +126,15 @@ class PyTT_TokenVectorEncoder(Pipe):
             for doc in docs:
                 gradients.append(
                     Activations(
-                        doc._.pytt_d_last_hidden_state, [], [], [], is_grad=True
+                        doc._.pytt_d_last_hidden_state,
+                        doc._.pytt_d_pooler_output,
+                        [], [], is_grad=True
                     )
                 )
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
+                doc._.pytt_d_pooler_output.fill(0)
             return None
 
         return outputs, finish_update
@@ -153,9 +156,17 @@ class PyTT_TokenVectorEncoder(Pipe):
         activations (iterable): A batch of activations.
         """
         for doc, doc_acts in zip(docs, activations):
+            xp = get_array_module(doc_acts.lh)
             wp_tensor = doc_acts.lh
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
+            doc._.pytt_pooler_output = doc_acts.po
+            doc._.pytt_all_hidden_states = doc_acts.ah
+            doc._.pytt_all_attentions = doc_acts.aa
+            doc._.pytt_d_last_hidden_state = xp.zeros((0,), dtype=wp_tensor.dtype)
+            doc._.pytt_d_pooler_output = xp.zeros((0,), dtype=wp_tensor.dtype)
+            doc._.pytt_d_all_hidden_states = []
+            doc._.pytt_d_all_attentions = []
             if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):
                 print("# word pieces: ", len(doc._.pytt_word_pieces))
                 print("# tensor rows: ", wp_tensor.shape[0])
@@ -172,6 +183,9 @@ class PyTT_TokenVectorEncoder(Pipe):
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum().
+            # TODO: Obviously incrementing the rows individually is bad. Need
+            # to make this more efficient. Maybe just copy to CPU, do our stuff,
+            # copy back to GPU?
             align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
             for word_piece_slice in doc._.pytt_alignment:
                 for i in word_piece_slice:
@@ -238,21 +252,18 @@ def get_last_hidden_state(activations, drop=0.0):
     return activations.lh, backprop_last_hidden_state
 
 
-def truncate_long_inputs(model, max_len):
+def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
     """Truncate inputs on the way into a model, and restore their shape on
     the way out.
     """
 
-    def with_truncate_forward(X, drop=0.0):
+    def with_truncate_forward(X: Array, drop: Dropout=0.0) -> Tuple[Activations, Callable]:
         # Dim 1 should be batch, dim 2 sequence length
         if X.shape[1] < max_len:
             return model.begin_update(X, drop=drop)
         X_short = X[:, :max_len]
         Y_short, get_dX_short = model.begin_update(X_short, drop=drop)
-        short_lh = Y_short.lh
-        Y = model.ops.allocate((short_lh.shape[0], X.shape[1]) + short_lh.shape[2:])
-        Y[:, :max_len] = short_lh
-        outputs = Activations(Y, [], [], [])
+        outputs = pad_batch_activations([Y_short], to=X.shape[1])
 
         def with_truncate_backward(dY, sgd=None):
             dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
@@ -281,14 +292,10 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         inputs: Input, drop: Dropout = 0.0
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
-        last_hiddens = [activs.lh[i, : len(seq)] for i, seq in enumerate(inputs)]
-        outputs = [Activations(y, [], [], []) for y in last_hiddens]
+        outputs = [activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)]
 
         def backprop_batched(d_outputs, sgd=None):
-            d_last_hiddens = [x.lh for x in d_outputs]
-            dY = pad_batch(d_last_hiddens)
-            dY = dY.reshape(len(d_outputs), -1, dY.shape[-1])
-            d_activs = Activations(dY, [], [], [], is_grad=True)
+            d_activs = pad_batch_activations(d_outputs)
             dX = get_dX(d_activs, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]
