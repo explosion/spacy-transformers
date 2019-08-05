@@ -141,22 +141,21 @@ def get_pytt_last_hidden(docs, drop=0.0):
 
 
 @layerize
-def tanh(X, drop=0.):
-    xp = get_array_module(X)
-    Y = xp.tanh(X)
-
-    def backprop_tanh(dY, sgd=None):
-        one = dY.dtype.type(1)
-        return dY * (one - Y*Y)
-
-    return Y, backprop_tanh
-
-@layerize
 def softmax(X, drop=0.):
     ops = Model.ops
     Y = ops.softmax(X)
-
     def backprop_softmax(dY, sgd=None):
-        return ops.backprop_softmax(Y, dY)
-
+        dX = ops.backprop_softmax(Y, dY)
+        return dX
     return Y, backprop_softmax
+
+
+@layerize
+def tanh(X, drop=0.):
+    xp = get_array_module(X)
+    Y = xp.tanh(X)
+    def backprop_tanh(dY, sgd=None):
+        one = Y.dtype.type(1)
+        dX = dY * (1 - Y * Y)
+        return dX
+    return Y, backprop_tanh

@@ -4,7 +4,7 @@
 
 This package provides [spaCy](https://github.com/explosion/spaCy) model
 pipelines that wrap
-[HuggingFace's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
+[Hugging Face's `pytorch-transformers`](https://github.com/huggingface/pytorch-transformers)
 package, so you can use them in spaCy. The result is convenient access to
 state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc. For
 more details and background, check out
@@ -93,15 +93,17 @@ representations, and then learn a text categorizer on top as a task-specific
 TRAIN_DATA = [
     ("text1", {"cats": {"POSITIVE": 1.0, "NEGATIVE": 0.0}})
 ]
-DEV_DATA = [
-    ("text2", {"cats": {"POSITIVE": 0.0, "NEGATIVE": 1.0}})
-]
 ```
 
 ```python
 import spacy
 from spacy.util import minibatch
 import random
+import torch
+
+is_using_gpu = spacy.prefer_gpu()
+if is_using_gpu:
+    torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 nlp = spacy.load("en_pytt_bertbaseuncased_lg")
 print(nlp.pipe_names) # ["sentencizer", "pytt_wordpiecer", "pytt_tok2vec"]
@@ -116,9 +118,8 @@ for i in range(10):
     losses = {}
     for batch in minibatch(TRAIN_DATA, size=8):
         texts, cats = zip(*batch)
-        nlp.update(texts, cats, optimizer=optimizer, losses=losses)
-    scores = nlp.evaluate(DEV_DATA)
-    print(i, scores, losses)
+        nlp.update(texts, cats, sgd=optimizer, losses=losses)
+    print(i, losses)
 nlp.to_disk("/bert-textcat")
 ```
 
@@ -217,6 +218,28 @@ print(nlp.pipe_names)  # ['sentencizer', 'pytt_wordpiecer', 'pytt_tok2vec']
 
 You can also use the [`init_model.py`](examples/init_model.py) script in the
 examples.
+
+#### Loading models from a path
+
+Pytorch-Transformers models can also be loaded from a file path instead of just
+a name. For instance, let's say you want to use Allen AI's
+[`scibert`](https://github.com/allenai/scibert). First, download the PyTorch
+model files, unpack them them, unpack the `weights.tar`, rename the
+`bert_config.json` to `config.json` and put everything into one directory. Your
+directory should now have a `pytorch_model.bin`, `vocab.txt` and `config.json`.
+You can then initialize the `nlp` object like this:
+
+```python
+from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
+
+name = "scibert-scivocab-uncased"
+path = "/path/to/scibert_scivocab_uncased"
+
+nlp = PyTT_Language(pytt_name=name, meta={"lang": "en"})
+nlp.add_pipe(nlp.create_pipe("sentencizer"))
+nlp.add_pipe(PyTT_WordPiecer.from_pretrained(nlp.vocab, path))
+nlp.add_pipe(PyTT_TokenVectorEncoder.from_pretrained(nlp.vocab, path))
+```
 
 ### Tokenization alignment
 
