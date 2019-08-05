@@ -188,7 +188,8 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int=0) -> Array:
             pad_desc = [[0, 0] for _ in seq.shape]
         pad_desc[0][1] = to - len(seq)
         padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
-    return xp.vstack(padded)
+    output = xp.vstack(padded)
+    return output
 
 
 def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations:
@@ -200,7 +201,7 @@ def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations
         lh = lh.reshape((len(batch), -1, lh.shape[-1]))
     po = pad_batch([x.po for x in batch], xp=xp)
     if po.size:
-        po = po.reshape((len(batch), -1, po.shape[-1]))
+        po = po.reshape((-1, 1, po.shape[-1]))
     # Transpose the lists, and then pad_batch the items
     ah = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.ah for x in batch])]
     aa = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.aa for x in batch])]
