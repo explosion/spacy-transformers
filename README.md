@@ -71,6 +71,11 @@ print(doc[0].similarity(doc[7]))
 print(doc._.pytt_last_hidden_state.shape)
 ```
 
+> 💡 If you're seeing an error like `No module named 'spacy.lang.pytt'`,
+> double-check that `spacy-pytorch-transformers` is installed. It needs to be
+> available so it can register its language entry points. Also make sure that
+> you're running spaCy v2.1.7 or higher.
+
 ## 📖 Usage
 
 ### Transfer learning
@@ -227,13 +232,14 @@ a name. For instance, let's say you want to use Allen AI's
 model files, unpack them them, unpack the `weights.tar`, rename the
 `bert_config.json` to `config.json` and put everything into one directory. Your
 directory should now have a `pytorch_model.bin`, `vocab.txt` and `config.json`.
-You can then initialize the `nlp` object like this:
+Also make sure that your path **includes the name of the model**. You can then
+initialize the `nlp` object like this:
 
 ```python
 from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer, PyTT_TokenVectorEncoder
 
 name = "scibert-scivocab-uncased"
-path = "/path/to/scibert_scivocab_uncased"
+path = "/path/to/scibert-scivocab-uncased"
 
 nlp = PyTT_Language(pytt_name=name, meta={"lang": "en"})
 nlp.add_pipe(nlp.create_pipe("sentencizer"))
