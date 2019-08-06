@@ -141,7 +141,7 @@ def main(
     torch.manual_seed(HP.seed)
     if not dont_gpu:
         is_using_gpu = spacy.prefer_gpu()
-        msg.info("Use gpu? %s" % is_using_gpu)
+        msg.info(f"Use gpu? {is_using_gpu")
         if is_using_gpu:
             torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
@@ -160,7 +160,7 @@ def main(
     optimizer.alpha = next(learn_rates)
     progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch, leave=False)
     table_widths = [2, 4, 4]
-    msg.info("Training. Initial learn rate:", optimizer.alpha)
+    msg.info(f"Training. Initial learn rate: {optimizer.alpha}")
     msg.row(["#", "Loss", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     for i in range(HP.num_train_epochs):
