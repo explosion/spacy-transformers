@@ -69,8 +69,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             model = model_cls(config_cls(**cfg["pytt_config"]))
             pytt_model = PyTT_Wrapper(name, cfg["pytt_config"], model)
         nO = pytt_model.nO
-        batch_by_length = cfg.get("words_per_batch", 3000)
-        max_length = cfg.get("max_length", 512)
+        batch_by_length = cfg.get("words_per_batch", 0)
+        max_length = cfg.get("max_length", 128)
         model = foreach_sentence(
             chain(
                 get_word_pieces,
@@ -308,12 +308,17 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         inputs: Input, drop: Dropout = 0.0
     ) -> Tuple[Output, Backprop]:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
-        outputs = [
-            activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)
-        ]
+        if activs.has_po:
+            assert activs.po.shape[0] == len(inputs)
+        outputs = [activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)]
+        shapes = (activs.lh.shape, activs.po.shape)
 
         def backprop_batched(d_outputs, sgd=None):
             d_activs = pad_batch_activations(d_outputs)
+            if d_activs.has_lh:
+                assert d_activs.lh.shape == shapes[0]
+            if d_activs.has_po:
+                assert d_activs.po.shape == shapes[1]
             dX = get_dX(d_activs, sgd=sgd)
             if dX is not None:
                 d_inputs = [dX[i, : len(seq)] for i, seq in enumerate(d_outputs)]

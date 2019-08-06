@@ -61,6 +61,7 @@ def test_pad_batch(lengths, expected_shape):
     seqs = [numpy.ones((length,), dtype="f") for length in lengths]
     padded = pad_batch(seqs)
     for i, seq in enumerate(seqs):
+        padded[i][padded[i] < 0] = 0
         assert padded[i].sum() == seq.sum()
         assert_equal(padded[i, : len(seq)], seq)
     assert padded.shape == expected_shape

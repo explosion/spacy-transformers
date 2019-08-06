@@ -6,6 +6,8 @@ import torch.nn.utils.clip_grad
 import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
+from thinc.neural.util import get_array_module
+import numpy
 
 from .util import get_pytt_model, get_pytt_config, Activations
 from .util import Array, Dropout
@@ -63,11 +65,10 @@ class PyTT_Wrapper(PyTorchWrapper):
         return self.cfg["max_position_embeddings"]
 
     def predict(self, ids: Array):
-        ids = torch.as_tensor(ids, dtype=torch.int64)
-        model_kwargs = self.get_model_kwargs(ids)
         self._model.eval()
+        model_kwargs = self.get_model_kwargs(ids)
         with torch.no_grad():
-            y_var = self._model(ids, **model_kwargs)
+            y_var = self._model(**model_kwargs)
         return Activations.from_pytt(y_var, is_grad=False)
 
     def begin_update(
@@ -77,10 +78,10 @@ class PyTT_Wrapper(PyTorchWrapper):
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
             return self.predict(ids), lambda dY, sgd=None: None
-        ids = torch.as_tensor(ids, dtype=torch.int64)
-        model_kwargs = self.get_model_kwargs(ids)
         self._model.train()
-        y_var = self._model(ids, **model_kwargs)
+        # Prepare all the model arguments, including the attention mask
+        model_kwargs = self.get_model_kwargs(ids)
+        y_var = self._model(**model_kwargs)
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
 
@@ -91,7 +92,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                 dy_for_bwd.append(xp2torch(d_output.lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                dy_for_bwd.append(xp2torch(d_output.po))
+                dy_for_bwd.append(xp2torch(d_output.po).reshape((d_output.po.shape[0], d_output.po.shape[2])))
                 y_for_bwd.append(y_var[1])
             if d_output.has_ah:
                 raise ValueError("Gradients on all hidden states not supported yet.")
@@ -102,17 +103,14 @@ class PyTT_Wrapper(PyTorchWrapper):
                 if sgd is not None:
                     if self._optimizer is None:
                         self._optimizer = self._create_optimizer(sgd)
-
-                    if getattr(self, "_lr_schedule", None) is None:
-                        self._lr_schedule = WarmupLinearSchedule(
-                            self._optimizer, warmup_steps=50, t_total=500
-                        )
                     if sgd.max_grad_norm:
                         torch.nn.utils.clip_grad.clip_grad_norm_(
                             self._model.parameters(), sgd.max_grad_norm
                         )
                     optimizer = self._optimizer
-                    self._lr_schedule.step()
+
+                    for params in optimizer.param_groups:
+                        params["lr"] = getattr(sgd, "pytt_lr", sgd.alpha)
                     optimizer.step()
                     optimizer.zero_grad()
             return None
@@ -121,17 +119,27 @@ class PyTT_Wrapper(PyTorchWrapper):
         return output, backward_pytorch
 
     def get_model_kwargs(self, ids):
+        if isinstance(ids, list):
+            ids = numpy.array(ids, dtype=xp.int_)
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
+        neg_idx = ids < 0
+        ids[neg_idx] = 0
+        ids = torch.as_tensor(ids, dtype=torch.int64)
         if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
-            mask = ids.clamp(0, 1)
+            mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
+            mask[neg_idx] = 0
+            mask = xp2torch(mask)
             segment_ids = torch.zeros_like(ids)
-            return {"attention_mask": mask, "token_type_ids": segment_ids}
+            return {"input_ids": ids, "attention_mask": mask, "token_type_ids": segment_ids}
         else:
-            return {}
+            return {"input_ids": ids}
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
-            self._model.parameters(), lr=sgd.alpha, betas=(sgd.b1, sgd.b2)
+            self._model.parameters(),
+            lr=sgd.alpha,
+            eps=sgd.eps,
+            betas=(sgd.b1, sgd.b2),
         )
-
+        optimizer.zero_grad()
         return optimizer

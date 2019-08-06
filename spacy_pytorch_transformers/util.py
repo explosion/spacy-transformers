@@ -61,7 +61,7 @@ class Activations:
         if isinstance(po, tuple):
             po = xp.zeros((0,), dtype=lh.dtype)
         else:
-            po = torch2xp(po)
+            po = torch2xp(po).reshape((po.shape[0], 1, po.shape[-1]))
         ah = list(map(torch2xp, ah))
         aa = list(map(torch2xp, aa))
         return cls(lh, po, ah, aa, is_grad=is_grad)
@@ -84,7 +84,7 @@ class Activations:
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.lh[x, y]
-        po = self.po[y]
+        po = self.po[x] if self.has_po else self.po
         ah = [self.ah[i][x, y] for i in range(len(self.ah))]
         aa = [self.aa[i][x, y] for i in range(len(self.aa))]
         return Activations(lh, po, ah, aa, is_grad=self.is_grad)
@@ -169,7 +169,7 @@ def get_pytt_tokenizer(name):
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
-def pad_batch(batch: List[Array], *, xp=numpy, to: int = 0) -> Array:
+def pad_batch(batch: List[Array], *, xp=numpy, to: int=0, value=-1) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
     them into a single array.
     """
@@ -180,6 +180,7 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int = 0) -> Array:
         raise ValueError(f"Cannot pad_batch with max len {max_len} to {to}.")
     padded: List[Array] = []
     seq: Array
+    values = (0, value)
     for seq in batch:
         # Ugh, numpy.pad sucks.
         if isinstance(seq, list):
@@ -187,8 +188,9 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int = 0) -> Array:
         else:
             pad_desc = [[0, 0] for _ in seq.shape]
         pad_desc[0][1] = to - len(seq)
-        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
-    return xp.vstack(padded)
+        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=values))
+    output = xp.vstack(padded)
+    return output
 
 
 def pad_batch_activations(batch: List[Activations], *, to: int = 0) -> Activations:
@@ -198,9 +200,9 @@ def pad_batch_activations(batch: List[Activations], *, to: int = 0) -> Activatio
     lh = pad_batch([x.lh for x in batch], xp=xp, to=to)
     if lh.size:
         lh = lh.reshape((len(batch), -1, lh.shape[-1]))
-    po = pad_batch([x.po for x in batch], xp=xp, to=to)
+    po = pad_batch([x.po for x in batch], xp=xp)
     if po.size:
-        po = po.reshape((len(batch), -1, po.shape[-1]))
+        po = po.reshape((-1, 1, po.shape[-1]))
     # Transpose the lists, and then pad_batch the items
     ah = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.ah for x in batch])]
     aa = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.aa for x in batch])]
@@ -263,3 +265,18 @@ def flatten_list(nested: List[List[Any]]) -> List[Any]:
 
 def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
+
+
+def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
+    """Generate a series, starting from an initial rate, and then with a warmup
+    period, and then a linear decline. Used for learning rates.
+    """
+    step = 0
+    lr = initial_rate
+    while True:
+        if step < warmup_steps:
+            factor = step / max(1, warmup_steps)
+        else:
+            factor = max(0., (total_steps - step) / max(1., total_steps - warmup_steps))
+        yield factor * initial_rate
+        step += 1
