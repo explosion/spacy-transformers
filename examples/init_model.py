@@ -24,7 +24,7 @@ def main(path, name="bert-base-uncased", lang="en"):
     msg.text(f"Pipeline: {nlp.pipe_names}")
     msg.text(f"Location: {path}")
     with msg.loading("Verifying model loads..."):
-        loaded = nlp.from_disk(path)
+        nlp.from_disk(path)
     msg.good("Model loads!")
 
 
