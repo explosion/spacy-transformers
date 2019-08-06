@@ -7,6 +7,7 @@ import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 from thinc.neural.util import get_array_module
+import numpy
 
 from .util import get_pytt_model, Activations
 from .util import Array, Dropout
@@ -99,19 +100,20 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def get_model_kwargs(self, ids):
         if isinstance(ids, list):
-            ids = numpy.array(ids, dtype=numpy.int_)
+            ids = numpy.array(ids, dtype=xp.int_)
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
-        xp = get_array_module(ids)
         neg_idx = ids < 0
         ids[neg_idx] = 0
+        ids = torch.as_tensor(ids, dtype=torch.int64)
         if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
-            mask = xp.ones(ids.shape, dtype="f")
+            mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
             mask[neg_idx] = 0
-            segment_ids = xp.zeros(ids.shape, dtype=ids.dtype)
-            output = {"input_ids": ids, "attention_mask": mask, "token_type_ids": segment_ids}
+            mask = xp2torch(mask)
+            segment_ids = numpy.zeros(ids.shape, dtype=numpy.int_)
+            segment_ids = torch.as_tensor(segment_ids, dtype=torch.int64)
+            return {"input_ids": ids, "attention_mask": mask, "token_type_ids": segment_ids}
         else:
-            output = {"input_ids": ids}
-        return {key: xp2torch(val) for key, val in output.items()}
+            return {"input_ids": ids}
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
