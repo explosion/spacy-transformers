@@ -141,7 +141,7 @@ def main(
     torch.manual_seed(HP.seed)
     if not dont_gpu:
         is_using_gpu = spacy.prefer_gpu()
-        msg.info(f"Use gpu? {is_using_gpu")
+        msg.info(f"Use gpu? {is_using_gpu}")
         if is_using_gpu:
             torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
@@ -170,7 +170,7 @@ def main(
             losses.update(loss)
             optimizer.alpha = next(learn_rates)
         main_score, accuracies = evaluate(nlp, task, dev_data)
-        msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score])
+        msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
 
 
 if __name__ == "__main__":
