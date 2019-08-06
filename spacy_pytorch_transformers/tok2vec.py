@@ -42,7 +42,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         """
         cfg["pytt_name"] = name
         model = cls.Model(from_pretrained=True, **cfg)
-        cfg["pytt_config"] = dict(model._model._model.config.to_dict())
+        cfg["pytt_config"] = dict(model._model.pytt_model.config.to_dict())
         self = cls(vocab, model=model, **cfg)
         return self
 
@@ -60,6 +60,10 @@ class PyTT_TokenVectorEncoder(Pipe):
         if cfg.get("from_pretrained"):
             pytt_model = PyTT_Wrapper.from_pretrained(name)
         else:
+            # Work around floating point limitation in ujson:
+            # If we have the setting cfg["pytt_config"]["layer_norm_eps"] as 0,
+            # that's because of misprecision in serializing. Fix that.
+            cfg["pytt_config"]["layer_norm_eps"] = 1e-12
             config_cls = get_pytt_config(name)
             model_cls = get_pytt_model(name)
             model = model_cls(config_cls(**cfg["pytt_config"]))
