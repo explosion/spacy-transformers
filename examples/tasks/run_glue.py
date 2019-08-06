@@ -30,6 +30,7 @@ def create_model(model_name, *, task_type, task_name, labels):
     optimizer.alpha = HP.learning_rate
     optimizer.max_grad_norm = HP.max_grad_norm
     optimizer.eps = HP.adam_epsilon
+    optimizer.L2 = 0.
     return nlp, optimizer
 
 
@@ -46,7 +47,7 @@ def train_epoch(nlp, optimizer, train_data):
         tokvecs, backprop_tok2vec = tok2vec.begin_update(docs, drop=HP.dropout)
         losses = {}
         tok2vec.set_annotations(docs, tokvecs)
-        textcat.update(docs, golds, sgd=optimizer, losses=losses)
+        textcat.update(docs, golds, drop=HP.dropout, sgd=optimizer, losses=losses)
         backprop_tok2vec(docs, sgd=optimizer)
         yield batch, losses
         for doc in docs:
@@ -118,11 +119,6 @@ def free_tensors(doc):
     doc._.pytt_d_pooler_output = None
     doc._.pytt_d_all_hidden_states = []
     doc._.pytt_d_all_attentions = []
-
-
-def print_progress(losses, scores):
-    print("Losses", losses)
-    print("Scores", scores)
 
 
 def main(
