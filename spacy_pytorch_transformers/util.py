@@ -75,7 +75,7 @@ class Activations:
         # Transpose the lists, so that the inner list items refer
         # to the subsequences. Then we can vstack those.
         ah = list(map(xp.vstack, zip(*[x.ah for x in sub_acts])))
-        #aa = list(map(xp.vstack, zip(*[x.aa for x in sub_acts])))
+        # aa = list(map(xp.vstack, zip(*[x.aa for x in sub_acts])))
         aa = []
         return cls(lh, po, ah, aa, is_grad=sub_acts[0].is_grad)
 
@@ -193,7 +193,7 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int=0, value=-1) -> Array:
     return output
 
 
-def pad_batch_activations(batch: List[Activations], *, to: int=0) -> Activations:
+def pad_batch_activations(batch: List[Activations], *, to: int = 0) -> Activations:
     if not batch:
         return Activations.blank()
     xp = get_array_module(batch[0])

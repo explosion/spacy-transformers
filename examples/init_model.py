@@ -23,6 +23,9 @@ def main(path, name="bert-base-uncased", lang="en"):
     msg.good(f"Saved '{name}' ({lang})")
     msg.text(f"Pipeline: {nlp.pipe_names}")
     msg.text(f"Location: {path}")
+    with msg.loading("Verifying model loads..."):
+        nlp.from_disk(path)
+    msg.good("Model loads!")
 
 
 if __name__ == "__main__":
