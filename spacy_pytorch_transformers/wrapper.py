@@ -104,12 +104,12 @@ class PyTT_Wrapper(PyTorchWrapper):
                         self._optimizer = self._create_optimizer(sgd)
 
                     if getattr(self, "_lr_schedule", None) is None:
-                        self._lr_schedule = WarmupLinearSchedule(self._optimizer,
-                            warmup_steps=50, t_total=500)
+                        self._lr_schedule = WarmupLinearSchedule(
+                            self._optimizer, warmup_steps=50, t_total=500
+                        )
                     if sgd.max_grad_norm:
                         torch.nn.utils.clip_grad.clip_grad_norm_(
-                            self._model.parameters(),
-                            sgd.max_grad_norm 
+                            self._model.parameters(), sgd.max_grad_norm
                         )
                     optimizer = self._optimizer
                     self._lr_schedule.step()
@@ -131,9 +131,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
-            self._model.parameters(),
-            lr=sgd.alpha,
-            betas=(sgd.b1, sgd.b2),
+            self._model.parameters(), lr=sgd.alpha, betas=(sgd.b1, sgd.b2)
         )
 
         return optimizer
