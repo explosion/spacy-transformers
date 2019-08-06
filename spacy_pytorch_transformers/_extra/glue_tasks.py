@@ -131,7 +131,6 @@ class MnliMismatchedProcessor(DataProcessor):
         return InputExample(guid, line[8], line[9], line[-1])
 
 
-@dataclass
 class ColaProcessor(DataProcessor):
     name = "cola"
     subdir = "CoLA"
