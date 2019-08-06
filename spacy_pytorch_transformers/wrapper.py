@@ -91,7 +91,9 @@ class PyTT_Wrapper(PyTorchWrapper):
                             sgd.max_grad_norm 
                         )
                     optimizer = self._optimizer
-                    optimizer.lr = sgd.alpha
+
+                    for params in optimizer.param_groups:
+                        params["lr"] = getattr(sgd, "pytt_lr", sgd.alpha)
                     optimizer.step()
                     optimizer.zero_grad()
             return None
@@ -109,8 +111,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
             mask[neg_idx] = 0
             mask = xp2torch(mask)
-            segment_ids = numpy.zeros(ids.shape, dtype=numpy.int_)
-            segment_ids = torch.as_tensor(segment_ids, dtype=torch.int64)
+            segment_ids = torch.zeros_like(ids)
             return {"input_ids": ids, "attention_mask": mask, "token_type_ids": segment_ids}
         else:
             return {"input_ids": ids}
