@@ -5,6 +5,7 @@ import spacy
 import spacy.util
 import tqdm 
 import numpy
+import wasabi
 from spacy.gold import GoldParse
 
 from collections import Counter
@@ -71,12 +72,13 @@ def evaluate(nlp, task, docs_golds):
             right += guess == truth
             total += 1
             free_tensors(doc)
-    metrics = compute_metrics(
+    main_name, metrics = compute_metrics(
         task, numpy.array(guesses), numpy.array(truths))
-    metrics["accuracy"] = right / total
-    metrics["right"] = right
-    metrics["total"] = total
-    return metrics
+    metrics["_accuracy"] = right / total
+    metrics["_right"] = right
+    metrics["_total"] = total
+    metrics["_main"] = metrics[main_name]
+    return metrics[main_name], metrics
 
 
 def process_data(nlp, task, examples):
@@ -133,36 +135,42 @@ def main(
 ):
     global HP
     HP = get_hyper_params(hyper_params)
+    msg = wasabi.Printer()
 
     spacy.util.fix_random_seed(HP.seed)
     torch.manual_seed(HP.seed)
     if not dont_gpu:
         is_using_gpu = spacy.prefer_gpu()
-        print("Use gpu?", is_using_gpu)
+        msg.info("Use gpu? %s" % is_using_gpu)
         if is_using_gpu:
             torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
-    print("Procress training data")
-    raw_train_data = read_train_data(data_dir, task)
-    raw_dev_data = read_dev_data(data_dir, task)
-    nlp, optimizer = create_model(model_name, **describe_task(task))
-    train_data = process_data(nlp, task, raw_train_data)
-    dev_data = process_data(nlp, task, raw_dev_data)
+    with msg.loading("Reading corpus"):
+        raw_train_data = read_train_data(data_dir, task)
+        raw_dev_data = read_dev_data(data_dir, task)
+    with msg.loading("Loading model"):
+        nlp, optimizer = create_model(model_name, **describe_task(task))
+    with msg.loading("Tokenizing corpus"):
+        train_data = process_data(nlp, task, raw_train_data)
+        dev_data = process_data(nlp, task, raw_dev_data)
 
     nr_batch = len(train_data) // HP.batch_size
     nr_step = nr_batch * HP.num_train_epochs
     learn_rates = warmup_linear_rates(HP.learning_rate, HP.warmup_steps, nr_step)
     optimizer.alpha = next(learn_rates)
-    progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch)
-    print("Training. Initial learn rate:", optimizer.alpha)
+    progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch, leave=False)
+    table_widths = [2, 4, 4]
+    msg.info("Training. Initial learn rate:", optimizer.alpha)
+    msg.row(["#", "Loss", "Score"], widths=table_widths)
+    msg.row(["-" * width for width in table_widths])
     for i in range(HP.num_train_epochs):
         # Train and evaluate
         losses = Counter()
         for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
             losses.update(loss)
             optimizer.alpha = next(learn_rates)
-        accuracies = evaluate(nlp, task, dev_data)
-        print_progress(losses, accuracies)
+        main_score, accuracies = evaluate(nlp, task, dev_data)
+        msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score])
 
 
 if __name__ == "__main__":
