@@ -62,7 +62,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         else:
             config_cls = get_pytt_config(name)
             model_cls = get_pytt_model(name)
-            model = model_cls(config_cls(**config))
+            model = model_cls(config_cls(**cfg["pytt_config"]))
             pytt_model = PyTT_Wrapper(name, cfg["pytt_config"], model)
         nO = pytt_model.nO
         batch_by_length = cfg.get("words_per_batch", 3000)
