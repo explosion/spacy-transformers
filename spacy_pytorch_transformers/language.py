@@ -132,7 +132,9 @@ class PyTT_Language(Language):
             component.cfg.update(cfg)
             component.begin_training(pipeline=self.pipeline, sgd=False, **cfg)
             assert component.model is not True
-        return super().resume_training(sgd=sgd, **kwargs)
+        optimizer = super().resume_training(sgd=sgd, **kwargs)
+        optimizer.L2 = 0.
+        return optimizer
 
 
 def get_defaults(lang):
