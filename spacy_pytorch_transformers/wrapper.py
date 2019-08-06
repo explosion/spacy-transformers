@@ -42,12 +42,10 @@ class PyTT_Wrapper(PyTorchWrapper):
         return self._model.config.max_position_embeddings
 
     def predict(self, ids: Array):
+        self._model.eval()
         model_kwargs = self.get_model_kwargs(ids)
-        is_training = self._model.training
-        self._model.training = False
         with torch.no_grad():
             y_var = self._model(**model_kwargs)
-        self._model.training = is_training
         return Activations.from_pytt(y_var, is_grad=False)
 
     def begin_update(
@@ -57,12 +55,10 @@ class PyTT_Wrapper(PyTorchWrapper):
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
             return self.predict(ids), lambda dY, sgd=None: None
+        self._model.train()
         # Prepare all the model arguments, including the attention mask
         model_kwargs = self.get_model_kwargs(ids)
-        is_training = self._model.training
-        self._model.train()
         y_var = self._model(**model_kwargs)
-        self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
 
@@ -97,7 +93,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                     optimizer.step()
                     optimizer.zero_grad()
             return None
-
+        self._model.eval()
         return output, backward_pytorch
 
     def get_model_kwargs(self, ids):
