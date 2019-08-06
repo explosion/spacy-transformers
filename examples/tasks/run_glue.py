@@ -156,10 +156,7 @@ def main(
 
     nr_batch = len(train_data) // HP.batch_size
     if HP.max_steps < 1:
-        HP.steps_todo = nr_batch * HP.num_train_epochs
-        HP.max_steps = HP.steps_todo
-    else:
-        HP.steps_todo = HP.max_steps
+        HP.max_steps = nr_batch * HP.num_train_epochs
     # Set up printing
     progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch, leave=False)
     table_widths = [2, 4, 4]
@@ -171,19 +168,24 @@ def main(
         nr_batch * HP.num_train_epochs)
     optimizer.alpha = next(learn_rates)
     optimizer.pytt_alpha = 0.0
+    step = 0
     for i in range(HP.num_train_epochs):
-        if HP.steps_todo < 1:
+        if step >= HP.max_steps:
             break
         # Train and evaluate
         losses = Counter()
         for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
             losses.update(loss)
             optimizer.alpha = next(learn_rates)
-            HP.steps_todo -= 1
-            if HP.steps_todo < 1:
+            step += 1
+            if step >= HP.max_steps:
                 break
-        main_score, accuracies = evaluate(nlp, task, dev_data)
-        msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
+            if HP.eval_every != 0 and (step % HP.eval_every) == 0:
+                main_score, accuracies = evaluate(nlp, task, dev_data)
+                msg.row([str(step), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
+        if not HP.eval_every:
+            main_score, accuracies = evaluate(nlp, task, dev_data)
+            msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
 
 
 if __name__ == "__main__":
