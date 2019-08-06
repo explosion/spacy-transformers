@@ -7,7 +7,7 @@ import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 
-from .util import get_pytt_model, Activations
+from .util import get_pytt_model, get_pytt_config, Activations
 from .util import Array, Dropout
 
 FINE_TUNE = True
@@ -20,24 +20,33 @@ class PyTT_Wrapper(PyTorchWrapper):
     _model: Any
     _optimizer: Any
     _lr_schedule: Any
+    cfg: dict
 
     @classmethod
     def from_pretrained(cls, name):
-        self = cls(name)
-        self._model = self._model.from_pretrained(name, **CONFIG)
+        config_cls = get_pytt_config(name)
+        model_cls = get_pytt_model(name)
+        config = config_cls.from_pretrained(name)
+        model = model_cls.from_pretrained(name, **CONFIG)
+        self = cls(name, config.to_dict(), model)
+        self.cfg.update(self.pytt_model.config.to_dict())
         return self
 
-    def __init__(self, name):
-        model = get_pytt_model(name)
+    def __init__(self, name, config, model):
         PyTorchWrapper.__init__(self, model)
+        self.cfg = dict(config)
 
     @property
     def nO(self):
-        return self._model.config.hidden_size
+        return self.cfg["hidden_size"]
+
+    @property
+    def pytt_model(self):
+        return self._model
 
     @property
     def max_length(self):
-        return self._model.config.max_position_embeddings
+        return self.cfg["max_position_embeddings"]
 
     def predict(self, ids: Array):
         ids = torch.as_tensor(ids, dtype=torch.int64)

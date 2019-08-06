@@ -7,6 +7,7 @@ from spacy.util import minibatch
 from spacy.tokens import Doc, Span
 
 from .wrapper import PyTT_Wrapper
+from .util import get_pytt_config, get_pytt_model
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
 from .util import pad_batch_activations
 from .util import Array, Optimizer, Dropout
@@ -39,9 +40,9 @@ class PyTT_TokenVectorEncoder(Pipe):
         name (unicode): Name of pre-trained model, e.g. 'bert-base-uncased'.
         RETURNS (PyTT_TokenVectorEncoder): The token vector encoder.
         """
-        cfg["from_pretrained"] = True
         cfg["pytt_name"] = name
-        model = cls.Model(**cfg)
+        model = cls.Model(from_pretrained=True, **cfg)
+        cfg["pytt_config"] = dict(model._model._model.config.to_dict())
         self = cls(vocab, model=model, **cfg)
         return self
 
@@ -59,7 +60,10 @@ class PyTT_TokenVectorEncoder(Pipe):
         if cfg.get("from_pretrained"):
             pytt_model = PyTT_Wrapper.from_pretrained(name)
         else:
-            pytt_model = PyTT_Wrapper(name)
+            config_cls = get_pytt_config(name)
+            model_cls = get_pytt_model(name)
+            model = model_cls(config_cls(**config))
+            pytt_model = PyTT_Wrapper(name, cfg["pytt_config"], model)
         nO = pytt_model.nO
         batch_by_length = cfg.get("words_per_batch", 3000)
         max_length = cfg.get("max_length", 512)
