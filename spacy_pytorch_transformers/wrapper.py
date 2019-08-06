@@ -38,7 +38,21 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     @property
     def nO(self):
-        return self.cfg["hidden_size"]
+        if "hidden_size" in self.cfg:
+            # BERT
+            return self.cfg["hidden_size"]
+        elif "n_embd" in self.cfg:
+            # GPT2
+            return self.cfg["n_embd"]
+        elif "d_model" in self.cfg:
+            # XLNet
+            return self.cfg["d_model"]
+        elif hasattr(self.pytt_model, "dim"):
+            # XLM
+            return self.pytt_model.dim
+        else:
+            keys = ", ".join(self.cfg.keys())
+            raise ValueError(f"Unexpected config. Keys: {keys}")
 
     @property
     def pytt_model(self):
