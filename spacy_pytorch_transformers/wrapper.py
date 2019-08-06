@@ -65,11 +65,9 @@ class PyTT_Wrapper(PyTorchWrapper):
     def predict(self, ids: Array):
         ids = torch.as_tensor(ids, dtype=torch.int64)
         model_kwargs = self.get_model_kwargs(ids)
-        is_training = self._model.training
-        self._model.training = False
+        self._model.eval()
         with torch.no_grad():
             y_var = self._model(ids, **model_kwargs)
-        self._model.training = is_training
         return Activations.from_pytt(y_var, is_grad=False)
 
     def begin_update(
@@ -80,7 +78,6 @@ class PyTT_Wrapper(PyTorchWrapper):
             # Thinc's API I'm least happy with...
             return self.predict(ids), lambda dY, sgd=None: None
         ids = torch.as_tensor(ids, dtype=torch.int64)
-        is_training = self._model.training
         model_kwargs = self.get_model_kwargs(ids)
         self._model.train()
         y_var = self._model(ids, **model_kwargs)
@@ -121,6 +118,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                     optimizer.zero_grad()
             return None
 
+        self._model.eval()
         return output, backward_pytorch
 
     def get_model_kwargs(self, ids):
