@@ -169,7 +169,7 @@ def get_pytt_tokenizer(name):
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
-def pad_batch(batch: List[Array], *, xp=numpy, to: int=0) -> Array:
+def pad_batch(batch: List[Array], *, xp=numpy, to: int=0, value=-1) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
     them into a single array.
     """
@@ -180,6 +180,7 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int=0) -> Array:
         raise ValueError(f"Cannot pad_batch with max len {max_len} to {to}.")
     padded: List[Array] = []
     seq: Array
+    values = (0, value)
     for seq in batch:
         # Ugh, numpy.pad sucks.
         if isinstance(seq, list):
@@ -187,7 +188,7 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int=0) -> Array:
         else:
             pad_desc = [[0, 0] for _ in seq.shape]
         pad_desc[0][1] = to - len(seq)
-        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=(0, 0)))
+        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=value))
     output = xp.vstack(padded)
     return output
 

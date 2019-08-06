@@ -6,6 +6,7 @@ import torch.nn.utils.clip_grad
 import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
+from thinc.neural.util import get_array_module
 
 from .util import get_pytt_model, Activations
 from .util import Array, Dropout
@@ -40,12 +41,11 @@ class PyTT_Wrapper(PyTorchWrapper):
         return self._model.config.max_position_embeddings
 
     def predict(self, ids: Array):
-        ids = torch.as_tensor(ids, dtype=torch.int64)
         model_kwargs = self.get_model_kwargs(ids)
         is_training = self._model.training
         self._model.training = False
         with torch.no_grad():
-            y_var = self._model(ids, **model_kwargs)
+            y_var = self._model(**model_kwargs)
         self._model.training = is_training
         return Activations.from_pytt(y_var, is_grad=False)
 
@@ -56,11 +56,11 @@ class PyTT_Wrapper(PyTorchWrapper):
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
             return self.predict(ids), lambda dY, sgd=None: None
-        ids = torch.as_tensor(ids, dtype=torch.int64)
-        is_training = self._model.training
+        # Prepare all the model arguments, including the attention mask
         model_kwargs = self.get_model_kwargs(ids)
+        is_training = self._model.training
         self._model.train()
-        y_var = self._model(ids, **model_kwargs)
+        y_var = self._model(**model_kwargs)
         self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
@@ -98,13 +98,20 @@ class PyTT_Wrapper(PyTorchWrapper):
         return output, backward_pytorch
 
     def get_model_kwargs(self, ids):
+        if isinstance(ids, list):
+            ids = numpy.array(ids, dtype=numpy.int_)
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
+        xp = get_array_module(ids)
+        neg_idx = ids < 0
+        ids[neg_idx] = 0
         if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
-            mask = ids.clamp(0, 1)
-            segment_ids = torch.zeros_like(ids)
-            return {"attention_mask": mask, "token_type_ids": segment_ids}
+            mask = xp.ones(ids.shape, dtype="f")
+            mask[neg_idx] = 0
+            segment_ids = xp.zeros(ids.shape, dtype=ids.dtype)
+            output = {"input_ids": ids, "attention_mask": mask, "token_type_ids": segment_ids}
         else:
-            return {}
+            output = {"input_ids": ids}
+        return {key: xp2torch(val) for key, val in output.items()}
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
