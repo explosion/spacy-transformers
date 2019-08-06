@@ -188,7 +188,7 @@ def pad_batch(batch: List[Array], *, xp=numpy, to: int=0, value=-1) -> Array:
         else:
             pad_desc = [[0, 0] for _ in seq.shape]
         pad_desc[0][1] = to - len(seq)
-        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=value))
+        padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=values))
     output = xp.vstack(padded)
     return output
 
