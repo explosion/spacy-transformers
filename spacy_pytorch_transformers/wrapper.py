@@ -7,7 +7,7 @@ import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 
-from .util import get_pytt_model, Activations
+from .util import get_pytt_model, get_pytt_config, Activations
 from .util import Array, Dropout
 
 FINE_TUNE = True
@@ -20,33 +20,54 @@ class PyTT_Wrapper(PyTorchWrapper):
     _model: Any
     _optimizer: Any
     _lr_schedule: Any
+    cfg: dict
 
     @classmethod
     def from_pretrained(cls, name):
-        self = cls(name)
-        self._model = self._model.from_pretrained(name, **CONFIG)
+        config_cls = get_pytt_config(name)
+        model_cls = get_pytt_model(name)
+        config = config_cls.from_pretrained(name)
+        model = model_cls.from_pretrained(name, **CONFIG)
+        self = cls(name, config.to_dict(), model)
+        self.cfg.update(self.pytt_model.config.to_dict())
         return self
 
-    def __init__(self, name):
-        model = get_pytt_model(name)
+    def __init__(self, name, config, model):
         PyTorchWrapper.__init__(self, model)
+        self.cfg = dict(config)
 
     @property
     def nO(self):
-        return self._model.config.hidden_size
+        if "hidden_size" in self.cfg:
+            # BERT
+            return self.cfg["hidden_size"]
+        elif "n_embd" in self.cfg:
+            # GPT2
+            return self.cfg["n_embd"]
+        elif "d_model" in self.cfg:
+            # XLNet
+            return self.cfg["d_model"]
+        elif hasattr(self.pytt_model, "dim"):
+            # XLM
+            return self.pytt_model.dim
+        else:
+            keys = ", ".join(self.cfg.keys())
+            raise ValueError(f"Unexpected config. Keys: {keys}")
+
+    @property
+    def pytt_model(self):
+        return self._model
 
     @property
     def max_length(self):
-        return self._model.config.max_position_embeddings
+        return self.cfg["max_position_embeddings"]
 
     def predict(self, ids: Array):
         ids = torch.as_tensor(ids, dtype=torch.int64)
         model_kwargs = self.get_model_kwargs(ids)
-        is_training = self._model.training
-        self._model.training = False
+        self._model.eval()
         with torch.no_grad():
             y_var = self._model(ids, **model_kwargs)
-        self._model.training = is_training
         return Activations.from_pytt(y_var, is_grad=False)
 
     def begin_update(
@@ -57,11 +78,9 @@ class PyTT_Wrapper(PyTorchWrapper):
             # Thinc's API I'm least happy with...
             return self.predict(ids), lambda dY, sgd=None: None
         ids = torch.as_tensor(ids, dtype=torch.int64)
-        is_training = self._model.training
         model_kwargs = self.get_model_kwargs(ids)
         self._model.train()
         y_var = self._model(ids, **model_kwargs)
-        self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
 
@@ -85,12 +104,12 @@ class PyTT_Wrapper(PyTorchWrapper):
                         self._optimizer = self._create_optimizer(sgd)
 
                     if getattr(self, "_lr_schedule", None) is None:
-                        self._lr_schedule = WarmupLinearSchedule(self._optimizer,
-                            warmup_steps=50, t_total=500)
+                        self._lr_schedule = WarmupLinearSchedule(
+                            self._optimizer, warmup_steps=50, t_total=500
+                        )
                     if sgd.max_grad_norm:
                         torch.nn.utils.clip_grad.clip_grad_norm_(
-                            self._model.parameters(),
-                            sgd.max_grad_norm 
+                            self._model.parameters(), sgd.max_grad_norm
                         )
                     optimizer = self._optimizer
                     self._lr_schedule.step()
@@ -98,6 +117,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                     optimizer.zero_grad()
             return None
 
+        self._model.eval()
         return output, backward_pytorch
 
     def get_model_kwargs(self, ids):
@@ -111,9 +131,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
-            self._model.parameters(),
-            lr=sgd.alpha,
-            betas=(sgd.b1, sgd.b2),
+            self._model.parameters(), lr=sgd.alpha, betas=(sgd.b1, sgd.b2)
         )
 
         return optimizer
