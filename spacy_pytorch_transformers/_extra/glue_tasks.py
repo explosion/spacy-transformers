@@ -66,12 +66,12 @@ class DataProcessor:
 
     def get_train_examples(self, data_dir: Path) -> List[InputExample]:
         """Gets a collection of `InputExample`s for the train set."""
-        filename = data_dir / self.train_filename
+        filename = data_dir / self.subdir / self.train_filename
         return list(self._read_examples(filename, self.train_name))
 
     def get_dev_examples(self, data_dir) -> List[InputExample]:
         """Gets a collection of `InputExample`s for the dev set."""
-        filename = data_dir / self.dev_filename
+        filename = data_dir / self.subdir / self.dev_filename
         return list(self._read_examples(filename, self.dev_name))
 
     def _read_examples(self, path: Path, set_type: str, quote=None) -> Iterator[InputExample]:
@@ -90,6 +90,7 @@ class DataProcessor:
 class MrpcProcessor(DataProcessor):
     """Processor for the MRPC data set (GLUE version)."""
     name = "mrpc"
+    subdir = "MRPC"
     task = "classification"
 
     labels = ("0", "1")
@@ -104,6 +105,7 @@ class MrpcProcessor(DataProcessor):
 class MnliProcessor(DataProcessor):
     """Processor for the MultiNLI data set (GLUE version)."""
     name = "mnli"
+    subdir = "MNLI"
     task = "classification"
     labels = ("contradiction", "entailment", "neutral")
     train_filename = "train.tsv"
@@ -117,6 +119,7 @@ class MnliProcessor(DataProcessor):
 class MnliMismatchedProcessor(DataProcessor):
     """Processor for the MultiNLI Mismatched data set (GLUE version)."""
     name = "mnli-mm"
+    subdir = "MNLI"
     task = "classification"
 
     labels = ("contradiction", "entailment", "neutral")
@@ -131,6 +134,7 @@ class MnliMismatchedProcessor(DataProcessor):
 @dataclass
 class ColaProcessor(DataProcessor):
     name = "cola"
+    subdir = "CoLA"
     task = "classification"
 
     labels = ("0", "1")
@@ -145,6 +149,7 @@ class ColaProcessor(DataProcessor):
 class Sst2Processor(DataProcessor):
     """Processor for the SST-2 data set (GLUE version)."""
     name = "sst2"
+    subdir = "SST-2"
     task = "classification"
 
     labels = ("0", "1")
@@ -159,6 +164,7 @@ class Sst2Processor(DataProcessor):
 class StsbProcessor(DataProcessor):
     """Processor for the STS-B data set (GLUE version)."""
     name = "sts-b"
+    subdir = "STS-B"
     task = "regression"
 
     labels = ("",)
@@ -173,6 +179,7 @@ class StsbProcessor(DataProcessor):
 class QqpProcessor(DataProcessor):
     """Processor for the QQP data set (GLUE version)."""
     name = "qqp"
+    subdir = "QQP"
     task = "classification"
 
     labels = ("0", "1")
@@ -193,6 +200,7 @@ class QqpProcessor(DataProcessor):
 class QnliProcessor(DataProcessor):
     """Processor for the QNLI data set (GLUE version)."""
     name = "qnli"
+    subdir = "QNLI"
     task = "classification"
 
     labels = ("entailment", "not_entailment")
@@ -212,6 +220,7 @@ class QnliProcessor(DataProcessor):
 class RteProcessor(DataProcessor):
     """Processor for the RTE data set (GLUE version)."""
     name = "rte"
+    subdir = "RTE"
     task = "classification"
     labels = ("entailment", "not_entailment")
     train_filename = "train.tsv"
@@ -226,6 +235,7 @@ class RteProcessor(DataProcessor):
 class WnliProcessor(DataProcessor):
     """Processor for the WNLI data set (GLUE version)."""
     name = "wnli"
+    subdir = "WNLI"
     task = "classification"
     labels = ("0", "1")
     train_filename = "train.tsv"
