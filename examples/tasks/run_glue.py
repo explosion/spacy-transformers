@@ -155,20 +155,33 @@ def main(
         dev_data = process_data(nlp, task, raw_dev_data)
 
     nr_batch = len(train_data) // HP.batch_size
-    nr_step = nr_batch * HP.num_train_epochs
-    learn_rates = warmup_linear_rates(HP.learning_rate, HP.warmup_steps, nr_step)
-    optimizer.alpha = next(learn_rates)
+    if HP.max_steps < 1:
+        HP.steps_todo = nr_batch * HP.num_train_epochs
+        HP.max_steps = HP.steps_todo
+    else:
+        HP.steps_todo = HP.max_steps
+    # Set up printing
     progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch, leave=False)
     table_widths = [2, 4, 4]
     msg.info(f"Training. Initial learn rate: {optimizer.alpha}")
     msg.row(["#", "Loss", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
+    # Set up learning rate schedule
+    learn_rates = warmup_linear_rates(HP.learning_rate, HP.warmup_steps,
+        nr_batch * HP.num_train_epochs)
+    optimizer.alpha = next(learn_rates)
+    optimizer.pytt_alpha = 0.0
     for i in range(HP.num_train_epochs):
+        if HP.steps_todo < 1:
+            break
         # Train and evaluate
         losses = Counter()
         for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
             losses.update(loss)
             optimizer.alpha = next(learn_rates)
+            HP.steps_todo -= 1
+            if HP.steps_todo < 1:
+                break
         main_score, accuracies = evaluate(nlp, task, dev_data)
         msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
 
