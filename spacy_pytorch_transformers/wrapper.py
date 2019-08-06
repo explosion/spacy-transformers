@@ -81,7 +81,6 @@ class PyTT_Wrapper(PyTorchWrapper):
         model_kwargs = self.get_model_kwargs(ids)
         self._model.train()
         y_var = self._model(ids, **model_kwargs)
-        self._model.training = is_training
         output = Activations.from_pytt(y_var, is_grad=False)
         assert output.lh is not None
 
