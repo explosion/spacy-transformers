@@ -84,7 +84,7 @@ class Activations:
 
     def get_slice(self, x, y) -> "Activations":
         lh = self.lh[x, y]
-        po = self.po[x]
+        po = self.po[x] if self.has_po else self.po
         ah = [self.ah[i][x, y] for i in range(len(self.ah))]
         aa = [self.aa[i][x, y] for i in range(len(self.aa))]
         return Activations(lh, po, ah, aa, is_grad=self.is_grad)
