@@ -3,7 +3,7 @@ import random
 import torch
 import spacy
 import spacy.util
-import tqdm 
+import tqdm
 import numpy
 import wasabi
 from spacy.gold import GoldParse
@@ -21,8 +21,7 @@ from spacy_pytorch_transformers._extra.metrics import compute_metrics
 
 def create_model(model_name, *, task_type, task_name, labels):
     nlp = spacy.load(model_name)
-    textcat = nlp.create_pipe("pytt_textcat", config={
-        "architecture": HP.textcat_arch})
+    textcat = nlp.create_pipe("pytt_textcat", config={"architecture": HP.textcat_arch})
     for label in labels:
         textcat.add_label(label)
     nlp.add_pipe(textcat)
@@ -30,7 +29,7 @@ def create_model(model_name, *, task_type, task_name, labels):
     optimizer.alpha = HP.learning_rate
     optimizer.max_grad_norm = HP.max_grad_norm
     optimizer.eps = HP.adam_epsilon
-    optimizer.L2 = 0.
+    optimizer.L2 = 0.0
     return nlp, optimizer
 
 
@@ -74,7 +73,8 @@ def evaluate(nlp, task, docs_golds):
             total += 1
             free_tensors(doc)
     main_name, metrics = compute_metrics(
-        task, numpy.array(guesses), numpy.array(truths))
+        task, numpy.array(guesses), numpy.array(truths)
+    )
     metrics["_accuracy"] = right / total
     metrics["_right"] = right
     metrics["_total"] = total
@@ -160,8 +160,9 @@ def main(
     msg.row(["#", "Loss", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     # Set up learning rate schedule
-    learn_rates = warmup_linear_rates(HP.learning_rate, HP.warmup_steps,
-        nr_batch * HP.num_train_epochs)
+    learn_rates = warmup_linear_rates(
+        HP.learning_rate, HP.warmup_steps, nr_batch * HP.num_train_epochs
+    )
     optimizer.alpha = next(learn_rates)
     optimizer.pytt_alpha = 0.0
     step = 0
@@ -178,10 +179,16 @@ def main(
                 break
             if HP.eval_every != 0 and (step % HP.eval_every) == 0:
                 main_score, accuracies = evaluate(nlp, task, dev_data)
-                msg.row([str(step), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
+                msg.row(
+                    [str(step), "%.2f" % losses["pytt_textcat"], main_score],
+                    widths=table_widths,
+                )
         if not HP.eval_every:
             main_score, accuracies = evaluate(nlp, task, dev_data)
-            msg.row([str(i), "%.2f" % losses["pytt_textcat"], main_score], widths=table_widths)
+            msg.row(
+                [str(i), "%.2f" % losses["pytt_textcat"], main_score],
+                widths=table_widths,
+            )
 
 
 if __name__ == "__main__":

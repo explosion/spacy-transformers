@@ -7,13 +7,13 @@ Adapted from Huggingface's pytorch-transformers.
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, List, Tuple, Callable
+from typing import Iterator, List, Tuple
 
 
 @dataclass
 class InputExample:
     """A single training/test example for simple sequence classification.
-    
+
     Args:
         guid: Unique id for the example.
         text_a: string. The untokenized text of the first sequence. For single
@@ -23,6 +23,7 @@ class InputExample:
         label: (Optional) string. The label of the example. This should be
         specified for train and dev examples, but not for test examples.
     """
+
     guid: int
     text_a: str
     text_b: str = ""
@@ -44,8 +45,9 @@ def describe_task(task: str) -> dict:
 
 class DataProcessor:
     """Base class for data converters for sequence classification data sets."""
+
     name: str
-    task: str 
+    task: str
     labels: Tuple[str, ...]
     train_filename: str
     dev_filename: str
@@ -56,7 +58,7 @@ class DataProcessor:
         train_filename but without the extension.
         """
         return self.train_filename.rsplit(".", 1)[0]
-    
+
     @property
     def dev_name(self) -> str:
         """The partition-name used for the dev data. Usually matches
@@ -74,7 +76,9 @@ class DataProcessor:
         filename = data_dir / self.subdir / self.dev_filename
         return list(self._read_examples(filename, self.dev_name))
 
-    def _read_examples(self, path: Path, set_type: str, quote=None) -> Iterator[InputExample]:
+    def _read_examples(
+        self, path: Path, set_type: str, quote=None
+    ) -> Iterator[InputExample]:
         """Creates examples for the training and dev sets."""
         with path.open("r", encoding="utf-8-sig") as file_:
             reader = csv.reader(file_, delimiter="\t", quotechar=quote)
@@ -89,6 +93,7 @@ class DataProcessor:
 
 class MrpcProcessor(DataProcessor):
     """Processor for the MRPC data set (GLUE version)."""
+
     name = "mrpc"
     subdir = "MRPC"
     task = "classification"
@@ -98,12 +103,13 @@ class MrpcProcessor(DataProcessor):
     dev_filename = "dev.tsv"
 
     def create_example(self, i, set_type, line):
-        guid = f"{i}-{set_type}" 
+        guid = f"{i}-{set_type}"
         return InputExample(guid, line[3], line[4], line[0])
 
 
 class MnliProcessor(DataProcessor):
     """Processor for the MultiNLI data set (GLUE version)."""
+
     name = "mnli"
     subdir = "MNLI"
     task = "classification"
@@ -118,6 +124,7 @@ class MnliProcessor(DataProcessor):
 
 class MnliMismatchedProcessor(DataProcessor):
     """Processor for the MultiNLI Mismatched data set (GLUE version)."""
+
     name = "mnli-mm"
     subdir = "MNLI"
     task = "classification"
@@ -147,6 +154,7 @@ class ColaProcessor(DataProcessor):
 
 class Sst2Processor(DataProcessor):
     """Processor for the SST-2 data set (GLUE version)."""
+
     name = "sst2"
     subdir = "SST-2"
     task = "classification"
@@ -156,12 +164,13 @@ class Sst2Processor(DataProcessor):
     dev_filename = "dev.tsv"
 
     def create_example(self, i, set_type, line):
-        guid = f"{set_type}-{i}" 
+        guid = f"{set_type}-{i}"
         return InputExample(guid, line[0], "", line[1])
 
 
 class StsbProcessor(DataProcessor):
     """Processor for the STS-B data set (GLUE version)."""
+
     name = "sts-b"
     subdir = "STS-B"
     task = "regression"
@@ -171,12 +180,13 @@ class StsbProcessor(DataProcessor):
     dev_filename = "dev.tsv"
 
     def create_example(self, i, set_type, line):
-        guid = f"{set_type}-{line[0]}" 
+        guid = f"{set_type}-{line[0]}"
         return InputExample(guid, line[7], line[8], line[-1])
 
 
 class QqpProcessor(DataProcessor):
     """Processor for the QQP data set (GLUE version)."""
+
     name = "qqp"
     subdir = "QQP"
     task = "classification"
@@ -186,7 +196,7 @@ class QqpProcessor(DataProcessor):
     dev_filename = "dev.tsv"
 
     def create_example(self, i, set_type, line):
-        guid = f"{set_type}-{line[0]}" 
+        guid = f"{set_type}-{line[0]}"
         try:
             text_a = line[3]
             text_b = line[4]
@@ -198,6 +208,7 @@ class QqpProcessor(DataProcessor):
 
 class QnliProcessor(DataProcessor):
     """Processor for the QNLI data set (GLUE version)."""
+
     name = "qnli"
     subdir = "QNLI"
     task = "classification"
@@ -212,12 +223,13 @@ class QnliProcessor(DataProcessor):
 
     def create_example(self, i, set_type, line):
         """Creates examples for the training and dev sets."""
-        guid = f"{set_type}-{line[0]}" 
+        guid = f"{set_type}-{line[0]}"
         return InputExample(guid, line[1], line[2], line[-1])
 
 
 class RteProcessor(DataProcessor):
     """Processor for the RTE data set (GLUE version)."""
+
     name = "rte"
     subdir = "RTE"
     task = "classification"
@@ -233,6 +245,7 @@ class RteProcessor(DataProcessor):
 
 class WnliProcessor(DataProcessor):
     """Processor for the WNLI data set (GLUE version)."""
+
     name = "wnli"
     subdir = "WNLI"
     task = "classification"
@@ -241,7 +254,7 @@ class WnliProcessor(DataProcessor):
     dev_filename = "dev.tsv"
 
     def create_example(self, i, set_type, line):
-        guid = f"{set_type}-{line[0]}",
+        guid = (f"{set_type}-{line[0]}",)
         return InputExample(guid, line[1], line[2], line[-1])
 
 

@@ -15,7 +15,7 @@ FIELDS = dict(
     warmup_steps=int,
     seed=int,
     textcat_arch=str,
-    eval_every=int
+    eval_every=int,
 )
 
 
