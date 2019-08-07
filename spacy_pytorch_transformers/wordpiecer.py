@@ -142,6 +142,9 @@ class PyTT_WordPiecer(Pipe):
             doc._.pytt_alignment = doc_alignment
         self.model.max_len = max_len
 
+    def use_params(self, params):
+        yield
+
 
 alpha_re = re.compile(r"[^A-Za-z]+")
 

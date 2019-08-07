@@ -7,6 +7,7 @@ import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 import numpy
+from torchcontrib.optim import SWA
 
 from .util import get_pytt_model, get_pytt_config, Activations
 from .util import Array, Dropout
@@ -65,7 +66,11 @@ class PyTT_Wrapper(PyTorchWrapper):
         self._model.eval()
         model_kwargs = self.get_model_kwargs(ids)
         with torch.no_grad():
+            if hasattr(self._optimizer, "swap_swa_sgd"):
+                self._optimizer.swap_swa_sgd()
             y_var = self._model(**model_kwargs)
+            if hasattr(self._optimizer, "swap_swa_sgd"):
+                self._optimizer.swap_swa_sgd()
         return Activations.from_pytt(y_var, is_grad=False)
 
     def begin_update(
@@ -141,7 +146,13 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
-            self._model.parameters(), lr=sgd.alpha, eps=sgd.eps, betas=(sgd.b1, sgd.b2)
+            self._model.parameters(),
+            lr=sgd.alpha,
+            eps=sgd.eps,
+            betas=(sgd.b1, sgd.b2),
+            weight_decay=getattr(sgd, "pytt_weight_decay", 0.0),
         )
+        if getattr(sgd, "pytt_use_swa", False):
+            optimizer = SWA(optimizer, swa_start=1, swa_freq=10, swa_lr=sgd.alpha)
         optimizer.zero_grad()
         return optimizer

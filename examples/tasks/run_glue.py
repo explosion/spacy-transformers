@@ -164,7 +164,8 @@ def main(
         HP.learning_rate, HP.warmup_steps, nr_batch * HP.num_train_epochs
     )
     optimizer.alpha = next(learn_rates)
-    optimizer.pytt_alpha = 0.0
+    optimizer.pytt_weight_decay = HP.weight_decay
+    optimizer.pytt_use_swa = True
     step = 0
     for i in range(HP.num_train_epochs):
         if step >= HP.max_steps:
@@ -173,12 +174,14 @@ def main(
         losses = Counter()
         for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
             losses.update(loss)
-            optimizer.alpha = next(learn_rates)
+            if HP.use_learn_rate_schedule:
+                optimizer.alpha = next(learn_rates)
             step += 1
             if step >= HP.max_steps:
                 break
             if HP.eval_every != 0 and (step % HP.eval_every) == 0:
-                main_score, accuracies = evaluate(nlp, task, dev_data)
+                with nlp.use_params(optimizer.averages):
+                    main_score, accuracies = evaluate(nlp, task, dev_data)
                 msg.row(
                     [str(step), "%.2f" % losses["pytt_textcat"], main_score],
                     widths=table_widths,

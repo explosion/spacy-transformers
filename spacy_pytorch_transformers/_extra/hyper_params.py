@@ -16,6 +16,8 @@ FIELDS = dict(
     seed=int,
     textcat_arch=str,
     eval_every=int,
+    use_learn_rate_schedule=int,
+    use_swa=int,
 )
 
 

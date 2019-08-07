@@ -314,7 +314,9 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         activs, get_dX = model_begin_update(pad_batch(inputs), drop)
         if activs.has_po:
             assert activs.po.shape[0] == len(inputs)
-        outputs = [activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)]
+        outputs = [
+            activs.get_slice(i, slice(0, len(seq))) for i, seq in enumerate(inputs)
+        ]
         shapes = (activs.lh.shape, activs.po.shape)
 
         def backprop_batched(d_outputs, sgd=None):
