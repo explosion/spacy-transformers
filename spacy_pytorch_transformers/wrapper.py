@@ -126,6 +126,33 @@ class PyTT_Wrapper(PyTorchWrapper):
         self._model.eval()
         return output, backward_pytorch
 
+    def get_activations(self, fields) -> Activations:
+        """Create Activations from the output tuples produced by PyTorch Transformers.
+        Includes converting torch tensors to xp, and handling missing values.
+        """
+        # lh: last hidden
+        # po: pooler_output
+        # ah: all_hidden
+        # aa: all_attention
+        if len(fields) != 4:
+            lh = fields[0]
+            po = tuple()
+            ah = []
+            aa = []
+        else:
+            lh, po, ah, aa = fields
+        # Convert last_hidden_state to xp
+        lh = torch2xp(lh)
+        xp = get_array_module(lh)
+        # Normalize "None" value for pooler output
+        if isinstance(po, tuple):
+            po = xp.zeros((0,), dtype=lh.dtype)
+        else:
+            po = torch2xp(po).reshape((po.shape[0], 1, po.shape[-1]))
+        ah = list(map(torch2xp, ah))
+        aa = list(map(torch2xp, aa))
+        return Activations(lh, po, ah, aa)
+
     def get_model_kwargs(self, ids):
         if isinstance(ids, list):
             ids = numpy.array(ids, dtype=xp.int_)
