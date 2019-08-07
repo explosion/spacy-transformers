@@ -5,7 +5,6 @@ from .util import List, Array, Union
 from .util import pad_batch, ensure3d
 
 
-
 @dataclass
 class Activations:
     lh: Array
