@@ -1,5 +1,9 @@
+from thinc.neural.util import get_array_module
+from dataclasses import dataclass
+
 from .util import List, Array, Union
 from .util import pad_batch, ensure3d
+
 
 
 @dataclass
