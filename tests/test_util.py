@@ -68,6 +68,26 @@ def test_pad_batch(lengths, expected_shape):
 
 
 @pytest.mark.parametrize(
+    "lengths,width,expected_shape",
+    [
+        ([1, 2], 5, (2, 2, 5)),
+        ([1, 2, 3], 2, (3, 3, 2)),
+        ([0, 1], 3, (2, 1, 3)),
+        ([1], 4, (1, 1, 4)),
+        ([1, 5, 2, 4], 6, (4, 5, 6)),
+    ],
+)
+def test_pad_batch_2d(lengths, width, expected_shape):
+    seqs = [numpy.ones((length, width), dtype="f") for length in lengths]
+    padded = pad_batch(seqs)
+    for i, seq in enumerate(seqs):
+        padded[i][padded[i] < 0] = 0
+        assert padded[i].sum() == seq.sum()
+        assert_equal(padded[i, : len(seq)], seq)
+    assert padded.shape == expected_shape
+
+
+@pytest.mark.parametrize(
     "wp_tokens,span,expected_start",
     [
         (["[CLS]", "hello", "world", "[SEP]"], slice(0, 1), 0),
