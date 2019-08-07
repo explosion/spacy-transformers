@@ -69,7 +69,11 @@ class PyTT_Wrapper(PyTorchWrapper):
         self._model.eval()
         model_kwargs = self.get_model_kwargs(ids)
         with torch.no_grad():
+            if hasattr(self._optimizer, "swap_swa_sgd"):
+                self._optimizer.swap_swa_sgd()
             y_var = self._model(**model_kwargs)
+            if hasattr(self._optimizer, "swap_swa_sgd"):
+                self._optimizer.swap_swa_sgd()
         return Activations.from_pytt(y_var, is_grad=False)
 
     def begin_update(
@@ -143,6 +147,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             betas=(sgd.b1, sgd.b2),
             weight_decay=getattr(sgd, "pytt_weight_decay", 0.0)
         )
-        optimizer = SWA(optimizer, swa_start=1, swa_freq=10, swa_lr=sgd.alpha)
+        if getattr(sgd, "pytt_use_swa", False):
+            optimizer = SWA(optimizer, swa_start=1, swa_freq=10, swa_lr=sgd.alpha)
         optimizer.zero_grad()
         return optimizer
