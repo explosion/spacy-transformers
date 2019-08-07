@@ -8,6 +8,7 @@ from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 from thinc.neural.util import get_array_module
 import numpy
+from torchcontrib.optim import SWA
 
 from .util import get_pytt_model, get_pytt_config, Activations
 from .util import Array, Dropout
@@ -140,6 +141,8 @@ class PyTT_Wrapper(PyTorchWrapper):
             lr=sgd.alpha,
             eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
+            weight_decay=getattr(sgd, "pytt_weight_decay", 0.0)
         )
+        optimizer = SWA(optimizer, swa_start=1, swa_freq=10, swa_lr=sgd.alpha)
         optimizer.zero_grad()
         return optimizer
