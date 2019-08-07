@@ -7,6 +7,7 @@ from spacy.util import minibatch
 from spacy.tokens import Doc, Span
 
 from .wrapper import PyTT_Wrapper
+from .reshape import foreach_sentence, with_length_batching, truncate_long_inputs
 from .util import get_pytt_config, get_pytt_model
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
 from .util import pad_batch_activations
@@ -55,33 +56,25 @@ class PyTT_TokenVectorEncoder(Pipe):
         RETURNS (thinc.neural.Model): The wrapped model.
         """
         name = cfg.get("pytt_name")
+        pytt_config = cfg["pytt_config"]
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
-            pytt_model = PyTT_Wrapper.from_pretrained(name)
+            pytt_wrap = PyTT_Wrapper.from_pretrained(name)
         else:
             # Work around floating point limitation in ujson:
             # If we have the setting cfg["pytt_config"]["layer_norm_eps"] as 0,
             # that's because of misprecision in serializing. Fix that.
-            cfg["pytt_config"]["layer_norm_eps"] = 1e-12
+            pytt_config["layer_norm_eps"] = 1e-12
             config_cls = get_pytt_config(name)
             model_cls = get_pytt_model(name)
-            model = model_cls(config_cls(**cfg["pytt_config"]))
-            pytt_model = PyTT_Wrapper(name, cfg["pytt_config"], model)
+            pytt_wrap = PyTT_Wrapper(name, pytt_config, model_cls(config_cls(**pytt_config)))
         nO = pytt_model.nO
-        batch_by_length = cfg.get("words_per_batch", 5000)
-        max_length = cfg.get("max_length", 512)
-        model = foreach_sentence(
-            chain(
-                get_word_pieces,
-                with_length_batching(
-                    truncate_long_inputs(pytt_model, max_length), batch_by_length
-                ),
-            )
-        )
-        setattr(model, "nO", nO)
-        setattr(model, "_model", pytt_model)
-        return model
+        make_model = get_model_function(cfg.get("architecture", "tok2vec_per_sentence"))
+        model = make_model(pytt_wrap, words_per_batch, max_length, cfg)
+    setattr(model, "nO", nO)
+    setattr(model, "_model", pytt_wrap)
+    return model
 
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.
@@ -256,6 +249,3 @@ def get_word_pieces(sents, drop=0.0):
             # Empty slice.
             outputs.append(sent.doc._.pytt_word_pieces[0:0])
     return outputs, None
-
-
-
