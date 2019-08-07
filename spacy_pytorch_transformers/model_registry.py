@@ -43,7 +43,7 @@ def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
             0, chain(Affine(cfg["token_vector_width"], cfg["token_vector_width"]), tanh)
         ),
         Pooling(mean_pool),
-        Softmax(2, cfg["token_vector_width"])
+        Softmax(2, cfg["token_vector_width"]),
     )
 
 
@@ -57,8 +57,7 @@ def fine_tune_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
     return chain(
         get_pytt_pooler_output,
         flatten_add_lengths,
-        with_getitem(0,
-            Softmax(nr_class, cfg["token_vector_width"])),
+        with_getitem(0, Softmax(nr_class, cfg["token_vector_width"])),
         Pooling(mean_pool),
     )
 

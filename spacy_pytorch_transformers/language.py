@@ -133,7 +133,7 @@ class PyTT_Language(Language):
             component.begin_training(pipeline=self.pipeline, sgd=False, **cfg)
             assert component.model is not True
         optimizer = super().resume_training(sgd=sgd, **kwargs)
-        optimizer.L2 = 0.
+        optimizer.L2 = 0.0
         return optimizer
 
 

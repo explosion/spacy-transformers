@@ -169,7 +169,7 @@ def get_pytt_tokenizer(name):
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
-def pad_batch(batch: List[Array], *, xp=numpy, to: int=0, value=-1) -> Array:
+def pad_batch(batch: List[Array], *, xp=numpy, to: int = 0, value=-1) -> Array:
     """Pad a batch with zeros so that sequences are the same length, and form
     them into a single array.
     """
@@ -277,6 +277,8 @@ def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
         if step < warmup_steps:
             factor = step / max(1, warmup_steps)
         else:
-            factor = max(0., (total_steps - step) / max(1., total_steps - warmup_steps))
+            factor = max(
+                0.0, (total_steps - step) / max(1.0, total_steps - warmup_steps)
+            )
         yield factor * initial_rate
         step += 1

@@ -152,7 +152,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             lr=sgd.alpha,
             eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
-            weight_decay=getattr(sgd, "pytt_weight_decay", 0.0)
+            weight_decay=getattr(sgd, "pytt_weight_decay", 0.0),
         )
         if getattr(sgd, "pytt_use_swa", False):
             optimizer = SWA(optimizer, swa_start=1, swa_freq=10, swa_lr=sgd.alpha)
