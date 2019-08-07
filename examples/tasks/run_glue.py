@@ -165,6 +165,7 @@ def main(
     )
     optimizer.alpha = next(learn_rates)
     optimizer.pytt_weight_decay = HP.weight_decay
+    optimizer.pytt_use_swa = True
     step = 0
     for i in range(HP.num_train_epochs):
         if step >= HP.max_steps:
@@ -179,13 +180,8 @@ def main(
             if step >= HP.max_steps:
                 break
             if HP.eval_every != 0 and (step % HP.eval_every) == 0:
-                pytt_opt = nlp.get_pipe("pytt_tok2vec").model._model._optimizer
-                if HP.use_swa:
-                    pytt_opt.swap_swa_sgd()
                 with nlp.use_params(optimizer.averages):
                     main_score, accuracies = evaluate(nlp, task, dev_data)
-                if HP.use_swa:
-                    pytt_opt.swap_swa_sgd()
                 msg.row(
                     [str(step), "%.2f" % losses["pytt_textcat"], main_score],
                     widths=table_widths,
