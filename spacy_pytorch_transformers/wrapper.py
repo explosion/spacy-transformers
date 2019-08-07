@@ -1,12 +1,11 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch
-from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
+from pytorch_transformers.optimization import AdamW
 import pytorch_transformers as pytt
 import torch.autograd
 import torch.nn.utils.clip_grad
 import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
-from thinc.neural.util import get_array_module
 import numpy
 from torchcontrib.optim import SWA
 
@@ -97,7 +96,11 @@ class PyTT_Wrapper(PyTorchWrapper):
                 dy_for_bwd.append(xp2torch(d_output.lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                dy_for_bwd.append(xp2torch(d_output.po).reshape((d_output.po.shape[0], d_output.po.shape[2])))
+                dy_for_bwd.append(
+                    xp2torch(d_output.po).reshape(
+                        (d_output.po.shape[0], d_output.po.shape[2])
+                    )
+                )
                 y_for_bwd.append(y_var[1])
             if d_output.has_ah:
                 raise ValueError("Gradients on all hidden states not supported yet.")
@@ -135,7 +138,11 @@ class PyTT_Wrapper(PyTorchWrapper):
             mask[neg_idx] = 0
             mask = xp2torch(mask)
             segment_ids = torch.zeros_like(ids)
-            return {"input_ids": ids, "attention_mask": mask, "token_type_ids": segment_ids}
+            return {
+                "input_ids": ids,
+                "attention_mask": mask,
+                "token_type_ids": segment_ids,
+            }
         else:
             return {"input_ids": ids}
 
