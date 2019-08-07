@@ -69,8 +69,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             model = model_cls(config_cls(**cfg["pytt_config"]))
             pytt_model = PyTT_Wrapper(name, cfg["pytt_config"], model)
         nO = pytt_model.nO
-        batch_by_length = cfg.get("words_per_batch", 0)
-        max_length = cfg.get("max_length", 128)
+        batch_by_length = cfg.get("words_per_batch", 5000)
+        max_length = cfg.get("max_length", 512)
         model = foreach_sentence(
             chain(
                 get_word_pieces,
@@ -280,6 +280,7 @@ def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
         X_short = X[:, :max_len]
         Y_short, get_dX_short = model.begin_update(X_short, drop=drop)
         outputs = pad_batch_activations([Y_short], to=X.shape[1])
+        assert outputs.lh.shape == (X.shape[0], X.shape[1], Y_short.lh.shape[-1]), (X.shape, outputs.lh.shape)
 
         def with_truncate_backward(dY, sgd=None):
             dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
@@ -307,7 +308,12 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
     def apply_model_padded(
         inputs: Input, drop: Dropout = 0.0
     ) -> Tuple[Output, Backprop]:
-        activs, get_dX = model_begin_update(pad_batch(inputs), drop)
+        padded_inputs = pad_batch(inputs)
+        activs, get_dX = model_begin_update(padded_inputs, drop)
+        if activs.has_lh:
+            max_len = max(len(x) for x in inputs)
+            assert activs.lh.shape[0] == len(inputs), (activs.lh.shape, len(inputs), max_len)
+            assert activs.lh.shape[1] == max_len, (activs.lh.shape, max_len)
         if activs.has_po:
             assert activs.po.shape[0] == len(inputs)
         outputs = [
@@ -318,7 +324,7 @@ def without_length_batching(model: PyTT_Wrapper, _: Any) -> Model:
         def backprop_batched(d_outputs, sgd=None):
             d_activs = pad_batch_activations(d_outputs)
             if d_activs.has_lh:
-                assert d_activs.lh.shape == shapes[0]
+                assert d_activs.lh.shape == shapes[0], (d_activs.lh.shape, shapes[0])
             if d_activs.has_po:
                 assert d_activs.po.shape == shapes[1]
             dX = get_dX(d_activs, sgd=sgd)

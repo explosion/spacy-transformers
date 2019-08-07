@@ -168,27 +168,58 @@ def get_pytt_tokenizer(name):
     else:
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
-
-def pad_batch(batch: List[Array], *, xp=numpy, to: int = 0, value=-1) -> Array:
-    """Pad a batch with zeros so that sequences are the same length, and form
-    them into a single array.
+def pad_batch(batch: List[Array], *, axis: int=0, xp=numpy, to: int = 0, value: int=-1) -> Array:
+    """Pad a batch of arrays with zeros so that sequences are the same
+    length, and form them into a single array.
     """
-    max_len = max((len(seq) for seq in batch), default=0)
+    if not batch:
+        return xp.zeros((0, to))
+
+    if isinstance(batch[0], list):
+        batch = [xp.array(x, dtype=numpy.int_) for x in batch]
+
+    max_len = max((seq.shape[axis] for seq in batch), default=0)
     if to < 1:
         to = max_len
     elif max_len > to:
         raise ValueError(f"Cannot pad_batch with max len {max_len} to {to}.")
+
+    if isinstance(batch[0], list) or len(batch[0].shape) == 1:
+        return _pad_batch_1d(batch, xp=xp, to=to, value=value)
+    else:
+        return _pad_batch_nd(batch, axis=axis, xp=xp, to=to, value=value)
+ 
+
+def _pad_batch_1d(batch: List[Array], *, xp=numpy, to: int, value) -> Array:
+    """Pad a batch of lists or 1d arrays with zeros so that sequences are the same
+    length, and form them into a single array.
+    """
     padded: List[Array] = []
     seq: Array
     values = (0, value)
+    pad_desc = [[0, 0]]
     for seq in batch:
-        # Ugh, numpy.pad sucks.
-        if isinstance(seq, list):
-            pad_desc = [[0, 0]]
-        else:
-            pad_desc = [[0, 0] for _ in seq.shape]
         pad_desc[0][1] = to - len(seq)
         padded.append(xp.pad(seq, pad_desc, mode="constant", constant_values=values))
+    output = xp.vstack(padded)
+    assert output.shape == (len(batch), to), output.shape
+    return output
+
+
+def _pad_batch_nd(batch: List[Array], axis: int, *, xp=numpy, to: int = 0, value=-1) -> Array:
+    padded: List[Array] = []
+    seq: Array
+    values = (0, value)
+    pad_desc = [[0, 0] for _ in batch[0].shape]
+    for seq in batch:
+        # Ugh, numpy.pad sucks.
+        pad_desc[axis][1] = to - seq.shape[axis]
+        arr = xp.pad(seq, pad_desc, mode="constant", constant_values=values)
+        if len(arr.shape) == 2:
+            # This prevents us concatenating on the sequence dimension, when what
+            # we want is to have a new batch dimension.
+            arr = arr.reshape((1, arr.shape[0], arr.shape[1]))
+        padded.append(arr)
     output = xp.vstack(padded)
     return output
 
@@ -197,15 +228,11 @@ def pad_batch_activations(batch: List[Activations], *, to: int = 0) -> Activatio
     if not batch:
         return Activations.blank()
     xp = get_array_module(batch[0])
-    lh = pad_batch([x.lh for x in batch], xp=xp, to=to)
-    if lh.size:
-        lh = lh.reshape((len(batch), -1, lh.shape[-1]))
+    lh = pad_batch([x.lh for x in batch], xp=xp, to=to, axis=-2)
     po = pad_batch([x.po for x in batch], xp=xp)
-    if po.size:
-        po = po.reshape((-1, 1, po.shape[-1]))
     # Transpose the lists, and then pad_batch the items
-    ah = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.ah for x in batch])]
-    aa = [pad_batch(list(seq), xp=xp, to=to) for seq in zip(*[x.aa for x in batch])]
+    ah = [pad_batch(list(seq), xp=xp, to=to, axis=1) for seq in zip(*[x.ah for x in batch])]
+    aa = [pad_batch(list(seq), xp=xp, to=to, axis=1) for seq in zip(*[x.aa for x in batch])]
     return Activations(lh, po, ah, aa, is_grad=batch[0].is_grad)
 
 
