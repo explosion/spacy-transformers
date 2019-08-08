@@ -1,7 +1,13 @@
-from thinc.api import layerize, chain, flatten_add_lengths, with_getitem
+from thinc.api import wrap, layerize, chain, flatten_add_lengths, with_getitem
 from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax, Affine, Model
 from thinc.neural.util import get_array_module
+from spacy.tokens import Span, Doc
+
+from .wrapper import PyTT_Wrapper
+from .util import Array, Tuple, Callable, Dropout, List, Optional, Optimizer
+from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
+from .activations import Activations as Acts
 
 
 REGISTRY = {}
@@ -119,7 +125,6 @@ def get_pytt_pooler_output(docs, drop=0.0):
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
-        total_grads = []
         for doc, dY in zip(docs, d_outputs):
             if doc._.pytt_d_pooler_output.size == 0:
                 xp = get_array_module(doc._.pytt_pooler_output)
@@ -175,6 +180,21 @@ def tanh(X, drop=0.0):
         return dX
 
     return Y, backprop_tanh
+
+
+@layerize
+def get_word_pieces(sents, drop=0.0):
+    assert isinstance(sents[0], Span)
+    outputs = []
+    for sent in sents:
+        wp_start = sent._.pytt_start
+        wp_end = sent._.pytt_end
+        if wp_start is not None and wp_end is not None:
+            outputs.append(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
+        else:
+            # Empty slice.
+            outputs.append(sent.doc._.pytt_word_pieces[0:0])
+    return outputs, None
 
 
 def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
@@ -244,21 +264,21 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> Model:
         return without_length_batching(model)
 
     def apply_model_to_batches(Xs: List[Array], drop: Dropout = 0.0) -> Tuple[List[Acts], Callable]:
-        batch: List[List[int]] = batch_by_length(Xs, max_words)
+        batches: List[List[int]] = batch_by_length(Xs, max_words)
         # Initialize this, so we can place the outputs back in order.
-        unbatched: List[Optional[Acts]] = [None for _ in inputs]
+        unbatched: List[Optional[Acts]] = [None for _ in Xs]
         backprops = []
         for indices in batches:
-            X: Array = pad_batch([inputs[i] for i in indices])
+            X: Array = pad_batch([Xs[i] for i in indices])
             As, get_dX = model.begin_update(X, drop=drop)
             backprops.append(get_dX)
             for i, j in enumerate(indices):
-                unbatched[j] = As.get_slice(i, slice(0, len(inputs[j])))
+                unbatched[j] = As.get_slice(i, slice(0, len(Xs[j])))
         outputs: List[Acts] = [y for y in unbatched if y is not None]
         assert len(outputs) == len(unbatched)
 
         def backprop_batched(d_outputs: List[Acts], sgd: Optimizer = None):
-            d_inputs = [None for _ in inputs]
+            d_inputs = [None for _ in d_outputs]
             for indices, get_dX in zip(batches, backprops):
                 d_activs = Acts.pad_batch([d_outputs[i] for i in indices])
                 dX = get_dX(d_activs, sgd=sgd)
