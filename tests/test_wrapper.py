@@ -1,9 +1,9 @@
-from spacy_pytorch_transformers.util import get_pytt_tokenizer
-from spacy_pytorch_transformers.activations import Activations
 import numpy
 import pytest
-
 from thinc.neural.optimizers import Adam
+
+from spacy_pytorch_transformers.activations import Activations, RaggedArray
+from spacy_pytorch_transformers.util import get_pytt_tokenizer
 
 
 @pytest.fixture
@@ -16,17 +16,18 @@ def ids(tokenizer):
     text = "the cat sat on the mat"
     return numpy.array(tokenizer.encode(text), dtype=numpy.int_)
 
+@pytest.fixture
+def inputs(ids):
+    return RaggedArray(ids, [len(ids)])
 
 @pytest.fixture
 def model(nlp):
     return nlp.get_pipe("pytt_tok2vec").model._model
 
 
-def test_wrapper_from_pretrained(name, model, ids):
-    outputs, backprop = model.begin_update(ids.reshape((1, -1)))
+def test_wrapper_from_pretrained(name, model, inputs):
+    outputs, backprop = model.begin_update(inputs)
     assert outputs.has_lh
-    if outputs.has_po:
-        assert hasattr(outputs.po[0], "shape")
     optimizer = Adam(model.ops, 0.001)
-    d_outputs = Activations(outputs.lh, model.ops.allocate((0,0,0)), [], [])
+    d_outputs = Activations(outputs.lh, RaggedArray.blank())
     backprop(d_outputs, sgd=optimizer)
