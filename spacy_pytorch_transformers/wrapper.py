@@ -66,7 +66,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def predict(self, inputs: RaggedArray):
         self._model.eval()
-        model_kwargs = self.get_model_kwargs(inputs.data, inputs.lengths)
+        model_kwargs = self.get_model_kwargs(inputs)
         with torch.no_grad():
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
@@ -82,7 +82,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
             return self.predict(inputs), lambda dY, sgd=None: None
-        model_kwargs = self.get_model_kwargs(inputs.data, inputs.lengths)
+        model_kwargs = self.get_model_kwargs(inputs)
         self._model.train()
         # Prepare all the model arguments, including the attention mask
         y_var = self._model(**model_kwargs)
@@ -123,6 +123,8 @@ class PyTT_Wrapper(PyTorchWrapper):
         """Create Activations from the output tuples produced by PyTorch Transformers.
         Includes converting torch tensors to xp, and handling missing values.
         """
+        fields = list(fields)
+        fields[0] = RaggedArray.from_padded(torch2xp(fields[0]), lengths)
         # lh: last hidden
         # po: pooler_output
         # ah: all_hidden
@@ -131,16 +133,16 @@ class PyTT_Wrapper(PyTorchWrapper):
             lh = fields[0]
             po = RaggedArray.blank()
         else:
+            if isinstance(fields[1], tuple):
+                fields[1] = RaggedArray.blank()
+            else:
+                fields[1] = RaggedArray(torch2xp(fields[1]), [1] * len(lengths))
             lh, po, _, _2 = fields
         # Convert last_hidden_state to xp
-        lh = RaggedArray.from_padded(torch2xp(lh), lengths)
-        po = RaggedArray(torch2xp(po), [1 for _ in lengths])
         return Activations(lh, po)
 
-    def get_model_kwargs(self, ids, lengths):
-        if isinstance(ids, list):
-            ids = numpy.array(ids, dtype=numpy.int_)
-        ids = ids.to_padded()
+    def get_model_kwargs(self, inputs):
+        ids = inputs.to_padded()
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0
