@@ -1,11 +1,13 @@
-from spacy.pipeline import Pipe
+from typing import Any, List
 from thinc.neural.ops import get_array_module
+from spacy.pipeline import Pipe
+from spacy.tokens import Doc
+from spacy.vocab import Vocab
 from spacy.util import minibatch
-from typing import Any
 
 from ..wrapper import PyTT_Wrapper
 from ..model_registry import get_model_function
-from ..activations import Activations
+from ..activations import Activations, RaggedArray
 from ..util import get_pytt_config, get_pytt_model
 
 
@@ -27,7 +29,7 @@ class PyTT_TokenVectorEncoder(Pipe):
         return cls(nlp.vocab, **cfg)
 
     @classmethod
-    def from_pretrained(cls, vocab, name, **cfg):
+    def from_pretrained(cls, vocab: Vocab, name: str, **cfg):
         """Create a PyTT_TokenVectorEncoder instance using pre-trained weights
         from a PyTorch Transformer model, even if it's not installed as a
         spaCy package.
@@ -125,14 +127,10 @@ class PyTT_TokenVectorEncoder(Pipe):
         def finish_update(docs, sgd=None):
             gradients = []
             for doc in docs:
-                gradients.append(
-                    Activations(
-                        doc._.pytt_d_last_hidden_state,
-                        doc._.pytt_d_pooler_output,
-                        [],
-                        [],
-                    )
-                )
+                length = len(doc._.pytt_word_pieces)
+                d_lh = RaggedArray(doc._.pytt_d_last_hidden_state, [length])
+                d_po = RaggedArray(doc._.pytt_d_pooler_output, [1])
+                gradients.append(Activations(d_lh, d_po))
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
@@ -150,22 +148,21 @@ class PyTT_TokenVectorEncoder(Pipe):
         """
         return self.model.predict(docs)
 
-    def set_annotations(self, docs, activations):
+    def set_annotations(self, docs: List[Doc], activations: Activations):
         """Assign the extracted features to the Doc objects and overwrite the
         vector and similarity hooks.
 
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        for doc, doc_acts in zip(docs, activations):
-            xp = get_array_module(doc_acts.lh)
+        xp = activations.xp
+        for i, doc in enumerate(docs):
             # Make it 2d -- acts are always 3d, to represent batch size.
-            wp_tensor = doc_acts.lh.reshape((-1, doc_acts.lh.shape[-1]))
+            wp_tensor = activations.lh.get(i)
+            pooler_output = activations.po.get(i)
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
-            doc._.pytt_pooler_output = doc_acts.po
-            doc._.pytt_all_hidden_states = doc_acts.ah
-            doc._.pytt_all_attentions = doc_acts.aa
+            doc._.pytt_pooler_output = pooler_output
             doc._.pytt_d_last_hidden_state = xp.zeros((0,0), dtype=wp_tensor.dtype)
             doc._.pytt_d_pooler_output = xp.zeros((0,0), dtype=wp_tensor.dtype)
             doc._.pytt_d_all_hidden_states = []
