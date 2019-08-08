@@ -1,7 +1,8 @@
 from thinc.neural.util import get_array_module
 from dataclasses import dataclass
+import numpy
 
-from .util import List, Array, Union
+from .util import List, Array, Union, Any
 from .util import pad_batch, ensure3d
 
 
@@ -14,7 +15,9 @@ class Activations:
 
     @classmethod
     def blank(cls, *, xp=numpy):
-        return cls(xp.zeros((0,0,0), dtype="f"), xp.zeros((0,0,0), dtype="f"), [], [])
+        return cls(
+            xp.zeros((0, 0, 0), dtype="f"), xp.zeros((0, 0, 0), dtype="f"), [], []
+        )
 
     @classmethod
     def join(cls, sub_acts: List["Activations"]) -> "Activations":
@@ -30,14 +33,17 @@ class Activations:
         return cls(lh, po, ah, aa)
 
     @classmethod
-    def pad_batch(cls, batch: List[Activations], *, to: int = 0) -> Activations:
+    def pad_batch(cls, batch: List["Activations"], *, to: int = 0) -> "Activations":
         if not batch:
             return Activations.blank()
         xp = get_array_module(batch[0])
         lh = pad_batch([x.lh for x in batch], xp=xp, to=to, axis=-2)
         po = pad_batch([x.po for x in batch], xp=xp)
         # Transpose the lists, and then pad_batch the items
-        ah = [pad_batch(list(seq), xp=xp, to=to, axis=1) for seq in zip(*[x.ah for x in batch])]
+        ah = [
+            pad_batch(list(seq), xp=xp, to=to, axis=1)
+            for seq in zip(*[x.ah for x in batch])
+        ]
         # TODO: Support aa
         aa = []
         return Activations(lh, po, ah, aa)
@@ -63,14 +69,13 @@ class Activations:
         else:
             ah = [[] for _ in lengths]
         # TODO: Support aa
-        aa = [[]  for _ in lengths]
+        aa = [[] for _ in lengths]
         assert len(lh) == len(po) == len(ah) == len(aa)
         # Make an Activations object for each subsequence.
         all_args = zip(lh, po, ah, aa)
         return [Activations(*args) for args in all_args]
 
     def untruncate(self, to: int) -> "Activations":
-        xp = self.xp
         raise NotImplementedError
 
     @property
