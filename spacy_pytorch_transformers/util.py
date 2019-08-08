@@ -1,8 +1,5 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
-from dataclasses import dataclass
 import pytorch_transformers as pytt
-from thinc.neural.ops import get_array_module
-from thinc.extra.wrappers import torch2xp
 import numpy
 
 from . import _tokenizers
@@ -127,7 +124,7 @@ def _pad_batch_nd(batch: List[Array], axis: int, *, xp=numpy, to: int = 0, value
 
 
 def batch_by_length(
-    seqs: Union[List[Array], List[Activations]], max_words: int
+    seqs: Union[List[Array], List["Activations"]], max_words: int
 ) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
@@ -199,7 +196,6 @@ def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
     period, and then a linear decline. Used for learning rates.
     """
     step = 0
-    lr = initial_rate
     while True:
         if step < warmup_steps:
             factor = step / max(1, warmup_steps)
