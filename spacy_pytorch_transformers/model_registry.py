@@ -294,7 +294,6 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> Model:
                     for i, j in enumerate(indices):
                         # As above, put things back in order, unpad.
                         d_inputs[j] = dX[i, : len(d_outputs[j])]
-            assert not any(dx is None for dx in d_inputs)
             return d_inputs
 
         return outputs, backprop_batched
