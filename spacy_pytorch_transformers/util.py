@@ -67,7 +67,9 @@ def get_pytt_tokenizer(name):
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
 
-def pad_batch(batch: List[Array], *, axis: int=0, xp=numpy, to: int = 0, value: int=-1) -> Array:
+def pad_batch(
+    batch: List[Array], *, axis: int = 0, xp=numpy, to: int = 0, value: int = -1
+) -> Array:
     """Pad a batch of arrays with zeros so that sequences are the same
     length, and form them into a single array.
     """
@@ -87,7 +89,7 @@ def pad_batch(batch: List[Array], *, axis: int=0, xp=numpy, to: int = 0, value: 
         return _pad_batch_1d(batch, xp=xp, to=to, value=value)
     else:
         return _pad_batch_nd(batch, axis=axis, xp=xp, to=to, value=value)
- 
+
 
 def _pad_batch_1d(batch: List[Array], *, xp=numpy, to: int, value) -> Array:
     """Pad a batch of lists or 1d arrays with zeros so that sequences are the same
@@ -105,7 +107,9 @@ def _pad_batch_1d(batch: List[Array], *, xp=numpy, to: int, value) -> Array:
     return output
 
 
-def _pad_batch_nd(batch: List[Array], axis: int, *, xp=numpy, to: int = 0, value=-1) -> Array:
+def _pad_batch_nd(
+    batch: List[Array], axis: int, *, xp=numpy, to: int = 0, value=-1
+) -> Array:
     padded: List[Array] = []
     seq: Array
     values = (0, value)
@@ -158,7 +162,7 @@ def batch_by_length(
     return batches
 
 
-def ensure3d(arr: Array, *, axis: int=1) -> Array:
+def ensure3d(arr: Array, *, axis: int = 1) -> Array:
     """Make sure an array is 3d, inserting a dimension at axis if not."""
     if len(arr.shape) == 3:
         return arr
