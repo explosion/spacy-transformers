@@ -31,10 +31,10 @@ def test_set_annotations(tok2vec, docs):
     for doc in docs:
         assert doc._.pytt_last_hidden_state is not None
         assert doc._.pytt_pooler_output is not None
-        assert doc._.pytt_all_hidden_states is not None
         assert doc._.pytt_d_last_hidden_state is not None
         assert doc._.pytt_d_last_hidden_state.ndim == 2
         assert doc._.pytt_d_pooler_output.ndim == 2
+
 
 def test_begin_finish_update(tok2vec, docs):
     scores, finish_update = tok2vec.begin_update(docs)
