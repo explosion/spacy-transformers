@@ -34,6 +34,9 @@ class RaggedArray:
     @property
     def dtype(self):
         return self.data.dtype
+    
+    def to_padded(self, value=0) -> Array:
+        raise NotImplementedError
 
 
 @dataclass
