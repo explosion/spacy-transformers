@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy
 
 from .util import List, Array, Union
-from .util import lengths2mask
+from .util import lengths2mask, pad_batch
 
 
 @dataclass
@@ -36,7 +36,7 @@ class RaggedArray:
         return self.data.dtype
     
     def to_padded(self, value=0) -> Array:
-        raise NotImplementedError
+        return pad_batch([self.data], to=max(self.lengths, default=0), value=value)
 
 
 @dataclass
