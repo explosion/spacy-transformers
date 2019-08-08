@@ -160,7 +160,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         """
         for doc, doc_acts in zip(docs, activations):
             xp = get_array_module(doc_acts.lh)
-            wp_tensor = doc_acts.lh
+            # Make it 2d -- acts are always 3d, to represent batch size.
+            wp_tensor = doc_acts.lh.reshape((-1, doc_acts.lh.shape[-1]))
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
             doc._.pytt_pooler_output = doc_acts.po
