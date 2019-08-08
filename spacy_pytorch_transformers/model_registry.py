@@ -1,9 +1,10 @@
+from typing import Tuple, Callable, List, Optional
 from thinc.api import wrap, layerize, chain, flatten_add_lengths, with_getitem
 from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax, Affine, Model
 from thinc.neural.util import get_array_module
 from spacy.tokens import Span, Doc
-from typing import Tuple, Callable, List, Optional
+import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
@@ -45,7 +46,6 @@ def tok2vec_per_sentence(pytt_model, cfg):
     model = foreach_sentence(
         chain(
             get_word_pieces,
-            pytt_model,
             without_length_batching(
                 truncate_long_inputs(pytt_model, max_length)
             ),
@@ -189,16 +189,17 @@ def tanh(X, drop=0.0):
 @layerize
 def get_word_pieces(sents, drop=0.0):
     assert isinstance(sents[0], Span)
-    outputs = []
+    ids = []
+    lengths = []
     for sent in sents:
         wp_start = sent._.pytt_start
         wp_end = sent._.pytt_end
         if wp_start is not None and wp_end is not None:
-            outputs.append(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
+            ids.extend(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
+            lengths.append((wp_end+1)-wp_start)
         else:
-            # Empty slice.
-            outputs.append(sent.doc._.pytt_word_pieces[0:0])
-    return outputs, None
+            lengths.append(0)
+    return RaggedArray(numpy.array(ids, dtype=numpy.int_), lengths), None
 
 
 def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
@@ -214,8 +215,9 @@ def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
 
 def without_length_batching(model: PyTT_Wrapper) -> PyTT_Wrapper:
 
-    def apply_model_unpadded(ids_lengths, drop=0.):
-        return model.begin_update(ids_lengths, drop=drop)
+    def apply_model_unpadded(inputs: RaggedArray, drop=0.) -> Tuple[Acts, Callable]:
+        assert isinstance(inputs, RaggedArray)
+        return model.begin_update(inputs, drop=drop)
 
     return wrap(apply_model_unpadded, model)
 
@@ -226,8 +228,8 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
 
     def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
         sents = flatten_list([list(doc.sents) for doc in docs])
-        words_per_doc = [len(d) for d in docs]
-        words_per_sent = [len(sent) for sent in sents]
+        words_per_doc = [len(d._.pytt_word_pieces) for d in docs]
+        words_per_sent = [len(s._.pytt_word_pieces) for s in sents]
         sents_per_doc = [len(list(d.sents)) for d in docs]
         acts, bp_acts = layer.begin_update(sents, drop=drop)
         # To go from "per sentence" activations to "per doc" activations, we
