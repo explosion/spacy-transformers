@@ -66,7 +66,6 @@ def get_pytt_tokenizer(name):
     else:
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
-
 def pad_batch(
     batch: List[Array], *, axis: int = 0, xp=numpy, to: int = 0, value: int = -1
 ) -> Array:
@@ -219,3 +218,6 @@ def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
             )
         yield factor * initial_rate
         step += 1
+
+
+from .activations import Activations
