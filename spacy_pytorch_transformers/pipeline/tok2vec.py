@@ -63,7 +63,9 @@ class PyTT_TokenVectorEncoder(Pipe):
             pytt_config["layer_norm_eps"] = 1e-12
             config_cls = get_pytt_config(name)
             model_cls = get_pytt_model(name)
-            pytt_wrap = PyTT_Wrapper(name, pytt_config, model_cls(config_cls(**pytt_config)))
+            pytt_wrap = PyTT_Wrapper(
+                name, pytt_config, model_cls(config_cls(**pytt_config))
+            )
         make_model = get_model_function(cfg.get("architecture", "tok2vec_per_sentence"))
         model = make_model(pytt_wrap, cfg)
         setattr(model, "nO", pytt_wrap.nO)
