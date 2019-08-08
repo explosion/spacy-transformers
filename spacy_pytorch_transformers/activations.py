@@ -12,11 +12,14 @@ class Activations:
     po: Array
     ah: List[Array]
     aa: List[Array]
+    wlengths: List[int]
+    slengths: List[int]
 
     @classmethod
     def blank(cls, *, xp=numpy):
         return cls(
-            xp.zeros((0, 0, 0), dtype="f"), xp.zeros((0, 0, 0), dtype="f"), [], []
+            xp.zeros((0, 0), dtype="f"), xp.zeros((0, 0), dtype="f"),
+            [], [], [], []
         )
 
     @classmethod
@@ -51,10 +54,10 @@ class Activations:
     def __len__(self) -> int:
         return len(self.lh)
 
-    def get_slice(self, x, y) -> "Activations":
-        lh = ensure3d(self.lh[x, y])
-        po = ensure3d(self.po[x] if self.has_po else self.po)
-        ah = [ensure3d(self.ah[i][x, y]) for i in range(len(self.ah))]
+    def get_slice(self, batch, word_slice, sent_slice) -> "Activations":
+        lh = ensure3d(self.lh[batch, word_slice])
+        po = ensure3d(self.po[batch, sent_slice] if self.has_po else self.po)
+        ah = [ensure3d(self.ah[i][batch, word_slice]) for i in range(len(self.ah))]
         # TODO: Support aa
         aa = []
         return Activations(lh, po, ah, aa)
@@ -63,6 +66,7 @@ class Activations:
         """Split into a list of Activation objects."""
         lh = ops.unflatten(self.lh, lengths)
         po = ops.unflatten(self.po, lengths)
+        print("lh", [x.shape for x in lh], "po", [x.shape for x in po])
         # Transpose the lists, so that the outer list refers to the subsequences
         if self.ah:
             ah = list(zip(*[ops.unflatten(x, lengths) for x in self.ah]))
