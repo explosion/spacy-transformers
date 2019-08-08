@@ -62,7 +62,7 @@ class Activations:
         return cls(RaggedArray.blank(xp=xp), RaggedArray.blank(xp=xp))
 
     @property
-    def xp(self) -> Union["numpy", "cupy"]:
+    def xp(self):
         return self.lh.xp
 
     @property
