@@ -39,7 +39,7 @@ def get_model_function(name: str):
 def tok2vec_per_sentence(pytt_model, cfg):
     batch_by_length = cfg.get("words_per_batch", 5000)
     max_length = cfg.get("max_length", 512)
-    
+
     model = foreach_sentence(
         chain(
             get_word_pieces,
@@ -49,6 +49,7 @@ def tok2vec_per_sentence(pytt_model, cfg):
         )
     )
     return model
+
 
 @register_model("fine_tune_class_vector")
 def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
@@ -202,16 +203,17 @@ def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
     the way out.
     """
 
-    def with_truncate_forward(
-        X: Array, drop: Dropout = 0.0
-    ) -> Tuple[Acts, Callable]:
+    def with_truncate_forward(X: Array, drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
         # Dim 1 should be batch, dim 2 sequence length
         if X.shape[1] < max_len:
             return model.begin_update(X, drop=drop)
         X_short = X[:, :max_len]
         Y_short, get_dX_short = model.begin_update(X_short, drop=drop)
         outputs = Y_short.untruncate(X.shape[1])
-        assert outputs.lh.shape == (X.shape[0], X.shape[1], Y_short.lh.shape[-1]), (X.shape, outputs.lh.shape)
+        assert outputs.lh.shape == (X.shape[0], X.shape[1], Y_short.lh.shape[-1]), (
+            X.shape,
+            outputs.lh.shape,
+        )
 
         def with_truncate_backward(dY, sgd=None):
             dY_short = dY.get_slice(slice(0, None), slice(0, max_len))
@@ -236,7 +238,10 @@ def without_length_batching(model: PyTT_Wrapper) -> Model:
     as input, and return Activations as output. The wrapped model takes a List[Array]
     as input, and returns a List[Activations] as output.
     """
-    def apply_model_padded(Xs: List[Array], drop: Dropout = 0.0) -> Tuple[List[Acts], Callable]:
+
+    def apply_model_padded(
+        Xs: List[Array], drop: Dropout = 0.0
+    ) -> Tuple[List[Acts], Callable]:
         X = pad_batch(Xs)
         A, get_dX = model.begin_update(X, drop=drop)
         As = [A.get_slice(i, slice(0, len(x))) for i, x in enumerate(Xs)]
@@ -263,7 +268,9 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> Model:
     if max_words < 1:
         return without_length_batching(model)
 
-    def apply_model_to_batches(Xs: List[Array], drop: Dropout = 0.0) -> Tuple[List[Acts], Callable]:
+    def apply_model_to_batches(
+        Xs: List[Array], drop: Dropout = 0.0
+    ) -> Tuple[List[Acts], Callable]:
         batches: List[List[int]] = batch_by_length(Xs, max_words)
         # Initialize this, so we can place the outputs back in order.
         unbatched: List[Optional[Acts]] = [None for _ in Xs]
