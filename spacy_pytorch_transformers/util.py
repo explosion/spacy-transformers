@@ -1,9 +1,15 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
+from types import ModuleType
 import pytorch_transformers as pytt
 import numpy
 
 from . import _tokenizers
 
+try:
+    # This allows us to use cupy with mypy, for type checking
+    import cupy
+except ImportError:
+    pass
 
 Array = Union["numpy.ndarray", "cupy.ndarray"]
 Optimizer = Callable[[Array, Array, Optional[int]], None]
@@ -127,8 +133,7 @@ def _pad_batch_nd(
 
 
 def batch_by_length(
-    seqs: Union[List[Array], List["Activations"]], max_words: int
-) -> List[List[int]]:
+    seqs: Union[List[Array]], max_words: int) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
     may be at most max_words in size, defined as max sequence length * size.
