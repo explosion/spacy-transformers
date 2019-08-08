@@ -9,6 +9,7 @@ from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
 from .activations import Activations as Acts
+from .activations import RaggedArray
 
 
 REGISTRY = {}
@@ -223,7 +224,7 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
     ops = layer.ops
 
-    def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Backprop]:
+    def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
         sents = flatten_list([list(doc.sents) for doc in docs])
         words_per_doc = [len(d) for d in docs]
         words_per_sent = [len(sent) for sent in sents]
