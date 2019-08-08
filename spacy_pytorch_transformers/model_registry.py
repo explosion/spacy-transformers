@@ -52,10 +52,10 @@ def tok2vec_per_sentence(pytt_model, cfg):
     return model
 
 
-@register_model("fine_tune_class_vector")
-def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
+@register_model("softmax_class_vector")
+def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     """Select features from the class-vectors from the last hidden state,
-    softmax them, and then mean-pool them to produce one feature per vector.
+    mean-pool them, and softmax to produce one vector per document.
     The gradients of the class vectors are incremented in the backward pass,
     to allow fine-tuning.
     """
@@ -70,12 +70,12 @@ def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     )
 
 
-@register_model("fine_tune_pooler_output")
-def fine_tune_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
-    """Select features from the class-vectors from the last hidden state,
-    softmax them, and then mean-pool them to produce one feature per vector.
-    The gradients of the class vectors are incremented in the backward pass,
-    to allow fine-tuning.
+@register_model("softmax_pooler_output")
+def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
+    """Select features from the pooler output, (if necessary) mean-pool them,
+    mean-pool them to produce one vector per softmax them, and then mean-pool
+    them to produce one feature per vector. The gradients of the class vectors
+    are incremented in the backward pass, to allow fine-tuning.
     """
     return chain(
         get_pytt_pooler_output,
@@ -124,7 +124,7 @@ def get_pytt_pooler_output(docs, drop=0.0):
     for each sentence in the document. To backprop, we increment the values
     in the doc._.pytt_d_last_hidden_state array.
     """
-    outputs = [doc._.pytt_pooler_output for doc in docs]
+    outputs = [doc._.pytt_pooler_output.sum(axis=0) for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
         for doc, dY in zip(docs, d_outputs):
