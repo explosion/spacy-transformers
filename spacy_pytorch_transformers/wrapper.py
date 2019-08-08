@@ -11,7 +11,7 @@ from torchcontrib.optim import SWA
 from thinc.neural.util import get_array_module
 
 from .util import get_pytt_model, get_pytt_config
-from .util import Array, Dropout
+from .util import Array, Dropout, pad_batch
 from .activations import Activations
 
 FINE_TUNE = True
@@ -78,31 +78,29 @@ class PyTT_Wrapper(PyTorchWrapper):
         return self.make_activations(y_var)
 
     def begin_update(
-        self, ids: Array, drop: Dropout = 0.0
+        self, ids_lengths: Tuple[Array, Array], drop: Dropout = 0.0
     ) -> Tuple[Activations, Callable[..., None]]:
         if drop is None:
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
-            return self.predict(ids), lambda dY, sgd=None: None
+            return self.predict(ids_lengths), lambda dY, sgd=None: None
+        ids, lengths = ids_lengths
+        model_kwargs = self.get_model_kwargs(ids, lengths)
         self._model.train()
         # Prepare all the model arguments, including the attention mask
-        model_kwargs = self.get_model_kwargs(ids)
         y_var = self._model(**model_kwargs)
-        output = self.make_activations(y_var)
+        output = self.make_activations(y_var, lengths)
         assert output.lh is not None
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_lh:
-                dy_for_bwd.append(xp2torch(d_output.lh))
+                d_lh = pad_batch(d_output.lh, d_output.lengths, value=0)
+                dy_for_bwd.append(xp2torch(d_lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                dy_for_bwd.append(
-                    xp2torch(d_output.po).reshape(
-                        (d_output.po.shape[0], d_output.po.shape[2])
-                    )
-                )
+                dy_for_bwd.append(xp2torch(d_output.po))
                 y_for_bwd.append(y_var[1])
             if d_output.has_ah:
                 raise ValueError("Gradients on all hidden states not supported yet.")
@@ -128,7 +126,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         self._model.eval()
         return output, backward_pytorch
 
-    def make_activations(self, fields) -> Activations:
+    def make_activations(self, fields, lengths) -> Activations:
         """Create Activations from the output tuples produced by PyTorch Transformers.
         Includes converting torch tensors to xp, and handling missing values.
         """
@@ -148,16 +146,17 @@ class PyTT_Wrapper(PyTorchWrapper):
         xp = get_array_module(lh)
         # Normalize "None" value for pooler output
         if isinstance(po, tuple):
-            po = xp.zeros((0,), dtype=lh.dtype)
+            po = xp.zeros((0, 0), dtype=lh.dtype)
         else:
-            po = torch2xp(po).reshape((po.shape[0], 1, po.shape[-1]))
+            po = torch2xp(po)
         ah = list(map(torch2xp, ah))
         aa = list(map(torch2xp, aa))
-        return Activations(lh, po, ah, aa)
+        return Activations(lh, po, ah, aa, lengths, [1 for _ in lengths])
 
-    def get_model_kwargs(self, ids):
+    def get_model_kwargs(self, ids, lengths):
         if isinstance(ids, list):
             ids = numpy.array(ids, dtype=numpy.int_)
+        ids = pad_batch(ids, lengths, value=-1)
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0
