@@ -131,7 +131,6 @@ class PyTT_TokenVectorEncoder(Pipe):
                         doc._.pytt_d_pooler_output,
                         [],
                         [],
-                        is_grad=True,
                     )
                 )
             backprop(gradients, sgd=sgd)
@@ -167,8 +166,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             doc._.pytt_pooler_output = doc_acts.po
             doc._.pytt_all_hidden_states = doc_acts.ah
             doc._.pytt_all_attentions = doc_acts.aa
-            doc._.pytt_d_last_hidden_state = xp.zeros((0,), dtype=wp_tensor.dtype)
-            doc._.pytt_d_pooler_output = xp.zeros((0,), dtype=wp_tensor.dtype)
+            doc._.pytt_d_last_hidden_state = xp.zeros((0,0), dtype=wp_tensor.dtype)
+            doc._.pytt_d_pooler_output = xp.zeros((0,0), dtype=wp_tensor.dtype)
             doc._.pytt_d_all_hidden_states = []
             doc._.pytt_d_all_attentions = []
             if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):
