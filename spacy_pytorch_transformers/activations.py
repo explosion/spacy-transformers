@@ -36,7 +36,20 @@ class RaggedArray:
         return self.data.dtype
     
     def to_padded(self, value=0) -> Array:
-        return pad_batch([self.data], to=max(self.lengths, default=0), value=value)
+        pad_to = max(self.lengths, default=0)
+        values = self.xp.zeros((len(self.lengths), pad_to), dtype=self.dtype)
+        values[:] = value
+        mask = lengths2mask(self.lengths)
+        start = 0
+        for i, length in enumerate(self.lengths):
+            values[i, :length] = self.data[start:start+length]
+            start += length
+        return values
+
+    def get(self, i: int) -> Array:
+        start = sum(self.lengths[:i])
+        end = start + self.lengths[i]
+        return self.data[start : end]
 
 
 @dataclass
