@@ -3,9 +3,10 @@ from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax, Affine, Model
 from thinc.neural.util import get_array_module
 from spacy.tokens import Span, Doc
+from typing import Tuple, Callable, List, Optional
 
 from .wrapper import PyTT_Wrapper
-from .util import Array, Tuple, Callable, Dropout, List, Optional, Optimizer
+from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
 from .activations import Activations as Acts
 

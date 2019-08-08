@@ -1,5 +1,5 @@
 import spacy.pipeline
-from .model_registry import get_model_function
+from ..model_registry import get_model_function
 
 
 class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
