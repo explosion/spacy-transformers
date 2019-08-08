@@ -8,10 +8,9 @@ from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 import numpy
 from torchcontrib.optim import SWA
-from thinc.neural.util import get_array_module
 
 from .util import get_pytt_model, get_pytt_config
-from .util import Array, Dropout, pad_batch
+from .util import Dropout, pad_batch
 from .activations import RaggedArray, Activations
 
 FINE_TUNE = True
@@ -65,47 +64,41 @@ class PyTT_Wrapper(PyTorchWrapper):
     def max_length(self):
         return self.cfg["max_position_embeddings"]
 
-    def predict(self, ids_lengths: RaggedArray):
+    def predict(self, inputs: RaggedArray):
         self._model.eval()
-        ids, lengths = ids_lengths
-        model_kwargs = self.get_model_kwargs(ids, lengths)
+        model_kwargs = self.get_model_kwargs(inputs.data, inputs.lengths)
         with torch.no_grad():
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
             y_var = self._model(**model_kwargs)
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
-        return self.make_activations(y_var)
+        return self.make_activations(y_var, inputs.lengths)
 
     def begin_update(
-        self, ids_lengths: RaggedArray, drop: Dropout = 0.0
+        self, inputs: RaggedArray, drop: Dropout = 0.0
     ) -> Tuple[Activations, Callable[..., None]]:
         if drop is None:
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
-            return self.predict(ids_lengths), lambda dY, sgd=None: None
-        ids, lengths = ids_lengths
-        model_kwargs = self.get_model_kwargs(ids, lengths)
+            return self.predict(inputs), lambda dY, sgd=None: None
+        model_kwargs = self.get_model_kwargs(inputs.data, inputs.lengths)
         self._model.train()
         # Prepare all the model arguments, including the attention mask
         y_var = self._model(**model_kwargs)
-        output = self.make_activations(y_var, lengths)
+        output = self.make_activations(y_var, inputs.lengths)
         assert output.lh is not None
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_lh:
-                d_lh = pad_batch(d_output.lh, d_output.lengths, value=0)
+                d_lh = d_output.lh.to_padded()
                 dy_for_bwd.append(xp2torch(d_lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
                 dy_for_bwd.append(xp2torch(d_output.po))
                 y_for_bwd.append(y_var[1])
-            if d_output.has_ah:
-                raise ValueError("Gradients on all hidden states not supported yet.")
-            if d_output.has_aa:
-                raise ValueError("Gradients on all attentions not supported yet.")
             if FINE_TUNE:
                 torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
                 if sgd is not None:
@@ -136,25 +129,18 @@ class PyTT_Wrapper(PyTorchWrapper):
         # aa: all_attention
         if len(fields) != 4:
             lh = fields[0]
-            po = tuple()
-            ah = []
-            aa = []
+            po = RaggedArray.blank()
         else:
-            lh, po, ah, aa = fields
+            lh, po, _, _2 = fields
         # Convert last_hidden_state to xp
         lh = RaggedArray.from_padded(torch2xp(lh), lengths)
-        xp = get_array_module(lh)
-        # Normalize "None" value for pooler output
-        if isinstance(po, tuple):
-            po = RaggedArray.empty([1 for _ in lengths])
-        else:
-            po = RaggedArray(torch2xp(po), [1 for _ in lengths])
+        po = RaggedArray(torch2xp(po), [1 for _ in lengths])
         return Activations(lh, po)
 
     def get_model_kwargs(self, ids, lengths):
         if isinstance(ids, list):
             ids = numpy.array(ids, dtype=numpy.int_)
-        ids = pad_batch(ids, lengths, value=-1)
+        ids = ids.to_padded()
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0
