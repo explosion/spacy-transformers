@@ -1,4 +1,4 @@
-from thinc.extra.wrappers import PyTorchWrapper, xp2torch
+from thinc.extra.wrappers import PyTorchWrapper, xp2torch, torch2xp
 from pytorch_transformers.optimization import AdamW
 import pytorch_transformers as pytt
 import torch.autograd
@@ -8,9 +8,11 @@ from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 import numpy
 from torchcontrib.optim import SWA
+from thinc.neural.util import get_array_module
 
-from .util import get_pytt_model, get_pytt_config, Activations
+from .util import get_pytt_model, get_pytt_config
 from .util import Array, Dropout
+from .activations import Activations
 
 FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
@@ -73,7 +75,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             y_var = self._model(**model_kwargs)
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
-        return Activations.from_pytt(y_var, is_grad=False)
+        return self.make_activations(y_var)
 
     def begin_update(
         self, ids: Array, drop: Dropout = 0.0
@@ -86,7 +88,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         # Prepare all the model arguments, including the attention mask
         model_kwargs = self.get_model_kwargs(ids)
         y_var = self._model(**model_kwargs)
-        output = Activations.from_pytt(y_var, is_grad=False)
+        output = self.make_activations(y_var)
         assert output.lh is not None
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
@@ -126,7 +128,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         self._model.eval()
         return output, backward_pytorch
 
-    def get_activations(self, fields) -> Activations:
+    def make_activations(self, fields) -> Activations:
         """Create Activations from the output tuples produced by PyTorch Transformers.
         Includes converting torch tensors to xp, and handling missing values.
         """
@@ -155,7 +157,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def get_model_kwargs(self, ids):
         if isinstance(ids, list):
-            ids = numpy.array(ids, dtype=xp.int_)
+            ids = numpy.array(ids, dtype=numpy.int_)
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0
