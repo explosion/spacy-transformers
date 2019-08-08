@@ -44,7 +44,7 @@ def tok2vec_per_sentence(pytt_model, cfg):
     model = foreach_sentence(
         chain(
             get_word_pieces,
-            pytt_model
+            pytt_model,
             without_length_batching(
                 truncate_long_inputs(pytt_model, max_length)
             ),
