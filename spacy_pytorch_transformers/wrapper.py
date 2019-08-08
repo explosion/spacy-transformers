@@ -11,7 +11,7 @@ from torchcontrib.optim import SWA
 from thinc.neural.util import get_array_module
 
 from .util import get_pytt_model, get_pytt_config
-from .util import Array, Dropout, pad_batch
+from .util import Array, Dropout, RaggedArray, pad_batch
 from .activations import Activations
 
 FINE_TUNE = True
@@ -23,7 +23,6 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     _model: Any
     _optimizer: Any
-    _lr_schedule: Any
     cfg: dict
 
     @classmethod
@@ -66,9 +65,10 @@ class PyTT_Wrapper(PyTorchWrapper):
     def max_length(self):
         return self.cfg["max_position_embeddings"]
 
-    def predict(self, ids: Array):
+    def predict(self, ids_lengths: RaggedArray):
         self._model.eval()
-        model_kwargs = self.get_model_kwargs(ids)
+        ids, lengths = ids_lengths
+        model_kwargs = self.get_model_kwargs(ids, lengths)
         with torch.no_grad():
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
@@ -78,7 +78,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         return self.make_activations(y_var)
 
     def begin_update(
-        self, ids_lengths: Tuple[Array, Array], drop: Dropout = 0.0
+        self, ids_lengths: RaggedArray, drop: Dropout = 0.0
     ) -> Tuple[Activations, Callable[..., None]]:
         if drop is None:
             # "drop is None" indicates prediction. It's one of the parts of
@@ -142,16 +142,14 @@ class PyTT_Wrapper(PyTorchWrapper):
         else:
             lh, po, ah, aa = fields
         # Convert last_hidden_state to xp
-        lh = torch2xp(lh)
+        lh = RaggedArray.from_padded(torch2xp(lh), lengths)
         xp = get_array_module(lh)
         # Normalize "None" value for pooler output
         if isinstance(po, tuple):
-            po = xp.zeros((0, 0), dtype=lh.dtype)
+            po = RaggedArray.empty([1 for _ in lengths])
         else:
-            po = torch2xp(po)
-        ah = list(map(torch2xp, ah))
-        aa = list(map(torch2xp, aa))
-        return Activations(lh, po, ah, aa, lengths, [1 for _ in lengths])
+            po = RaggedArray(torch2xp(po), [1 for _ in lengths])
+        return Activations(lh, po)
 
     def get_model_kwargs(self, ids, lengths):
         if isinstance(ids, list):
