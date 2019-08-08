@@ -1,4 +1,5 @@
-from spacy_pytorch_transformers.util import get_pytt_tokenizer, Activations
+from spacy_pytorch_transformers.util import get_pytt_tokenizer
+from spacy_pytorch_transformers.activations import Activations
 import numpy
 import pytest
 
@@ -27,5 +28,5 @@ def test_wrapper_from_pretrained(name, model, ids):
     if outputs.has_po:
         assert hasattr(outputs.po[0], "shape")
     optimizer = Adam(model.ops, 0.001)
-    d_outputs = Activations(outputs.lh, model.ops.allocate((0,)), [], [], is_grad=True)
+    d_outputs = Activations(outputs.lh, model.ops.allocate((0,0,0)), [], [])
     backprop(d_outputs, sgd=optimizer)
