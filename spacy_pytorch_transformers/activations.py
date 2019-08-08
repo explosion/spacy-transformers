@@ -12,6 +12,10 @@ class RaggedArray:
     lengths: List[int]
 
     @classmethod
+    def blank(cls, xp=numpy) -> "RaggedArray":
+        return RaggedArray(xp.zeros((0,), dtype="f"), [])
+
+    @classmethod
     def from_padded(cls, padded: Array, lengths: List[int]) -> "RaggedArray":
         mask = lengths2mask(lengths)
         all_rows = padded.reshape((-1, padded.shape[-1]))
