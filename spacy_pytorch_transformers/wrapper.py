@@ -11,8 +11,8 @@ from torchcontrib.optim import SWA
 from thinc.neural.util import get_array_module
 
 from .util import get_pytt_model, get_pytt_config
-from .util import Array, Dropout, RaggedArray, pad_batch
-from .activations import Activations
+from .util import Array, Dropout, pad_batch
+from .activations import RaggedArray, Activations
 
 FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
