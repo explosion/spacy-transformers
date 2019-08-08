@@ -1,17 +1,12 @@
-from typing import List, Tuple, Callable, Any, Optional
 from spacy.pipeline import Pipe
 from thinc.neural.ops import get_array_module
-from thinc.neural._classes.model import Model
-from thinc.api import chain, layerize, wrap
 from spacy.util import minibatch
-from spacy.tokens import Doc, Span
+from typing import Any
 
-from .wrapper import PyTT_Wrapper
-from .reshape import foreach_sentence, with_length_batching, truncate_long_inputs
-from .util import get_pytt_config, get_pytt_model
-from .util import batch_by_length, pad_batch, flatten_list, unflatten_list, Activations
-from .util import pad_batch_activations
-from .util import Array, Optimizer, Dropout
+from ..wrapper import PyTT_Wrapper
+from ..model_registry import get_model_function
+from ..activations import Activations
+from ..util import get_pytt_config, get_pytt_model
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -56,12 +51,12 @@ class PyTT_TokenVectorEncoder(Pipe):
         RETURNS (thinc.neural.Model): The wrapped model.
         """
         name = cfg.get("pytt_name")
-        pytt_config = cfg["pytt_config"]
         if not name:
             raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
             pytt_wrap = PyTT_Wrapper.from_pretrained(name)
         else:
+            pytt_config = cfg["pytt_config"]
             # Work around floating point limitation in ujson:
             # If we have the setting cfg["pytt_config"]["layer_norm_eps"] as 0,
             # that's because of misprecision in serializing. Fix that.
@@ -69,12 +64,11 @@ class PyTT_TokenVectorEncoder(Pipe):
             config_cls = get_pytt_config(name)
             model_cls = get_pytt_model(name)
             pytt_wrap = PyTT_Wrapper(name, pytt_config, model_cls(config_cls(**pytt_config)))
-        nO = pytt_model.nO
         make_model = get_model_function(cfg.get("architecture", "tok2vec_per_sentence"))
-        model = make_model(pytt_wrap, words_per_batch, max_length, cfg)
-    setattr(model, "nO", nO)
-    setattr(model, "_model", pytt_wrap)
-    return model
+        model = make_model(pytt_wrap, cfg)
+        setattr(model, "nO", pytt_wrap.nO)
+        setattr(model, "_model", pytt_wrap)
+        return model
 
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.
@@ -234,18 +228,3 @@ def get_similarity_via_tensor(doc1, doc2):
     v2 = doc2.vector
     xp = get_array_module(v1)
     return xp.dot(v1, v2) / (doc1.vector_norm * doc2.vector_norm)
-
-
-@layerize
-def get_word_pieces(sents, drop=0.0):
-    assert isinstance(sents[0], Span)
-    outputs = []
-    for sent in sents:
-        wp_start = sent._.pytt_start
-        wp_end = sent._.pytt_end
-        if wp_start is not None and wp_end is not None:
-            outputs.append(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
-        else:
-            # Empty slice.
-            outputs.append(sent.doc._.pytt_word_pieces[0:0])
-    return outputs, None
