@@ -164,7 +164,9 @@ def batch_by_length(
 
 def ensure3d(arr: Array, *, axis: int = 1) -> Array:
     """Make sure an array is 3d, inserting a dimension at axis if not."""
-    if len(arr.shape) == 3:
+    if arr.size == 0:
+        return arr.reshape((0,0,0))
+    elif len(arr.shape) == 3:
         return arr
     elif len(arr.shape) == 2:
         return arr.reshape((arr.shape[0], 1, arr.shape[1]))
