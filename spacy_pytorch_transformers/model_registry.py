@@ -238,6 +238,7 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
         acts.po.lengths = sents_per_doc
 
         def sentence_bwd(d_acts: Acts, sgd: Optional[Optimizer] = None) -> None:
+            assert isinstance(d_acts, Acts)
             # Translate back to the per-sentence activations
             d_acts.lh.lengths = words_per_sent
             d_acts.po.lengths = [1 for _ in words_per_sent]

@@ -37,9 +37,9 @@ class RaggedArray:
     
     def to_padded(self, value=0) -> Array:
         pad_to = max(self.lengths, default=0)
-        values = self.xp.zeros((len(self.lengths), pad_to), dtype=self.dtype)
+        shape = (len(self.lengths), pad_to) + self.data.shape[1:]
+        values = self.xp.zeros(shape, dtype=self.dtype)
         values[:] = value
-        mask = lengths2mask(self.lengths)
         start = 0
         for i, length in enumerate(self.lengths):
             values[i, :length] = self.data[start:start+length]

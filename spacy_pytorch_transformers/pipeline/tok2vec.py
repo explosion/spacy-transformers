@@ -125,12 +125,20 @@ class PyTT_TokenVectorEncoder(Pipe):
         outputs, backprop = self.model.begin_update(docs, drop=drop)
 
         def finish_update(docs, sgd=None):
-            gradients = []
+            assert len(docs)
+            d_lh = []
+            d_po = []
+            words_per_doc = []
+            sents_per_doc = []
             for doc in docs:
-                length = len(doc._.pytt_word_pieces)
-                d_lh = RaggedArray(doc._.pytt_d_last_hidden_state, [length])
-                d_po = RaggedArray(doc._.pytt_d_pooler_output, [1])
-                gradients.append(Activations(d_lh, d_po))
+                d_lh.append(doc._.pytt_d_last_hidden_state)
+                d_po.append(doc._.pytt_d_pooler_output)
+                words_per_doc.append(len(doc._.pytt_word_pieces))
+                sents_per_doc.append(len(list(doc.sents)))
+            xp = self.model.ops.xp
+            gradients = Activations(
+                RaggedArray(xp.vstack(d_lh), words_per_doc),
+                RaggedArray(xp.vstack(d_po), sents_per_doc))
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
