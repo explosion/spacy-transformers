@@ -193,6 +193,14 @@ def flatten_list(nested: List[List[Any]]) -> List[Any]:
     return flat
 
 
+def lengths2mask(lengths):
+    """Get a boolean mask of which entries in a padded batch are valid, given
+    a list of lengths."""
+    padded = pad_batch([numpy.ones((L,), dtype="i") for L in lengths])
+    padded[padded < 0] = 0
+    return padded.reshape((-1,))
+
+
 def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
 
