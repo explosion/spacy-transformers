@@ -22,7 +22,7 @@ def test_act_blank():
 ])
 def test_ragged_to_padded(extra_dims, lengths, pad_to, expected_shape):
     arr = RaggedArray(numpy.ones((sum(lengths),) + extra_dims), lengths)
-    if pad_to < max(lengths):
+    if pad_to > 1 and pad_to < max(lengths):
         with pytest.raises(ValueError):
             padded = arr.to_padded(to=pad_to)
     else:
