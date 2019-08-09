@@ -42,8 +42,9 @@ def main(
 
     nlp = spacy.load(model)
     print(f"Loaded model '{model}'")
-    textcat = nlp.create_pipe("pytt_textcat",
-        config={"architecture": "softmax_pooler_output"})
+    textcat = nlp.create_pipe(
+        "pytt_textcat", config={"architecture": "softmax_pooler_output"}
+    )
     # add label to text classifier
     textcat.add_label("POSITIVE")
     textcat.add_label("NEGATIVE")
@@ -62,9 +63,7 @@ def main(
     # It means we can mix the sentences into different batches, so we can make
     # more frequent updates. It also changes the loss somewhat, in a way that's
     # not obviously better -- but it does seem to work well.
-    print(
-        f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation)"
-    )
+    print(f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation)")
     train_texts, train_cats = make_sentence_examples(nlp, train_texts, train_cats)
     print(f"Extracted {len(train_texts)} training sents")
     total_words = sum(len(text.split()) for text in train_texts)
