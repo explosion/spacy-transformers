@@ -39,11 +39,14 @@ class RaggedArray:
         pad_to = max(self.lengths, default=0)
         shape = (len(self.lengths), pad_to) + self.data.shape[1:]
         values = self.xp.zeros(shape, dtype=self.dtype)
-        values[:] = value
-        start = 0
-        for i, length in enumerate(self.lengths):
-            values[i, :length] = self.data[start:start+length]
-            start += length
+        if self.data.size == 0:
+            return values
+        # Slightly convoluted implementation here, to do the operation in one
+        # and avoid the loop
+        mask = lengths2mask(self.lengths)
+        values = values.reshape((len(self.lengths) * pad_to,) + self.data.shape[1:])
+        values[mask >= 1] = self.data
+        values = values.reshape(shape)
         return values
 
     def get(self, i: int) -> Array:
@@ -67,7 +70,7 @@ class Activations:
 
     @property
     def has_lh(self) -> bool:
-        return bool(self.lh.lengths)
+        return bool(self.lh.data.size)
 
     @property
     def has_po(self) -> bool:
