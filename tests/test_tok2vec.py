@@ -25,6 +25,21 @@ def test_from_pretrained(tok2vec, docs):
         diff = doc.tensor.sum() - doc._.pytt_last_hidden_state.sum()
         assert abs(diff) <= 1e-2
 
+def test_set_annotations(tok2vec, docs):
+    scores = tok2vec.predict(docs)
+    tok2vec.set_annotations(docs, scores)
+    for doc in docs:
+        assert doc._.pytt_last_hidden_state is not None
+        assert doc._.pytt_pooler_output is not None
+        assert doc._.pytt_d_last_hidden_state is not None
+        assert doc._.pytt_d_last_hidden_state.ndim == 2
+        assert doc._.pytt_d_pooler_output.ndim == 2
+
+
+def test_begin_finish_update(tok2vec, docs):
+    scores, finish_update = tok2vec.begin_update(docs)
+    finish_update(docs)
+
 
 @pytest.mark.parametrize(
     "text1,text2,is_similar,threshold",

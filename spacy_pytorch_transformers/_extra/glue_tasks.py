@@ -51,6 +51,7 @@ class DataProcessor:
     labels: Tuple[str, ...]
     train_filename: str
     dev_filename: str
+    subdir: str
 
     @property
     def train_name(self) -> str:

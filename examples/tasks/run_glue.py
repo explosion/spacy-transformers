@@ -163,9 +163,13 @@ def main(
     learn_rates = warmup_linear_rates(
         HP.learning_rate, HP.warmup_steps, nr_batch * HP.num_train_epochs
     )
-    optimizer.alpha = next(learn_rates)
+    optimizer.pytt_lr = next(learn_rates)
     optimizer.pytt_weight_decay = HP.weight_decay
-    optimizer.pytt_use_swa = True
+    optimizer.pytt_use_swa = HP.use_swa
+    # This sets the learning rate for the Thinc layers, i.e. just the final
+    # softmax. By keeping this LR high, we avoid a problem where the model
+    # spends too long flat, which harms the transfer learning.
+    optimizer.alpha = 0.001
     step = 0
     for i in range(HP.num_train_epochs):
         if step >= HP.max_steps:
@@ -175,7 +179,7 @@ def main(
         for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
             losses.update(loss)
             if HP.use_learn_rate_schedule:
-                optimizer.alpha = next(learn_rates)
+                optimizer.pytt_lr = next(learn_rates)
             step += 1
             if step >= HP.max_steps:
                 break
@@ -187,7 +191,8 @@ def main(
                     widths=table_widths,
                 )
         if not HP.eval_every:
-            main_score, accuracies = evaluate(nlp, task, dev_data)
+            with nlp.use_params(optimizer.averages):
+                main_score, accuracies = evaluate(nlp, task, dev_data)
             msg.row(
                 [str(i), "%.2f" % losses["pytt_textcat"], main_score],
                 widths=table_widths,

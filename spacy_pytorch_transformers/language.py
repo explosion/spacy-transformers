@@ -82,7 +82,6 @@ class PyTT_Language(Language):
         pytt_outputs, backprop_tok2vec = tok2vec.begin_update(
             docs, drop=drop, **component_cfg.get("pytt_tok2vec", {})
         )
-        assert len(docs) == len(pytt_outputs)
         tok2vec.set_annotations(docs, pytt_outputs)
         for doc in docs:
             assert doc._.pytt_last_hidden_state is not None

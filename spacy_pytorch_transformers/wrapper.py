@@ -1,4 +1,4 @@
-from thinc.extra.wrappers import PyTorchWrapper, xp2torch
+from thinc.extra.wrappers import PyTorchWrapper, xp2torch, torch2xp
 from pytorch_transformers.optimization import AdamW
 import pytorch_transformers as pytt
 import torch.autograd
@@ -9,8 +9,9 @@ from thinc.neural.optimizers import Optimizer
 import numpy
 from torchcontrib.optim import SWA
 
-from .util import get_pytt_model, get_pytt_config, Activations
-from .util import Array, Dropout
+from .util import get_pytt_model
+from .util import Dropout
+from .activations import RaggedArray, Activations
 
 FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
@@ -21,7 +22,6 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     _model: Any
     _optimizer: Any
-    _lr_schedule: Any
     cfg: dict
 
     @classmethod
@@ -60,50 +60,49 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     @property
     def max_length(self):
-        return self.cfg["max_position_embeddings"]
+        return self.cfg.get("max_position_embeddings", 0)
 
-    def predict(self, ids: Array):
+    def predict(self, inputs: RaggedArray):
         self._model.eval()
-        model_kwargs = self.get_model_kwargs(ids)
+        model_kwargs = self.get_model_kwargs(inputs)
         with torch.no_grad():
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
             y_var = self._model(**model_kwargs)
             if hasattr(self._optimizer, "swap_swa_sgd"):
                 self._optimizer.swap_swa_sgd()
-        return Activations.from_pytt(y_var, is_grad=False)
+        return self.make_activations(y_var, inputs.lengths)
 
     def begin_update(
-        self, ids: Array, drop: Dropout = 0.0
+        self, inputs: RaggedArray, drop: Dropout = 0.0
     ) -> Tuple[Activations, Callable[..., None]]:
         if drop is None:
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
-            return self.predict(ids), lambda dY, sgd=None: None
+            return self.predict(inputs), lambda dY, sgd=None: None
+        max_original = max(inputs.lengths, default=0)
+        model_kwargs = self.get_model_kwargs(inputs)
         self._model.train()
         # Prepare all the model arguments, including the attention mask
-        model_kwargs = self.get_model_kwargs(ids)
         y_var = self._model(**model_kwargs)
-        output = Activations.from_pytt(y_var, is_grad=False)
-        assert output.lh is not None
+        output = self.make_activations(y_var, inputs.lengths)
+        assert output.lh.data.shape[0] == inputs.data.shape[0], (
+            output.lh.data.shape,
+            inputs.data.shape,
+        )
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_lh:
-                dy_for_bwd.append(xp2torch(d_output.lh))
+                d_lh = d_output.lh.to_padded(to=max_original)
+                if self.max_length and d_lh.shape[1] >= self.max_length:
+                    d_lh = d_lh[:, : self.max_length]
+                dy_for_bwd.append(xp2torch(d_lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                dy_for_bwd.append(
-                    xp2torch(d_output.po).reshape(
-                        (d_output.po.shape[0], d_output.po.shape[2])
-                    )
-                )
+                dy_for_bwd.append(xp2torch(d_output.po.data))
                 y_for_bwd.append(y_var[1])
-            if d_output.has_ah:
-                raise ValueError("Gradients on all hidden states not supported yet.")
-            if d_output.has_aa:
-                raise ValueError("Gradients on all attentions not supported yet.")
             if FINE_TUNE:
                 torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
                 if sgd is not None:
@@ -124,9 +123,34 @@ class PyTT_Wrapper(PyTorchWrapper):
         self._model.eval()
         return output, backward_pytorch
 
-    def get_model_kwargs(self, ids):
-        if isinstance(ids, list):
-            ids = numpy.array(ids, dtype=xp.int_)
+    def make_activations(self, fields, lengths) -> Activations:
+        """Create Activations from the output tuples produced by PyTorch Transformers.
+        Includes converting torch tensors to xp, and handling missing values.
+        """
+        fields = list(fields)
+        fields[0] = torch2xp(fields[0])
+        fields[0] = RaggedArray.from_padded(fields[0], lengths)
+        assert fields[0].data.shape[0] == sum(lengths)
+        # lh: last hidden
+        # po: pooler_output
+        # ah: all_hidden
+        # aa: all_attention
+        if len(fields) != 4:
+            lh = fields[0]
+            po = RaggedArray.blank()
+        else:
+            if isinstance(fields[1], tuple):
+                fields[1] = RaggedArray.blank()
+            else:
+                fields[1] = RaggedArray(torch2xp(fields[1]), [1] * len(lengths))
+            lh, po, _, _2 = fields
+        # Convert last_hidden_state to xp
+        return Activations(lh, po)
+
+    def get_model_kwargs(self, inputs):
+        ids = inputs.to_padded()
+        if self.max_length:
+            ids = ids[:, : self.max_length]
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0
@@ -147,7 +171,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
             self._model.parameters(),
-            lr=sgd.alpha,
+            lr=getattr(sgd, "pytt_lr", sgd.alpha),
             eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
             weight_decay=getattr(sgd, "pytt_weight_decay", 0.0),

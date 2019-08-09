@@ -3,7 +3,7 @@ from spacy.util import minibatch
 import re
 import numpy
 
-from .util import get_pytt_tokenizer, flatten_list, is_special_token
+from ..util import get_pytt_tokenizer, flatten_list, is_special_token
 
 
 class PyTT_WordPiecer(Pipe):

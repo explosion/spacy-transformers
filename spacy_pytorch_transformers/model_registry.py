@@ -1,7 +1,16 @@
-from thinc.api import layerize, chain, flatten_add_lengths, with_getitem
+from typing import Tuple, Callable, List, Optional
+from thinc.api import wrap, layerize, chain, flatten_add_lengths, with_getitem
 from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax, Affine, Model
 from thinc.neural.util import get_array_module
+from spacy.tokens import Span, Doc
+import numpy
+
+from .wrapper import PyTT_Wrapper
+from .util import Array, Dropout, Optimizer
+from .util import batch_by_length, flatten_list
+from .activations import Activations as Acts
+from .activations import RaggedArray
 
 
 REGISTRY = {}
@@ -29,10 +38,20 @@ def get_model_function(name: str):
     return REGISTRY[name]
 
 
-@register_model("fine_tune_class_vector")
-def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
+@register_model("tok2vec_per_sentence")
+def tok2vec_per_sentence(pytt_model, cfg):
+    max_words = cfg.get("words_per_batch", 1000)
+
+    model = foreach_sentence(
+        chain(get_word_pieces, with_length_batching(pytt_model, max_words))
+    )
+    return model
+
+
+@register_model("softmax_class_vector")
+def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     """Select features from the class-vectors from the last hidden state,
-    softmax them, and then mean-pool them to produce one feature per vector.
+    mean-pool them, and softmax to produce one vector per document.
     The gradients of the class vectors are incremented in the backward pass,
     to allow fine-tuning.
     """
@@ -47,10 +66,10 @@ def fine_tune_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     )
 
 
-@register_model("fine_tune_pooler_output")
-def fine_tune_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
-    """Select features from the class-vectors from the last hidden state,
-    softmax them, and then mean-pool them to produce one feature per vector.
+@register_model("softmax_pooler_output")
+def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
+    """Select features from the pooler output, (if necessary) mean-pool them 
+    to produce one vector per item, and then softmax them.
     The gradients of the class vectors are incremented in the backward pass,
     to allow fine-tuning.
     """
@@ -104,7 +123,6 @@ def get_pytt_pooler_output(docs, drop=0.0):
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
-        total_grads = []
         for doc, dY in zip(docs, d_outputs):
             if doc._.pytt_d_pooler_output.size == 0:
                 xp = get_array_module(doc._.pytt_pooler_output)
@@ -160,3 +178,115 @@ def tanh(X, drop=0.0):
         return dX
 
     return Y, backprop_tanh
+
+
+@layerize
+def get_word_pieces(sents, drop=0.0):
+    assert isinstance(sents[0], Span)
+    ids = []
+    lengths = []
+    for sent in sents:
+        wp_start = sent._.pytt_start
+        wp_end = sent._.pytt_end
+        if wp_start is not None and wp_end is not None:
+            ids.extend(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
+            lengths.append((wp_end + 1) - wp_start)
+        else:
+            lengths.append(0)
+    return RaggedArray(numpy.array(ids, dtype=numpy.int_), lengths), None
+
+
+def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
+    ops = model.ops
+
+    def apply_model_to_batches(
+        inputs: RaggedArray, drop: Dropout = 0.0
+    ) -> Tuple[Acts, Callable]:
+        if max_words == 0 or inputs.data.shape[0] < max_words:
+            return model.begin_update(inputs, drop=drop)
+        Xs: List[Array] = ops.unflatten(inputs.data, inputs.lengths)
+        outputs = None
+        backprops = []
+        index2rows = {}
+        start = 0
+        # Map each index to the slice of rows in the flattened data it refers to.
+        for i, length in enumerate(inputs.lengths):
+            index2rows[i] = [start + j for j in range(length)]
+            start += length
+        total_rows = sum(inputs.lengths)
+        for indices in batch_by_length(Xs, max_words):
+            X: Array = inputs.xp.concatenate([Xs[i] for i in indices])
+            lengths = [inputs.lengths[i] for i in indices]
+            Y, get_dX = model.begin_update(RaggedArray(X, lengths), drop=drop)
+            if outputs is None:
+                lh_shape = (total_rows, Y.lh.data.shape[-1])
+                po_shape = (len(inputs.lengths), Y.po.data.shape[-1])
+                outputs = Acts(
+                    RaggedArray(Y.lh.xp.zeros(lh_shape, dtype="f"), inputs.lengths),
+                    RaggedArray(
+                        Y.po.xp.zeros(po_shape, dtype="f"), [1 for _ in inputs.lengths]
+                    ),
+                )
+            lh_rows = []
+            po_rows = []
+            for index in indices:
+                lh_rows.extend(index2rows[index])
+                po_rows.append(index)
+            lh_rows = outputs.xp.array(lh_rows, dtype="i")
+            po_rows = outputs.xp.array(po_rows, dtype="i")
+            outputs.lh.data[lh_rows] = Y.lh.data
+            outputs.po.data[po_rows] = Y.po.data
+            backprops.append((get_dX, lh_rows, po_rows, lengths))
+
+        def backprop_batched(d_outputs: Acts, sgd: Optimizer = None):
+            for get_dX, lh_rows, po_rows, lengths in backprops:
+                if d_outputs.has_lh:
+                    d_lh = d_outputs.lh.data[lh_rows]
+                    lh_lengths = lengths
+                else:
+                    d_lh = d_outputs.lh.data
+                    lh_lengths = []
+                if d_outputs.has_po:
+                    d_po = d_outputs.po.data[po_rows]
+                    po_lengths = [1 for _ in lengths]
+                else:
+                    d_po = d_outputs.po.data
+                    po_lengths = []
+                dY = Acts(RaggedArray(d_lh, lh_lengths), RaggedArray(d_po, po_lengths))
+                dX = get_dX(dY, sgd=sgd)
+                assert dX is None
+            return None
+
+        return outputs, backprop_batched
+
+    return wrap(apply_model_to_batches, model)
+
+
+def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
+    """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
+
+    def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
+        sents = flatten_list([list(doc.sents) for doc in docs])
+        words_per_doc = [len(d._.pytt_word_pieces) for d in docs]
+        words_per_sent = [len(s._.pytt_word_pieces) for s in sents]
+        sents_per_doc = [len(list(d.sents)) for d in docs]
+        acts, bp_acts = layer.begin_update(sents, drop=drop)
+        # To go from "per sentence" activations to "per doc" activations, we
+        # just have to tell it where the sequences end.
+        acts.lh.lengths = words_per_doc
+        acts.po.lengths = sents_per_doc
+
+        def sentence_bwd(d_acts: Acts, sgd: Optional[Optimizer] = None) -> None:
+            assert isinstance(d_acts, Acts)
+            # Translate back to the per-sentence activations
+            d_acts.lh.lengths = words_per_sent
+            d_acts.po.lengths = [1 for _ in words_per_sent]
+            d_ids = bp_acts(d_acts, sgd=sgd)
+            if not (d_ids is None or all(ds is None for ds in d_ids)):
+                raise ValueError("Expected gradient of sentence to be None")
+            return d_ids
+
+        return acts, sentence_bwd
+
+    model = wrap(sentence_fwd, layer)
+    return model

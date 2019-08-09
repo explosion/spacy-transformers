@@ -42,7 +42,8 @@ def main(
 
     nlp = spacy.load(model)
     print(f"Loaded model '{model}'")
-    textcat = nlp.create_pipe("pytt_textcat", config={"exclusive_classes": True})
+    textcat = nlp.create_pipe("pytt_textcat",
+        config={"architecture": "softmax_pooler_output"})
     # add label to text classifier
     textcat.add_label("POSITIVE")
     textcat.add_label("NEGATIVE")

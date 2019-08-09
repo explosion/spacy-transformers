@@ -3,8 +3,8 @@ import numpy
 from numpy.testing import assert_equal
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
-from spacy_pytorch_transformers.wordpiecer import align_word_pieces
-from spacy_pytorch_transformers.util import pad_batch, batch_by_length
+from spacy_pytorch_transformers.pipeline.wordpiecer import align_word_pieces
+from spacy_pytorch_transformers.util import pad_batch, batch_by_length, lengths2mask
 
 
 @pytest.mark.parametrize(
@@ -85,6 +85,21 @@ def test_pad_batch_2d(lengths, width, expected_shape):
         assert padded[i].sum() == seq.sum()
         assert_equal(padded[i, : len(seq)], seq)
     assert padded.shape == expected_shape
+
+
+@pytest.mark.parametrize(
+    "lengths",
+    [
+        [1],
+        [1, 2],
+        [5, 3, 1],
+    ],
+)
+def test_lengths2mask(lengths):
+    mask = lengths2mask(lengths)
+    assert mask.ndim == 1
+    assert mask.sum() == sum(lengths)
+    assert mask.size == max(lengths) * len(lengths)
 
 
 @pytest.mark.parametrize(
