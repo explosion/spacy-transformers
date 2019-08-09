@@ -46,9 +46,7 @@ def tok2vec_per_sentence(pytt_model, cfg):
     model = foreach_sentence(
         chain(
             get_word_pieces,
-            with_length_batching(
-                truncate_long_inputs(pytt_model, max_length), max_words
-            ),
+            with_length_batching(pytt_model, max_words)
         )
     )
     return model
@@ -200,17 +198,6 @@ def get_word_pieces(sents, drop=0.0):
         else:
             lengths.append(0)
     return RaggedArray(numpy.array(ids, dtype=numpy.int_), lengths), None
-
-
-def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
-    """Truncate inputs on the way into a model, and restore their shape on
-    the way out.
-    """
-
-    def with_truncate_forward(inputs: RaggedArray, drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
-        return model.begin_update(inputs, drop=drop)
-
-    return wrap(with_truncate_forward, model)
 
 
 def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
