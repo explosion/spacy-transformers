@@ -26,11 +26,9 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     @classmethod
     def from_pretrained(cls, name):
-        config_cls = get_pytt_config(name)
         model_cls = get_pytt_model(name)
-        config = config_cls.from_pretrained(name)
         model = model_cls.from_pretrained(name, **CONFIG)
-        self = cls(name, config.to_dict(), model)
+        self = cls(name, model.config.to_dict(), model)
         self.cfg.update(self.pytt_model.config.to_dict())
         return self
 
