@@ -9,8 +9,8 @@ from thinc.neural.optimizers import Optimizer
 import numpy
 from torchcontrib.optim import SWA
 
-from .util import get_pytt_model, get_pytt_config
-from .util import Dropout, pad_batch
+from .util import get_pytt_model
+from .util import Dropout
 from .activations import RaggedArray, Activations
 
 FINE_TUNE = True

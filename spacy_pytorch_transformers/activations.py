@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy
 
 from .util import List, Array, Union
-from .util import lengths2mask, pad_batch
+from .util import lengths2mask
 
 
 @dataclass

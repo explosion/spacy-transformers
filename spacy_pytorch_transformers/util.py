@@ -1,5 +1,4 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
-from types import ModuleType
 import pytorch_transformers as pytt
 import numpy
 
@@ -7,7 +6,7 @@ from . import _tokenizers
 
 try:
     # This allows us to use cupy with mypy, for type checking
-    import cupy
+    import cupy # noqa
 except ImportError:
     pass
 
@@ -225,4 +224,4 @@ def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
         step += 1
 
 
-from .activations import Activations
+from .activations import Activations # noqa

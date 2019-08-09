@@ -8,7 +8,7 @@ import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
-from .util import batch_by_length, pad_batch, flatten_list, unflatten_list
+from .util import batch_by_length, flatten_list
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -264,7 +264,6 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
 
 def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
-    ops = layer.ops
 
     def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
         sents = flatten_list([list(doc.sents) for doc in docs])

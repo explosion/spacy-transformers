@@ -1,6 +1,8 @@
 import spacy.pipeline
 from ..model_registry import get_model_function
 
+DEBUG_LOSS = False
+
 
 class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
     """Subclass of spaCy's built-in TextCategorizer component that supports
@@ -41,5 +43,6 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         loss, d_scores = super().get_loss(docs, golds, scores)
         mean_score = scores.mean(axis=0)[0]
         var_score = scores.var(axis=0)[0]
-        # print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
+        if DEBUG_LOSS:
+            print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
         return loss, d_scores
