@@ -11,6 +11,18 @@ class RaggedArray:
     data: Array
     lengths: List[int]
 
+    @property
+    def size(self) -> int:
+        return self.data.size
+
+    @property
+    def xp(self):
+        return get_array_module(self.data)
+
+    @property
+    def dtype(self):
+        return self.data.dtype
+
     @classmethod
     def blank(cls, xp=numpy) -> "RaggedArray":
         return RaggedArray(xp.zeros((0,), dtype="f"), [])
@@ -41,27 +53,17 @@ class RaggedArray:
 
     @classmethod
     def from_padded(cls, padded: Array, lengths: List[int]) -> "RaggedArray":
+        if max(lengths, default=0) > padded.shape[1]:
+            return cls.from_truncated(padded, lengths)
         mask = lengths2mask(lengths)
         all_rows = padded.reshape((-1, padded.shape[-1]))
         xp = get_array_module(all_rows)
         data = xp.ascontiguousarray(all_rows[mask])
         return cls(data, lengths)
-
-    @property
-    def size(self) -> int:
-        return self.data.size
-
-    @property
-    def xp(self):
-        return get_array_module(self.data)
-
-    @property
-    def dtype(self):
-        return self.data.dtype
-    
+   
     def to_padded(self, *, value=0, to: int=-1) -> Array:
         max_len = max(self.lengths, default=0)
-        if to >= -1 and to < max_len:
+        if to >= 1 and to < max_len:
             raise ValueError(f"Cannot pad to {to}: Less than max length {max_len}")
         to = max(to, max_len)
         # Slightly convoluted implementation here, to do the operation in one
