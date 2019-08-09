@@ -166,6 +166,9 @@ def main(
     optimizer.pytt_lr = next(learn_rates)
     optimizer.pytt_weight_decay = HP.weight_decay
     optimizer.pytt_use_swa = HP.use_swa
+    # This sets the learning rate for the Thinc layers, i.e. just the final
+    # softmax. By keeping this LR high, we avoid a problem where the model
+    # spends too long flat, which harms the transfer learning.
     optimizer.alpha = 0.001
     step = 0
     for i in range(HP.num_train_epochs):
