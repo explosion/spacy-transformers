@@ -126,7 +126,7 @@ def get_pytt_pooler_output(docs, drop=0.0):
     for each sentence in the document. To backprop, we increment the values
     in the doc._.pytt_d_last_hidden_state array.
     """
-    outputs = [doc._.pytt_pooler_output.sum(axis=0) for doc in docs]
+    outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
         for doc, dY in zip(docs, d_outputs):
