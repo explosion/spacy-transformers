@@ -129,6 +129,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         fields = list(fields)
         fields[0] = torch2xp(fields[0])
         fields[0] = RaggedArray.from_padded(fields[0], lengths)
+        assert fields[0].data.shape[0] == sum(lengths)
         # lh: last hidden
         # po: pooler_output
         # ah: all_hidden
