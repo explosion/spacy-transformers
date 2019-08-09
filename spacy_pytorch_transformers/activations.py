@@ -64,6 +64,7 @@ class RaggedArray:
         return cls(data, lengths)
 
     def to_padded(self, *, value=0, to: int = -1) -> Array:
+        assert sum(self.lengths) == self.data.shape[0]
         max_len = max(self.lengths, default=0)
         if to >= 1 and to < max_len:
             raise ValueError(f"Cannot pad to {to}: Less than max length {max_len}")
@@ -105,4 +106,4 @@ class Activations:
 
     @property
     def has_po(self) -> bool:
-        return bool(self.po.lengths)
+        return bool(self.po.data.size)
