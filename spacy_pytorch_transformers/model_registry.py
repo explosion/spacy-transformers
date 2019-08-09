@@ -40,14 +40,14 @@ def get_model_function(name: str):
 
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(pytt_model, cfg):
-    batch_by_length = cfg.get("words_per_batch", 5000)
+    max_words = cfg.get("words_per_batch", 5000)
     max_length = cfg.get("max_length", 512)
 
     model = foreach_sentence(
         chain(
             get_word_pieces,
-            without_length_batching(
-                truncate_long_inputs(pytt_model, max_length)
+            with_length_batching(
+                truncate_long_inputs(pytt_model, max_length), max_words
             ),
         )
     )
@@ -213,13 +213,54 @@ def truncate_long_inputs(model: PyTT_Wrapper, max_len: int) -> PyTT_Wrapper:
     return wrap(with_truncate_forward, model)
 
 
-def without_length_batching(model: PyTT_Wrapper) -> PyTT_Wrapper:
+def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
+    ops = model.ops
+    
+    def apply_model_to_batches(inputs: RaggedArray, drop: Dropout = 0.) -> Tuple[Acts, Callable]:
+        if max_words == 0 or inputs.data.shape[0] < max_words:
+            return model.begin_update(inputs, drop=drop)
+        Xs: List[Array] = ops.unflatten(inputs.data, inputs.lengths)
+        outputs = None
+        backprops = []
+        index2rows = {}
+        start = 0
+        # Map each index to the slice of rows in the flattened data it refers to.
+        for i, length in enumerate(inputs.lengths):
+            index2rows[i] = [start+j for j in range(length)]
+            start += length
+        total_rows = sum(inputs.lengths)
+        for indices in batch_by_length(Xs, max_words):
+            X: Array = inputs.xp.concatenate([Xs[i] for i in indices])
+            lengths = [inputs.lengths[i] for i in indices]
+            Y, get_dX = model.begin_update(RaggedArray(X, lengths), drop=drop)
+            if outputs is None:
+                lh_shape = (total_rows, Y.lh.data.shape[-1])
+                po_shape = (len(inputs.lengths), Y.po.data.shape[-1])
+                outputs = Acts(
+                    RaggedArray(Y.lh.xp.zeros(lh_shape, dtype="f"), inputs.lengths),
+                    RaggedArray(Y.po.xp.zeros(po_shape, dtype="f"), [1 for _ in inputs.lengths]))
+            lh_rows = []
+            po_rows = []
+            for index in indices:
+                lh_rows.extend(index2rows[index])
+                po_rows.append(index)
+            sub_array = outputs.lh.data[lh_rows]
+            outputs.lh.data[lh_rows] = Y.lh.data
+            outputs.po.data[po_rows] = Y.po.data
+            backprops.append((get_dX, lh_rows, po_rows, lengths))
 
-    def apply_model_unpadded(inputs: RaggedArray, drop=0.) -> Tuple[Acts, Callable]:
-        assert isinstance(inputs, RaggedArray)
-        return model.begin_update(inputs, drop=drop)
+        def backprop_batched(d_outputs: Acts, sgd: Optimizer = None):
+            for get_dX, lh_rows, po_rows, lengths in backprops:
+                dY = Acts(
+                    RaggedArray(d_outputs.lh.data[lh_rows], lengths),
+                    RaggedArray(d_outputs.po.data[po_rows], [1 for _ in lengths]))
+                dX = get_dX(dY, sgd=sgd)
+                assert dX is None
+            return None
 
-    return wrap(apply_model_unpadded, model)
+        return outputs, backprop_batched
+
+    return wrap(apply_model_to_batches, model)
 
 
 def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
