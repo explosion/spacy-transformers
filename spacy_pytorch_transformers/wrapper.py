@@ -88,7 +88,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         # Prepare all the model arguments, including the attention mask
         y_var = self._model(**model_kwargs)
         output = self.make_activations(y_var, inputs.lengths)
-        assert output.lh is not None
+        assert output.lh.data.shape[0] == inputs.data.shape[0], (output.lh.data.shape, inputs.data.shape)
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
