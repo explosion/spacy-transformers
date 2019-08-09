@@ -97,7 +97,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                 dy_for_bwd.append(xp2torch(d_lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
-                dy_for_bwd.append(xp2torch(d_output.po))
+                dy_for_bwd.append(xp2torch(d_output.po.data))
                 y_for_bwd.append(y_var[1])
             if FINE_TUNE:
                 torch.autograd.backward(y_for_bwd, grad_tensors=dy_for_bwd)
