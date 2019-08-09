@@ -40,13 +40,30 @@ def get_model_function(name: str):
 
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(pytt_model, cfg):
-    max_words = cfg.get("words_per_batch", 1000)
+    max_words = cfg.get("words_per_batch", 2000)
 
     model = foreach_sentence(
         chain(get_word_pieces, with_length_batching(pytt_model, max_words))
     )
     return model
 
+
+@register_model("softmax_tanh_class_vector")
+def softmax_tanh_class_vector(nr_class, *, exclusive_classes=True, **cfg):
+    """Select features from the class-vectors from the last hidden state,
+    mean-pool them, and softmax to produce one vector per document.
+    The gradients of the class vectors are incremented in the backward pass,
+    to allow fine-tuning.
+    """
+    width = cfg["token_vector_width"]
+    return chain(
+        get_pytt_class_tokens,
+        flatten_add_lengths,
+        with_getitem(
+            0, chain(Affine(width, width), tanh)),
+        Pooling(mean_pool),
+        Softmax(2, width)
+    )
 
 @register_model("softmax_class_vector")
 def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
@@ -55,14 +72,12 @@ def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     The gradients of the class vectors are incremented in the backward pass,
     to allow fine-tuning.
     """
+    width = cfg["token_vector_width"]
     return chain(
         get_pytt_class_tokens,
         flatten_add_lengths,
-        with_getitem(
-            0, chain(Affine(cfg["token_vector_width"], cfg["token_vector_width"]), tanh)
-        ),
         Pooling(mean_pool),
-        Softmax(2, cfg["token_vector_width"]),
+        Softmax(2, width)
     )
 
 
@@ -106,6 +121,8 @@ def get_pytt_class_tokens(docs, drop=0.0):
                 xp = get_array_module(doc._.pytt_last_hidden_state)
                 grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype="f")
                 doc._.pytt_d_last_hidden_state = grads
+            nr_word_pieces = len(doc._.pytt_word_pieces)
+            assert doc._.pytt_d_last_hidden_state.shape[0] == nr_word_pieces
             for i, sent in enumerate(doc.sents):
                 if sent._.pytt_start is not None:
                     doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
@@ -270,6 +287,7 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
         words_per_doc = [len(d._.pytt_word_pieces) for d in docs]
         words_per_sent = [len(s._.pytt_word_pieces) for s in sents]
         sents_per_doc = [len(list(d.sents)) for d in docs]
+        assert sum(words_per_doc) == sum(words_per_sent)
         acts, bp_acts = layer.begin_update(sents, drop=drop)
         # To go from "per sentence" activations to "per doc" activations, we
         # just have to tell it where the sequences end.
@@ -279,6 +297,9 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
         def sentence_bwd(d_acts: Acts, sgd: Optional[Optimizer] = None) -> None:
             assert isinstance(d_acts, Acts)
             # Translate back to the per-sentence activations
+            if d_acts.has_lh:
+                assert d_acts.lh.data.shape[0] == sum(d_acts.lh.lengths)
+                assert d_acts.lh.lengths == words_per_doc
             d_acts.lh.lengths = words_per_sent
             d_acts.po.lengths = [1 for _ in words_per_sent]
             d_ids = bp_acts(d_acts, sgd=sgd)
