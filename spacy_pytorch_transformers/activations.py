@@ -16,6 +16,30 @@ class RaggedArray:
         return RaggedArray(xp.zeros((0,), dtype="f"), [])
 
     @classmethod
+    def from_truncated(cls, square: Array, lengths: List[int]) -> "RaggedArray":
+        if len(lengths) != square.shape[0]:
+            raise ValueError("Truncated array must have shape[0] == len(lengths)")
+        width = square.shape[1]
+        max_len = max(lengths, default=0)
+        extra_dims = square.shape[2:]
+        if width == max_len:
+            return RaggedArray(square, lengths)
+        elif width > max_len:
+            raise ValueError("Expected width < max_len. Got {width} > {max_len}")
+        xp = get_array_module(square)
+        expanded = xp.zeros((sum(lengths),) + extra_dims, dtype=square.dtype)
+        # TODO: I know there's a way to do this without the loop :(. Escapes
+        # me currently.
+        start = 0
+        for i, length in enumerate(lengths):
+            # We could have a row that's actually shorter than the width,
+            # if the array was padded. Make sure we don't get junk values.
+            row_width = min(width, length)
+            expanded[start:start+row_width] = square[i, :row_width]
+            start += length
+        return cls(expanded, lengths)
+
+    @classmethod
     def from_padded(cls, padded: Array, lengths: List[int]) -> "RaggedArray":
         mask = lengths2mask(lengths)
         all_rows = padded.reshape((-1, padded.shape[-1]))
@@ -35,16 +59,19 @@ class RaggedArray:
     def dtype(self):
         return self.data.dtype
     
-    def to_padded(self, value=0) -> Array:
-        pad_to = max(self.lengths, default=0)
-        shape = (len(self.lengths), pad_to) + self.data.shape[1:]
+    def to_padded(self, *, value=0, to: int=-1) -> Array:
+        max_len = max(self.lengths, default=0)
+        if to >= -1 and to < max_len:
+            raise ValueError(f"Cannot pad to {to}: Less than max length {max_len}")
+        to = max(to, max_len)
+        # Slightly convoluted implementation here, to do the operation in one
+        # and avoid the loop
+        shape = (len(self.lengths), to) + self.data.shape[1:]
         values = self.xp.zeros(shape, dtype=self.dtype)
         if self.data.size == 0:
             return values
-        # Slightly convoluted implementation here, to do the operation in one
-        # and avoid the loop
         mask = lengths2mask(self.lengths)
-        values = values.reshape((len(self.lengths) * pad_to,) + self.data.shape[1:])
+        values = values.reshape((len(self.lengths) * to,) + self.data.shape[1:])
         values[mask >= 1] = self.data
         values = values.reshape(shape)
         return values
