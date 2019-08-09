@@ -95,6 +95,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_lh:
+                assert d_output.lh.data.shape[0] == sum(d_output.lh.lengths)
                 d_lh = d_output.lh.to_padded(to=max_original)
                 if self.max_length and d_lh.shape[1] >= self.max_length:
                     d_lh = d_lh[:, : self.max_length]
