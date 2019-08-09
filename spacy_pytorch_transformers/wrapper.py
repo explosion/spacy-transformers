@@ -62,7 +62,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     @property
     def max_length(self):
-        return self.cfg["max_position_embeddings"]
+        return self.cfg.get("max_position_embeddings", 0)
 
     def predict(self, inputs: RaggedArray):
         self._model.eval()
@@ -82,6 +82,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             # "drop is None" indicates prediction. It's one of the parts of
             # Thinc's API I'm least happy with...
             return self.predict(inputs), lambda dY, sgd=None: None
+        max_original = max(inputs.lengths, default=0)
         model_kwargs = self.get_model_kwargs(inputs)
         self._model.train()
         # Prepare all the model arguments, including the attention mask
@@ -93,7 +94,9 @@ class PyTT_Wrapper(PyTorchWrapper):
             y_for_bwd = []
             dy_for_bwd = []
             if d_output.has_lh:
-                d_lh = d_output.lh.to_padded()
+                d_lh = d_output.lh.to_padded(to=max_original)
+                if self.max_length and d_lh.shape[1] >= self.max_length:
+                    d_lh = d_lh[:, :self.max_length]
                 dy_for_bwd.append(xp2torch(d_lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
@@ -124,7 +127,8 @@ class PyTT_Wrapper(PyTorchWrapper):
         Includes converting torch tensors to xp, and handling missing values.
         """
         fields = list(fields)
-        fields[0] = RaggedArray.from_padded(torch2xp(fields[0]), lengths)
+        fields[0] = torch2xp(fields[0])
+        fields[0] = RaggedArray.from_padded(fields[0], lengths)
         # lh: last hidden
         # po: pooler_output
         # ah: all_hidden
@@ -143,6 +147,8 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def get_model_kwargs(self, inputs):
         ids = inputs.to_padded()
+        if self.max_length:
+            ids = ids[:, :self.max_length]
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0
