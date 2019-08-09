@@ -168,7 +168,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
             self._model.parameters(),
-            lr=sgd.alpha,
+            lr=getattr(sgd, "pytt_lr", sgd.alpha),
             eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
             weight_decay=getattr(sgd, "pytt_weight_decay", 0.0),
