@@ -27,14 +27,12 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The model.
         """
-        make_model = get_model_function(
-            cfg.get("architecture", "softmax_class_vector")
-        )
+        make_model = get_model_function(cfg.get("architecture", "softmax_class_vector"))
         return make_model(nr_class, exclusive_classes=exclusive_classes, **cfg)
 
     def get_loss(self, docs, golds, scores):
         # This is a useful diagnostic while figuring out whether your model is
-        # learning anything. We print the loss each batch, and also the 
+        # learning anything. We print the loss each batch, and also the
         # mean and variance for the score of the first class.
         # If the model is learning things, we want to see the mean score stay
         # close the the class distribution (e.g. 0.5 for balanced classes),
@@ -43,6 +41,5 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         loss, d_scores = super().get_loss(docs, golds, scores)
         mean_score = scores.mean(axis=0)[0]
         var_score = scores.var(axis=0)[0]
-        #print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
+        # print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
         return loss, d_scores
-

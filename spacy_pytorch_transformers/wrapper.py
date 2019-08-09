@@ -86,7 +86,10 @@ class PyTT_Wrapper(PyTorchWrapper):
         # Prepare all the model arguments, including the attention mask
         y_var = self._model(**model_kwargs)
         output = self.make_activations(y_var, inputs.lengths)
-        assert output.lh.data.shape[0] == inputs.data.shape[0], (output.lh.data.shape, inputs.data.shape)
+        assert output.lh.data.shape[0] == inputs.data.shape[0], (
+            output.lh.data.shape,
+            inputs.data.shape,
+        )
 
         def backward_pytorch(d_output: Activations, sgd: Optimizer = None) -> None:
             y_for_bwd = []
@@ -94,7 +97,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             if d_output.has_lh:
                 d_lh = d_output.lh.to_padded(to=max_original)
                 if self.max_length and d_lh.shape[1] >= self.max_length:
-                    d_lh = d_lh[:, :self.max_length]
+                    d_lh = d_lh[:, : self.max_length]
                 dy_for_bwd.append(xp2torch(d_lh))
                 y_for_bwd.append(y_var[0])
             if d_output.has_po:
@@ -147,7 +150,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     def get_model_kwargs(self, inputs):
         ids = inputs.to_padded()
         if self.max_length:
-            ids = ids[:, :self.max_length]
+            ids = ids[:, : self.max_length]
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         neg_idx = ids < 0
         ids[neg_idx] = 0

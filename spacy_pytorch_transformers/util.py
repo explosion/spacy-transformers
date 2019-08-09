@@ -72,6 +72,7 @@ def get_pytt_tokenizer(name):
     else:
         raise ValueError(f"Unsupported PyTT config name: '{name}'")
 
+
 def pad_batch(
     batch: List[Array], *, axis: int = 0, xp=numpy, to: int = 0, value: int = -1
 ) -> Array:
@@ -132,8 +133,7 @@ def _pad_batch_nd(
     return output
 
 
-def batch_by_length(
-    seqs: Union[List[Array]], max_words: int) -> List[List[int]]:
+def batch_by_length(seqs: Union[List[Array]], max_words: int) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order. Batches
     may be at most max_words in size, defined as max sequence length * size.
@@ -169,7 +169,7 @@ def batch_by_length(
 def ensure3d(arr: Array, *, axis: int = 1) -> Array:
     """Make sure an array is 3d, inserting a dimension at axis if not."""
     if arr.size == 0:
-        return arr.reshape((0,0,0))
+        return arr.reshape((0, 0, 0))
     elif len(arr.shape) == 3:
         return arr
     elif len(arr.shape) == 2:

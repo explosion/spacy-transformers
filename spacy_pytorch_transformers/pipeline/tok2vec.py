@@ -142,7 +142,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             xp = self.model.ops.xp
             gradients = Activations(
                 RaggedArray(xp.vstack(d_lh), words_per_doc),
-                RaggedArray(xp.vstack(d_po), sents_per_doc))
+                RaggedArray(xp.vstack(d_po), sents_per_doc),
+            )
             backprop(gradients, sgd=sgd)
             for doc in docs:
                 doc._.pytt_d_last_hidden_state.fill(0)
@@ -175,8 +176,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
             doc._.pytt_last_hidden_state = wp_tensor
             doc._.pytt_pooler_output = pooler_output
-            doc._.pytt_d_last_hidden_state = xp.zeros((0,0), dtype=wp_tensor.dtype)
-            doc._.pytt_d_pooler_output = xp.zeros((0,0), dtype=wp_tensor.dtype)
+            doc._.pytt_d_last_hidden_state = xp.zeros((0, 0), dtype=wp_tensor.dtype)
+            doc._.pytt_d_pooler_output = xp.zeros((0, 0), dtype=wp_tensor.dtype)
             doc._.pytt_d_all_hidden_states = []
             doc._.pytt_d_all_attentions = []
             if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):

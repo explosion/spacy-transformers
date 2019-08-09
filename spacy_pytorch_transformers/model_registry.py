@@ -43,10 +43,7 @@ def tok2vec_per_sentence(pytt_model, cfg):
     max_words = cfg.get("words_per_batch", 1000)
 
     model = foreach_sentence(
-        chain(
-            get_word_pieces,
-            with_length_batching(pytt_model, max_words)
-        )
+        chain(get_word_pieces, with_length_batching(pytt_model, max_words))
     )
     return model
 
@@ -193,7 +190,7 @@ def get_word_pieces(sents, drop=0.0):
         wp_end = sent._.pytt_end
         if wp_start is not None and wp_end is not None:
             ids.extend(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
-            lengths.append((wp_end+1)-wp_start)
+            lengths.append((wp_end + 1) - wp_start)
         else:
             lengths.append(0)
     return RaggedArray(numpy.array(ids, dtype=numpy.int_), lengths), None
@@ -201,8 +198,10 @@ def get_word_pieces(sents, drop=0.0):
 
 def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
     ops = model.ops
-    
-    def apply_model_to_batches(inputs: RaggedArray, drop: Dropout = 0.) -> Tuple[Acts, Callable]:
+
+    def apply_model_to_batches(
+        inputs: RaggedArray, drop: Dropout = 0.0
+    ) -> Tuple[Acts, Callable]:
         if max_words == 0 or inputs.data.shape[0] < max_words:
             return model.begin_update(inputs, drop=drop)
         Xs: List[Array] = ops.unflatten(inputs.data, inputs.lengths)
@@ -212,7 +211,7 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
         start = 0
         # Map each index to the slice of rows in the flattened data it refers to.
         for i, length in enumerate(inputs.lengths):
-            index2rows[i] = [start+j for j in range(length)]
+            index2rows[i] = [start + j for j in range(length)]
             start += length
         total_rows = sum(inputs.lengths)
         for indices in batch_by_length(Xs, max_words):
@@ -224,7 +223,10 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
                 po_shape = (len(inputs.lengths), Y.po.data.shape[-1])
                 outputs = Acts(
                     RaggedArray(Y.lh.xp.zeros(lh_shape, dtype="f"), inputs.lengths),
-                    RaggedArray(Y.po.xp.zeros(po_shape, dtype="f"), [1 for _ in inputs.lengths]))
+                    RaggedArray(
+                        Y.po.xp.zeros(po_shape, dtype="f"), [1 for _ in inputs.lengths]
+                    ),
+                )
             lh_rows = []
             po_rows = []
             for index in indices:
@@ -250,9 +252,7 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
                 else:
                     d_po = d_outputs.po.data
                     po_lengths = []
-                dY = Acts(
-                    RaggedArray(d_lh, lh_lengths),
-                    RaggedArray(d_po, po_lengths))
+                dY = Acts(RaggedArray(d_lh, lh_lengths), RaggedArray(d_po, po_lengths))
                 dX = get_dX(dY, sgd=sgd)
                 assert dX is None
             return None

@@ -47,7 +47,7 @@ class RaggedArray:
             # We could have a row that's actually shorter than the width,
             # if the array was padded. Make sure we don't get junk values.
             row_width = min(width, length)
-            expanded[start:start+row_width] = square[i, :row_width]
+            expanded[start : start + row_width] = square[i, :row_width]
             start += length
         return cls(expanded, lengths)
 
@@ -62,8 +62,8 @@ class RaggedArray:
         data = xp.ascontiguousarray(all_rows[mask])
         assert data.shape[0] == sum(lengths)
         return cls(data, lengths)
-   
-    def to_padded(self, *, value=0, to: int=-1) -> Array:
+
+    def to_padded(self, *, value=0, to: int = -1) -> Array:
         max_len = max(self.lengths, default=0)
         if to >= 1 and to < max_len:
             raise ValueError(f"Cannot pad to {to}: Less than max length {max_len}")
@@ -83,7 +83,7 @@ class RaggedArray:
     def get(self, i: int) -> Array:
         start = sum(self.lengths[:i])
         end = start + self.lengths[i]
-        return self.data[start : end]
+        return self.data[start:end]
 
 
 @dataclass
