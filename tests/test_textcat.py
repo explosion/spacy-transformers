@@ -3,12 +3,13 @@ from spacy_pytorch_transformers.pipeline import PyTT_TextCategorizer
 from spacy.gold import GoldParse
 
 
-@pytest.fixture
-def textcat(nlp):
+@pytest.fixture(params=["softmax_pooler_output", "softmax_class_vector"])
+def textcat(nlp, request):
+    arch = request.param
     width = nlp.get_pipe("pytt_tok2vec").model.nO
     textcat = PyTT_TextCategorizer(nlp.vocab, token_vector_width=width)
     textcat.add_label("Hello")
-    textcat.begin_training()
+    textcat.begin_training(config={"architecture": arch})
     return textcat
 
 
