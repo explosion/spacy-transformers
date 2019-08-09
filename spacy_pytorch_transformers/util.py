@@ -202,7 +202,7 @@ def lengths2mask(lengths):
     a list of lengths."""
     padded = pad_batch([numpy.ones((L,), dtype="i") for L in lengths])
     padded[padded < 0] = 0
-    return padded.reshape((-1,))
+    return padded.reshape((-1,)) >= 1
 
 
 def is_special_token(text: str) -> bool:
