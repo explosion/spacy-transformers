@@ -40,8 +40,7 @@ def get_model_function(name: str):
 
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(pytt_model, cfg):
-    max_words = cfg.get("words_per_batch", 5000)
-    max_length = cfg.get("max_length", 512)
+    max_words = cfg.get("words_per_batch", 1000)
 
     model = foreach_sentence(
         chain(
@@ -231,16 +230,29 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
             for index in indices:
                 lh_rows.extend(index2rows[index])
                 po_rows.append(index)
-            sub_array = outputs.lh.data[lh_rows]
+            lh_rows = outputs.xp.array(lh_rows, dtype="i")
+            po_rows = outputs.xp.array(po_rows, dtype="i")
             outputs.lh.data[lh_rows] = Y.lh.data
             outputs.po.data[po_rows] = Y.po.data
             backprops.append((get_dX, lh_rows, po_rows, lengths))
 
         def backprop_batched(d_outputs: Acts, sgd: Optimizer = None):
             for get_dX, lh_rows, po_rows, lengths in backprops:
+                if d_outputs.has_lh:
+                    d_lh = d_outputs.lh.data[lh_rows]
+                    lh_lengths = lengths
+                else:
+                    d_lh = d_outputs.lh.data
+                    lh_lengths = []
+                if d_outputs.has_po:
+                    d_po = d_outputs.po.data[po_rows]
+                    po_lengths = [1 for _ in lengths]
+                else:
+                    d_po = d_outputs.po.data
+                    po_lengths = []
                 dY = Acts(
-                    RaggedArray(d_outputs.lh.data[lh_rows], lengths),
-                    RaggedArray(d_outputs.po.data[po_rows], [1 for _ in lengths]))
+                    RaggedArray(d_lh, lh_lengths),
+                    RaggedArray(d_po, po_lengths))
                 dX = get_dX(dY, sgd=sgd)
                 assert dX is None
             return None
