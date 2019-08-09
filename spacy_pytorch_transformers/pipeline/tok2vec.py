@@ -65,6 +65,9 @@ class PyTT_TokenVectorEncoder(Pipe):
             pytt_config["layer_norm_eps"] = 1e-12
             config_cls = get_pytt_config(name)
             model_cls = get_pytt_model(name)
+            # Need to match the name their constructor expects.
+            vocab_size = cfg["pytt_config"]["vocab_size"]
+            cfg["pytt_config"]["vocab_size_or_config_json_file"] = vocab_size
             pytt_wrap = PyTT_Wrapper(
                 name, pytt_config, model_cls(config_cls(**pytt_config))
             )
