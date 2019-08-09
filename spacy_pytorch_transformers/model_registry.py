@@ -71,10 +71,10 @@ def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
 
 @register_model("softmax_pooler_output")
 def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
-    """Select features from the pooler output, (if necessary) mean-pool them,
-    mean-pool them to produce one vector per softmax them, and then mean-pool
-    them to produce one feature per vector. The gradients of the class vectors
-    are incremented in the backward pass, to allow fine-tuning.
+    """Select features from the pooler output, (if necessary) mean-pool them 
+    to produce one vector per item, and then softmax them.
+    The gradients of the class vectors are incremented in the backward pass,
+    to allow fine-tuning.
     """
     return chain(
         get_pytt_pooler_output,
