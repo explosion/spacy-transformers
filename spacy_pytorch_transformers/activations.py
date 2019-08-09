@@ -56,9 +56,11 @@ class RaggedArray:
         if max(lengths, default=0) > padded.shape[1]:
             return cls.from_truncated(padded, lengths)
         mask = lengths2mask(lengths)
-        all_rows = padded.reshape((-1, padded.shape[-1]))
+        assert sum(mask) == sum(lengths)
+        all_rows = padded.reshape((-1,) + padded.shape[2:])
         xp = get_array_module(all_rows)
         data = xp.ascontiguousarray(all_rows[mask])
+        assert data.shape[0] == sum(lengths)
         return cls(data, lengths)
    
     def to_padded(self, *, value=0, to: int=-1) -> Array:
@@ -74,7 +76,7 @@ class RaggedArray:
             return values
         mask = lengths2mask(self.lengths)
         values = values.reshape((len(self.lengths) * to,) + self.data.shape[1:])
-        values[mask >= 1] = self.data
+        values[mask] = self.data
         values = values.reshape(shape)
         return values
 
