@@ -8,7 +8,7 @@ import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
-from .util import batch_by_length, flatten_list, get_sents
+from .util import batch_by_length, flatten_list, get_sents, is_class_token
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -122,28 +122,23 @@ def get_pytt_class_tokens(docs, drop=0.0):
     """
     xp = get_array_module(docs[0]._.pytt_last_hidden_state)
     outputs = []
+    doc_class_tokens = []
     for doc in docs:
+        class_tokens = []
+        for i, wp in enumerate(doc._.pytt_word_pieces_):
+            if is_class_token(wp):
+                class_tokens.append(i)
+        doc_class_tokens.append(xp.array(class_tokens, dtype="i"))
         wp_tensor = doc._.pytt_last_hidden_state
-        class_vectors = []
-        for sent in get_sents(doc):
-            if sent._.pytt_start is not None:
-                class_vectors.append(wp_tensor[sent._.pytt_start])
-            else:
-                class_vectors.append(xp.zeros((wp_tensor.shape[-1],), dtype="f"))
-        Y = xp.vstack(class_vectors)
-        outputs.append(Y)
+        outputs.append(wp_tensor[doc_class_tokens[-1]])
 
     def backprop_pytt_class_tokens(d_outputs, sgd=None):
-        for doc, dY in zip(docs, d_outputs):
+        for doc, class_tokens, dY in zip(docs, doc_class_tokens, d_outputs):
             if doc._.pytt_d_last_hidden_state.size == 0:
                 xp = get_array_module(doc._.pytt_last_hidden_state)
                 grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype="f")
                 doc._.pytt_d_last_hidden_state = grads
-            nr_word_pieces = len(doc._.pytt_word_pieces)
-            assert doc._.pytt_d_last_hidden_state.shape[0] == nr_word_pieces
-            for i, sent in enumerate(get_sents(doc)):
-                if sent._.pytt_start is not None:
-                    doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
+            doc._.pytt_d_last_hidden_state[class_tokens] += dY
         return None
 
     return outputs, backprop_pytt_class_tokens
