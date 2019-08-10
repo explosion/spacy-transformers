@@ -147,7 +147,7 @@ def get_defaults(lang):
 
 def get_wp_start(span):
     if isinstance(span, Token):
-        span = span.doc[span.i:span.i+1]
+        span = span.doc[span.i : span.i + 1]
     for token in span:
         if token._.pytt_alignment:
             wp_start = token._.pytt_alignment[0]
@@ -163,7 +163,7 @@ def get_wp_start(span):
 
 def get_wp_end(span):
     if isinstance(span, Token):
-        span = span.doc[span.i:span.i+1]
+        span = span.doc[span.i : span.i + 1]
     for token in reversed(span):
         if token._.pytt_alignment:
             wp_end = token._.pytt_alignment[-1]
@@ -186,7 +186,7 @@ def get_span_wp_getter(attr):
         start = span._.pytt_start
         end = span._.pytt_end
         doc_values = span.doc._.get(attr)
-        return doc_values[start:end+1]
+        return doc_values[start : end + 1]
 
     if attr == "pytt_alignment":
         return span_alignment_getter
@@ -203,7 +203,7 @@ def get_token_wp_getter(attr):
         doc_values = token.doc._.get(attr)
         start = token._.pytt_start
         end = token._.pytt_end
-        return [doc_values[i] for i in range(start, end+1)]
+        return [doc_values[i] for i in range(start, end + 1)]
 
     if attr == "pytt_alignment":
         return token_alignment_getter
@@ -219,7 +219,7 @@ def get_span_tok2vec_getter(attr):
         wp_start = span[0]._.pytt_wp_start
         wp_end = span[-1]._.pytt_wp_end
         if wp_start is not None and wp_end is not None:
-            return doc_activations[wp_start:wp_end+1]
+            return doc_activations[wp_start : wp_end + 1]
         else:
             # Return empty slice.
             return doc_activations[0:0]
