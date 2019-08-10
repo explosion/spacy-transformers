@@ -123,8 +123,15 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
     def clean_wp_token(self, token):
         return token.replace("##", "", 1).strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.cls_token] + tokens + [self.sep_token]
+    def add_special_tokens(self, segments):
+        output = []
+        for segment in segments:
+            output.extend(segment)
+            output.append(self.sep_token)
+        if output:
+            # If we otherwise would have an empty output, don't add cls
+            output.insert(0, self.cls_token)
+        return output
 
 
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
@@ -170,8 +177,13 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         text = clean_extended_unicode(text)
         return text.strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.bos_token] + tokens + [self.eos_token]
+    def add_special_tokens(self, segments):
+        output = []
+        # Apparently no CLS token in GPT2?
+        for segment in segments:
+            output.extend(segment)
+            output.append(self.sep_token)
+        return output
 
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
@@ -215,8 +227,14 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         text = self._replace_re.sub("", text)
         return text.replace("</w>", "").strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.bos_token] + tokens + [self.cls_token]
+    def add_special_tokens(self, segments):
+        output = []
+        for segment in segments:
+            output.append(self.bos_token)
+            output.extend(segment)
+        if output:
+            output.append(self.cls_token)
+        return output
 
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
@@ -264,8 +282,14 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         text = self._replace_re.sub("", text)
         return text.strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.sep_token] + tokens + [self.cls_token]
+    def add_special_tokens(self, segments):
+        output = []
+        for segment in segments:
+            output.append(self.sep_token)
+            output.extend(segment)
+        if output:
+            output.append(self.cls_token)
+        return output
 
 
 def clean_accents(text):

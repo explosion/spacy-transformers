@@ -85,11 +85,11 @@ class PyTT_WordPiecer(Pipe):
         for doc in docs:
             output.append([])
             for sent in get_sents(doc):
-                tokens = self.model.tokenize(sent.text)
-                if tokens:
-                    output[-1].append(self.model.add_special_tokens(tokens))
-                else:
-                    output[-1].append(tokens)
+                segments = []
+                for segment in sent._.pytt_segments:
+                    segments.append(self.model.tokenize(segment.text))
+                tokens = self.model.add_special_tokens(segments)
+                output[-1].append(tokens)
         return output
 
     def set_annotations(self, docs, outputs, tensors=None):
