@@ -127,7 +127,8 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
         output = []
         for segment in segments:
             output.extend(segment)
-            output.append(self.sep_token)
+            if segment:
+                output.append(self.sep_token)
         if output:
             # If we otherwise would have an empty output, don't add cls
             output.insert(0, self.cls_token)
@@ -182,7 +183,8 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         # Apparently no CLS token in GPT2?
         for segment in segments:
             output.extend(segment)
-            output.append(self.sep_token)
+            if segment:
+                output.append(self.sep_token)
         return output
 
 
@@ -230,7 +232,8 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
     def add_special_tokens(self, segments):
         output = []
         for segment in segments:
-            output.append(self.bos_token)
+            if segment:
+                output.append(self.bos_token)
             output.extend(segment)
         if output:
             output.append(self.cls_token)
@@ -285,7 +288,8 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
     def add_special_tokens(self, segments):
         output = []
         for segment in segments:
-            output.append(self.sep_token)
+            if segment:
+                output.append(self.sep_token)
             output.extend(segment)
         if output:
             output.append(self.cls_token)
