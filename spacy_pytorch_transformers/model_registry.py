@@ -137,6 +137,13 @@ def get_pytt_pooler_output(docs, drop=0.0):
     for each sentence in the document. To backprop, we increment the values
     in the doc._.pytt_d_last_hidden_state array.
     """
+    for doc in docs:
+        if doc._.pytt_pooler_output is None:
+            raise ValueError(
+                "Pooler output unset. Perhaps you're using the wrong architecture? "
+                "The BERT model provides a pooler output, but XLNet doesn't. "
+                "You might need to set 'architecture': 'softmax_class_vector' "
+                "instead.")
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
