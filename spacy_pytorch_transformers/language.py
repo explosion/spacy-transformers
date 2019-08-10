@@ -182,11 +182,11 @@ def get_wp_end(span):
     else:
         return None
     wordpieces = span.doc._.pytt_word_pieces_
-    next_token = wp_end + 1
-    if next_token < len(wordpieces) and is_special_token(wordpieces[next_token]):
-        return next_token
-    else:
-        return wp_end
+    # We can have a sequence SEP, CLS for XLNet and XLM. Maybe we should check
+    # for two iterations specifically? Unsure.
+    while (wp_end+1) < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
+        wp_end += 1
+    return wp_end
 
 
 def get_span_wp_getter(attr):
