@@ -91,16 +91,14 @@ def process_data(nlp, task, examples):
     docs = []
     golds = []
     for eg in examples:
-        assert "\n" not in eg.text_a
-        assert "\n" not in eg.text_b
-        doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
-        # Set "sentence boundary"
-        for token in doc:
-            if token.text == "\n":
-                token.is_sent_start = True
+        if eg.text_b:
+            assert "\n" not in eg.text_a
+            assert "\n" not in eg.text_b
+            doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
+            doc._.pytt_separator = "\n"
+        else:
+            doc = nlp.make_doc(eg.text_a)
         doc = wordpiecer(doc)
-        for token in doc[1:]:
-            token.is_sent_start = False
         cats = {label: 0.0 for label in textcat.labels}
         cats[eg.label] = 1.0
         gold = GoldParse(doc, cats=cats)
