@@ -51,7 +51,8 @@ def tok2vec_per_sentence(pytt_model, cfg):
 @register_model("softmax_tanh_class_vector")
 def softmax_tanh_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     """Select features from the class-vectors from the last hidden state,
-    mean-pool them, and softmax to produce one vector per document.
+    mean-pool them, apply a tanh-activated hidden layer, and then softmax-activated
+    output layer to produce one vector per document.
     The gradients of the class vectors are incremented in the backward pass,
     to allow fine-tuning.
     """
@@ -68,9 +69,9 @@ def softmax_tanh_class_vector(nr_class, *, exclusive_classes=True, **cfg):
 @register_model("softmax_class_vector")
 def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     """Select features from the class-vectors from the last hidden state,
-    mean-pool them, and softmax to produce one vector per document.
-    The gradients of the class vectors are incremented in the backward pass,
-    to allow fine-tuning.
+    mean-pool them, and apply a softmax-activated hidden layer to produce one
+    vector per document. The gradients of the class vectors are incremented
+    in the backward pass, to allow fine-tuning.
     """
     width = cfg["token_vector_width"]
     return chain(
@@ -79,6 +80,23 @@ def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
         Pooling(mean_pool),
         Softmax(2, width),
     )
+
+
+@register_model("softmax_last_hidden")
+def softmax_last_hidden(nr_class, *, exclusive_classes=True, **cfg):
+    """Select features from the class-vectors from the last hidden state,
+    mean-pool them, and softmax to produce one vector per document.
+    The gradients of the class vectors are incremented in the backward pass,
+    to allow fine-tuning.
+    """
+    width = cfg["token_vector_width"]
+    return chain(
+        get_pytt_last_hidden,
+        flatten_add_lengths,
+        Pooling(mean_pool),
+        Softmax(2, width),
+    )
+
 
 
 @register_model("softmax_pooler_output")
@@ -137,6 +155,13 @@ def get_pytt_pooler_output(docs, drop=0.0):
     for each sentence in the document. To backprop, we increment the values
     in the doc._.pytt_d_last_hidden_state array.
     """
+    for doc in docs:
+        if doc._.pytt_pooler_output is None:
+            raise ValueError(
+                "Pooler output unset. Perhaps you're using the wrong architecture? "
+                "The BERT model provides a pooler output, but XLNet doesn't. "
+                "You might need to set 'architecture': 'softmax_class_vector' "
+                "instead.")
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
@@ -162,11 +187,13 @@ def get_pytt_last_hidden(docs, drop=0.0):
         assert out is not None
 
     def backprop_pytt_last_hidden(d_outputs, sgd=None):
-        for doc, d_last_hidden_state in zip(docs, d_outputs):
-            if doc._.pytt_d_last_hidden_state is None:
-                doc._.pytt_d_last_hidden_state = d_last_hidden_state
-            else:
-                doc._.pytt_d_last_hidden_state += d_last_hidden_state
+        for doc, d_lh in zip(docs, d_outputs):
+            xp = get_array_module(d_lh)
+            shape = d_lh.shape
+            dtype = d_lh.dtype
+            if doc._.pytt_d_last_hidden_state.size == 0:
+                doc._.pytt_d_last_hidden_state = xp.zeros(shape, dtype=dtype)
+            doc._.pytt_d_last_hidden_state += d_lh
         return None
 
     return outputs, backprop_pytt_last_hidden
