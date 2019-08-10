@@ -8,7 +8,7 @@ import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
-from .util import batch_by_length, flatten_list
+from .util import batch_by_length, flatten_list, get_sents
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -107,7 +107,7 @@ def get_pytt_class_tokens(docs, drop=0.0):
     for doc in docs:
         wp_tensor = doc._.pytt_last_hidden_state
         class_vectors = []
-        for sent in doc.sents:
+        for sent in get_sents(doc):
             if sent._.pytt_start is not None:
                 class_vectors.append(wp_tensor[sent._.pytt_start])
             else:
@@ -123,7 +123,7 @@ def get_pytt_class_tokens(docs, drop=0.0):
                 doc._.pytt_d_last_hidden_state = grads
             nr_word_pieces = len(doc._.pytt_word_pieces)
             assert doc._.pytt_d_last_hidden_state.shape[0] == nr_word_pieces
-            for i, sent in enumerate(doc.sents):
+            for i, sent in enumerate(get_sents(doc)):
                 if sent._.pytt_start is not None:
                     doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
         return None
@@ -283,6 +283,8 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
 
     def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
+        if not all(doc.is_sentenced for doc in docs):
+            return layer.begin_update([d[:] for d in docs], drop=drop)
         sents = flatten_list([list(doc.sents) for doc in docs])
         words_per_doc = [len(d._.pytt_word_pieces) for d in docs]
         words_per_sent = [len(s._.pytt_word_pieces) for s in sents]
@@ -309,5 +311,4 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
 
         return acts, sentence_bwd
 
-    model = wrap(sentence_fwd, layer)
-    return model
+    return wrap(sentence_fwd, layer)
