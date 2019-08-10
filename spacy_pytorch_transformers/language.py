@@ -40,6 +40,11 @@ class PyTT_Language(Language):
             Doc.set_extension(attr, default=None)
             Span.set_extension(attr, getter=get_span_wp_getter(attr))
             Token.set_extension(attr, getter=get_token_wp_getter(attr))
+        Doc.set_extension("pytt_separator", default=None)
+        Span.set_extension("pytt_separator", getter=lambda span: span.doc._.pytt_separator)
+        Token.set_extension("pytt_separator", getter=lambda token: token.doc._.pytt_separator)
+        Doc.set_extension("pytt_segments", getter=get_pytt_segments)
+        Span.set_extension("pytt_segments", getter=get_pytt_segments)
         for cls in [Token, Span, Doc]:
             cls.set_extension("pytt_start", getter=get_wp_start)
             cls.set_extension("pytt_end", getter=get_wp_end)
@@ -63,16 +68,22 @@ class PyTT_Language(Language):
 
     def update(self, docs, golds, drop=0.0, sgd=None, losses=None, component_cfg={}):
         component_cfg = dict(component_cfg)
-        sentencizer = self.get_pipe("sentencizer")
-        wp = self.get_pipe("pytt_wordpiecer")
+        if self.has_pipe("sentencizer"):
+            sentencizer = self.get_pipe("sentencizer")
+        else:
+            sentencizer = lambda doc: doc
+        if self.has_pipe("pytt_wordpiecer"):
+            wp = self.get_pipe("pytt_wordpiecer")
+        else:
+            wp = lambda doc: doc
         tok2vec = self.get_pipe("pytt_tok2vec")
         new_docs = []
         new_golds = []
         for doc, gold in zip(docs, golds):
             if isinstance(doc, str):
                 doc = self.make_doc(doc)
-            doc = sentencizer(doc)
-            doc = wp(doc)
+                doc = sentencizer(doc)
+                doc = wp(doc)
             if not isinstance(gold, GoldParse):
                 gold = GoldParse(doc, **gold)
             new_docs.append(doc)
@@ -234,3 +245,16 @@ def get_token_tok2vec_getter(attr):
         return span._.get(attr)
 
     return token_getter
+
+
+def get_pytt_segments(doc):
+    separator = doc._.pytt_separator
+    if separator is not None:
+        start = 0
+        for token in doc:
+            if token.text == separator:
+                yield doc[start : token.i]
+                start = token.i
+        yield doc[start:]
+    else:
+        yield doc[:]
