@@ -49,9 +49,9 @@ the [model releases](https://github.com/explosion/spacy-models/releases).
 
 | Package name                 | Pretrained model         | Language | Author                                                     |  Size |                                            Release                                             |
 | ---------------------------- | ------------------------ | -------- | ---------------------------------------------------------- | ----: | :--------------------------------------------------------------------------------------------: |
-| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased`      | English  | [Google Research](https://github.com/google-research/bert) | 406MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.0) |
-| `de_pytt_bertbasecased_lg`   | `bert-base-german-cased` | German   | [deepset](https://deepset.ai/german-bert)                  | 406MB |  [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.0)  |
-| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`       | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)    | 434MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.0)  |
+| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased`      | English  | [Google Research](https://github.com/google-research/bert) | 406MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.1) |
+| `de_pytt_bertbasecased_lg`   | `bert-base-german-cased` | German   | [deepset](https://deepset.ai/german-bert)                  | 406MB |  [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.1)  |
+| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`       | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)    | 434MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.1)  |
 
 ```bash
 python -m spacy download en_pytt_bertbaseuncased_lg
