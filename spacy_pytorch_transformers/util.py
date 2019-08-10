@@ -1,6 +1,7 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
 import pytorch_transformers as pytt
 import numpy
+from spacy.tokens import Doc, Span
 
 from . import _tokenizers
 
@@ -206,6 +207,13 @@ def lengths2mask(lengths):
 
 def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
+
+
+def get_sents(doc: Union[Span, Doc]) -> List[Span]:
+    if doc.is_sentenced:
+        return list(doc.sents)
+    else:
+        return [doc[:]]
 
 
 def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
