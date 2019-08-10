@@ -28,6 +28,7 @@ SPECIAL_TOKENS: Sequence[str] = (
 )
 
 
+
 def get_pytt_config(name):
     """Map a name to the appropriate pytorch_transformers.*Config class."""
     name = name.lower()
@@ -207,6 +208,10 @@ def lengths2mask(lengths):
 
 def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
+
+
+def is_class_token(text: str) -> bool:
+    return text == "[CLS]" or text == "<cls>"
 
 
 def get_sents(doc: Union[Span, Doc]) -> List[Span]:
