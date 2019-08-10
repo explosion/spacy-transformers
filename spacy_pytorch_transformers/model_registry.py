@@ -279,7 +279,8 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
             lh_rows = outputs.xp.array(lh_rows, dtype="i")
             po_rows = outputs.xp.array(po_rows, dtype="i")
             outputs.lh.data[lh_rows] = Y.lh.data
-            outputs.po.data[po_rows] = Y.po.data
+            if outputs.has_po and po_rows:
+                outputs.po.data[po_rows] = Y.po.data
             backprops.append((get_dX, lh_rows, po_rows, lengths))
 
         def backprop_batched(d_outputs: Acts, sgd: Optimizer = None):
