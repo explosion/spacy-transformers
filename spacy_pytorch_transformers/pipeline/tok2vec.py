@@ -8,7 +8,7 @@ from spacy.util import minibatch
 from ..wrapper import PyTT_Wrapper
 from ..model_registry import get_model_function
 from ..activations import Activations, RaggedArray
-from ..util import get_pytt_config, get_pytt_model
+from ..util import get_pytt_config, get_pytt_model, get_sents
 
 
 class PyTT_TokenVectorEncoder(Pipe):
@@ -209,7 +209,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             # To make this weighting work, we "align" the boundary tokens against
             # every token in their sentence.
             if doc.tensor.sum() != wp_tensor.sum():
-                for sent in doc.sents:
+                for sent in get_sents(doc):
                     if sent._.pytt_start is not None and sent._.pytt_end is not None:
                         cls_vector = wp_tensor[sent._.pytt_start]
                         sep_vector = wp_tensor[sent._.pytt_end]
