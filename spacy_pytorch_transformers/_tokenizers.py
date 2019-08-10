@@ -230,9 +230,9 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
     def add_special_tokens(self, segments):
         output = []
         for segment in segments:
+            output.extend(segment)
             if segment:
                 output.append(self.bos_token)
-            output.extend(segment)
         if output:
             output.append(self.cls_token)
         return output
@@ -286,9 +286,9 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
     def add_special_tokens(self, segments):
         output = []
         for segment in segments:
+            output.extend(segment)
             if segment:
                 output.append(self.sep_token)
-            output.extend(segment)
         if output:
             output.append(self.cls_token)
         return output
