@@ -40,7 +40,7 @@ def get_model_function(name: str):
 
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(pytt_model, cfg):
-    max_words = cfg.get("words_per_batch", 2000)
+    max_words = cfg.get("words_per_batch", 1000)
 
     model = foreach_sentence(
         chain(get_word_pieces, with_length_batching(pytt_model, max_words))
@@ -279,7 +279,7 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
             lh_rows = outputs.xp.array(lh_rows, dtype="i")
             po_rows = outputs.xp.array(po_rows, dtype="i")
             outputs.lh.data[lh_rows] = Y.lh.data
-            if outputs.has_po and po_rows:
+            if outputs.has_po and po_rows.size:
                 outputs.po.data[po_rows] = Y.po.data
             backprops.append((get_dX, lh_rows, po_rows, lengths))
 
