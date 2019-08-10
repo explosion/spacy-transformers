@@ -37,6 +37,7 @@ def test_textcat_update(textcat, nlp):
     textcat.update([doc], [GoldParse(doc, cats=cats)], sgd=optimizer, losses=losses)
     assert "pytt_textcat" in losses
 
+
 def test_textcat_update_multi_sentence(textcat, nlp):
     doc = nlp("Hello world. This is sentence 2.")
     assert len(list(doc.sents)) == 2

@@ -87,14 +87,7 @@ def test_pad_batch_2d(lengths, width, expected_shape):
     assert padded.shape == expected_shape
 
 
-@pytest.mark.parametrize(
-    "lengths",
-    [
-        [1],
-        [1, 2],
-        [5, 3, 1],
-    ],
-)
+@pytest.mark.parametrize("lengths", [[1], [1, 2], [5, 3, 1]])
 def test_lengths2mask(lengths):
     mask = lengths2mask(lengths)
     assert mask.ndim == 1

@@ -25,6 +25,7 @@ def test_from_pretrained(tok2vec, docs):
         diff = doc.tensor.sum() - doc._.pytt_last_hidden_state.sum()
         assert abs(diff) <= 1e-2
 
+
 def test_set_annotations(tok2vec, docs):
     scores = tok2vec.predict(docs)
     tok2vec.set_annotations(docs, scores)

@@ -59,11 +59,11 @@ def softmax_tanh_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     return chain(
         get_pytt_class_tokens,
         flatten_add_lengths,
-        with_getitem(
-            0, chain(Affine(width, width), tanh)),
+        with_getitem(0, chain(Affine(width, width), tanh)),
         Pooling(mean_pool),
-        Softmax(2, width)
+        Softmax(2, width),
     )
+
 
 @register_model("softmax_class_vector")
 def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
@@ -77,13 +77,13 @@ def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
         get_pytt_class_tokens,
         flatten_add_lengths,
         Pooling(mean_pool),
-        Softmax(2, width)
+        Softmax(2, width),
     )
 
 
 @register_model("softmax_pooler_output")
 def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
-    """Select features from the pooler output, (if necessary) mean-pool them 
+    """Select features from the pooler output, (if necessary) mean-pool them
     to produce one vector per item, and then softmax them.
     The gradients of the class vectors are incremented in the backward pass,
     to allow fine-tuning.

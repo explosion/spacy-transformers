@@ -16,9 +16,11 @@ def ids(tokenizer):
     text = "the cat sat on the mat"
     return numpy.array(tokenizer.encode(text), dtype=numpy.int_)
 
+
 @pytest.fixture
 def inputs(ids):
     return RaggedArray(ids, [len(ids)])
+
 
 @pytest.fixture
 def model(nlp):
