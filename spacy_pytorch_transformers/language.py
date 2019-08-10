@@ -185,7 +185,12 @@ def get_span_wp_getter(attr):
     def span_getter(span):
         start = span._.pytt_start
         end = span._.pytt_end
+        if start is None and end is None:
+            return []
         doc_values = span.doc._.get(attr)
+        start = start if start is not None else 0
+        if end is None:
+            return doc_values[start:]
         return doc_values[start : end + 1]
 
     if attr == "pytt_alignment":
@@ -203,6 +208,8 @@ def get_token_wp_getter(attr):
         doc_values = token.doc._.get(attr)
         start = token._.pytt_start
         end = token._.pytt_end
+        if start is None and end is None:
+            return []
         return [doc_values[i] for i in range(start, end + 1)]
 
     if attr == "pytt_alignment":
