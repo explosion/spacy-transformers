@@ -180,11 +180,9 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
 
     def add_special_tokens(self, segments):
         output = []
-        # Apparently no CLS token in GPT2?
+        # Apparently no CLS or SEP tokens in GPT2?
         for segment in segments:
             output.extend(segment)
-            if segment:
-                output.append(self.sep_token)
         return output
 
 
