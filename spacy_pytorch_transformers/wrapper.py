@@ -18,8 +18,16 @@ CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 
 class PyTT_Wrapper(PyTorchWrapper):
-    """Wrap a PyTorch-Transformers model for use in Thinc."""
-
+    """Wrap a PyTorch-Transformers model for use in Thinc.
+    
+    The model will take as input a spacy_pytorch_transformers.util.RaggedArray
+    object that will specify the input IDs and optionally the segment IDs. The
+    RaggedArray is basically a tuple (ids, lengths), where ids is concatenated
+    for a whole batch (this format allows the data to be contiguous even if
+    the sequences are different lengths). The segment IDs should be coded as
+    the different models expect them -- see
+    https://github.com/huggingface/pytorch-transformers/blob/master/examples/utils_glue.py
+    """
     _model: Any
     _optimizer: Any
     cfg: dict
@@ -149,25 +157,30 @@ class PyTT_Wrapper(PyTorchWrapper):
         return Activations(lh, po)
 
     def get_model_kwargs(self, inputs):
-        ids = inputs.to_padded()
+        padded = inputs.to_padded()
         if self.max_length:
-            ids = ids[:, : self.max_length]
-        # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
+            padded = padded[:, : self.max_length]
+        ids = padded[:, :, 0]
         neg_idx = ids < 0
         ids[neg_idx] = 0
         ids = torch.as_tensor(ids, dtype=torch.int64)
+        if padded.shape[2] == 2:
+            segment_ids = padded[:, :, 1]
+            segment_ids = torch.as_tensor(segment_ids, dtype=torch.int64)
+        else:
+            segment_ids = torch.zeros_like(ids)
+        # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
         if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
             mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
             mask[neg_idx] = 0
             mask = xp2torch(mask)
-            segment_ids = torch.zeros_like(ids)
             return {
                 "input_ids": ids,
                 "attention_mask": mask,
                 "token_type_ids": segment_ids,
             }
         else:
-            return {"input_ids": ids}
+            return {"input_ids": ids, "token_type_ids": segment_ids}
 
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
