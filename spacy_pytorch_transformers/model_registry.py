@@ -235,7 +235,7 @@ def get_word_pieces(pytt_name):
                 lengths.append(len(wordpieces))
             else:
                 lengths.append(0)
-        features = numpy.array(zip(ids, segment_ids), dtype=numpy.int_)
+        features = numpy.array(list(zip(ids, segment_ids)), dtype=numpy.int_)
         assert features.shape[0] == sum(lengths), (features.shape, sum(lengths))
         return RaggedArray(features, lengths), None
     return layerize(get_features_forward)
