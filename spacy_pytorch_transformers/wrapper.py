@@ -69,7 +69,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     @property
     def max_length(self):
-        return self.cfg.get("max_position_embeddings", 0)
+        return self.cfg.get("max_position_embeddings", 128)
 
     def predict(self, inputs: RaggedArray):
         self._model.eval()
