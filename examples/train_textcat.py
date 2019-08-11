@@ -7,9 +7,10 @@ from pathlib import Path
 import thinc.extra.datasets
 import spacy
 import torch
-from spacy.util import minibatch
+from spacy.util import minibatch, compounding
 import tqdm
 import unicodedata
+from spacy_pytorch_transformers.util import warmup_linear_rates
 
 
 @plac.annotations(
@@ -27,7 +28,7 @@ def main(
     model,
     input_dir=None,
     output_dir=None,
-    n_iter=20,
+    n_iter=5,
     n_texts=100,
     batch_size=8,
     learn_rate=2e-5,
@@ -47,7 +48,7 @@ def main(
     print(nlp.pipe_names)
     print(f"Loaded model '{model}'")
     textcat = nlp.create_pipe(
-        "pytt_textcat", config={"architecture": "softmax_class_vector"}
+        "pytt_textcat", config={"architecture": "softmax_last_hidden"}
     )
     if input_dir is not None:
         train_texts, train_cats = read_inputs(input_dir / "training.jsonl")
@@ -87,7 +88,8 @@ def main(
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
     # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
-    optimizer.alpha = learn_rate
+    optimizer.alpha = 0.001
+    learn_rates = warmup_linear_rates(learn_rate, 0, n_iter * len(train_data) // batch_size)
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
     for i in range(n_iter):
@@ -97,11 +99,13 @@ def main(
         batches = minibatch(train_data, size=batch_size)
         with tqdm.tqdm(total=total_words, leave=False) as pbar:
             for batch in batches:
+                optimizer.pytt_lr = next(learn_rates)
                 texts, annotations = zip(*batch)
                 nlp.update(texts, annotations, sgd=optimizer, drop=0.1, losses=losses)
                 pbar.update(sum(len(text.split()) for text in texts))
         # evaluate on the dev data split off in load_data()
-        scores = evaluate(nlp, eval_texts, eval_cats)
+        with nlp.use_params(optimizer.averages):
+            scores = evaluate(nlp, eval_texts, eval_cats)
         print(
             "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
                 losses["pytt_textcat"],
