@@ -231,13 +231,11 @@ def get_word_pieces(pytt_name):
             wordpieces = sent._.pytt_word_pieces
             if wordpieces:
                 ids.extend(wordpieces)
-                segment_ids.append(get_segment_ids(pytt_name, len(wordpieces)-2, 0))
+                segment_ids.extend(get_segment_ids(pytt_name, len(wordpieces)-2, 0))
                 lengths.append(len(wordpieces))
             else:
                 lengths.append(0)
-        ids_array = numpy.array(ids, dtype=numpy.int_).reshape((-1, 1))
-        segments_array = numpy.concatenate(segment_ids).reshape((-1, 1))
-        features = numpy.hstack((ids_array, segments_array))
+        features = numpy.array(zip(ids, segment_ids), dtype=numpy.int_)
         assert features.shape[0] == sum(lengths), (features.shape, sum(lengths))
         return RaggedArray(features, lengths), None
     return layerize(get_features_forward)
