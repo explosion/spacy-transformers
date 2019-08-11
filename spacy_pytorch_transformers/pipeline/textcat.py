@@ -59,3 +59,12 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         if DEBUG_LOSS:
             print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
         return loss, d_scores
+
+    def begin_training(self, get_gold_tuples=lambda: [], pipeline=None, sgd=None, **kwargs):
+        if self.model is True:
+            self.cfg.update(kwargs)
+            self.require_labels()
+            self.model = self.Model(len(self.labels), **self.cfg)
+        if sgd is None:
+            sgd = self.create_optimizer()
+        return sgd
