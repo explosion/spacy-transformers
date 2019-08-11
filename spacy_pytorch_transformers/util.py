@@ -303,21 +303,21 @@ def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
     
-    I'm really not sure how this should look? I guess there's no sep and cls
-    tokens, so just denote the segments...
+    I'm really not sure how this should look? We currently require segment
+    boundaries, so we're just using the <|endoftext|> markers in their vocab?
 
     (a) For sequence pairs:
-        tokens:    is this jack ##son ##ville ? no it is not . 
-        type_ids:   0   0  0    0    0     0    1  1  1  1   1 
+        tokens:   <|eot|> is this jack ##son ##ville ? <|eot|> no it is not . <|eot|> 
+        type_ids:   0     0  0    0    0     0       0  0      1  1  1  1   1 1
 
     (b) For single sequences:
-        tokens:   the dog is hairy .
-        type_ids:   0   0   0   0  0
+        tokens:   <|eot|> the dog is hairy . <|eot|>
+        type_ids:   0      0   0   0   0   0 0
     """
     if not length2:
-        return [0] * length1
+        return [0] + [0] * length1 + [0]
     else:
-        return [0] * length1 + [1] * length2
+        return [0] + [0] * length1 + [0] + [1] * length2 + [1]
 
  
 def get_sents(doc: Union[Span, Doc]) -> List[Span]:
