@@ -214,7 +214,15 @@ def is_class_token(text: str) -> bool:
     return text == "[CLS]" or text == "<cls>"
 
 
-def get_segment_ids(name: str, length1: int, length2: int) -> List[int]:
+def get_segment_ids(name: str, *lengths) -> List[int]:
+    if len(lengths) == 1:
+        length1 = lengths[0]
+        length2 = 0
+    elif len(lengths) == 2:
+        length1, length2 = lengths
+    else:
+        msg = f"Expected 1 or 2 segments. Got {len(lengths)}"
+        raise ValueError(msg)
     if "bert" in name:
         return get_bert_segment_ids(length1, length2)
     elif "xlnet" in name:
