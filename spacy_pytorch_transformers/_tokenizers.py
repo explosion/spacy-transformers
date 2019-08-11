@@ -343,10 +343,13 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         offset = 0
         output = []
         for segment in segments:
+            seen = set()
             for idx_group in segment:
                 output.append([idx + offset for idx in idx_group])
-            offset += len(segment)
-            offset += 1
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
+            if segment:
+                offset += 1
         return output
 
 
