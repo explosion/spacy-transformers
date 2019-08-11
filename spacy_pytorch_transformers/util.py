@@ -245,7 +245,7 @@ def get_bert_segment_ids(length1: int, length2: int) -> List[int]:
     if length2:
         return [0] * length1 + [0] + [0] + [1] * length2 + [1]
     else:
-        [0] * length1 + [0] + [0]
+        return [0] * length1 + [0] + [0]
 
 
 def get_xlnet_segment_ids(length1: int, length2: int) -> List[int]:
