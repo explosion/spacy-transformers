@@ -180,9 +180,12 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
 
     def add_special_tokens(self, segments):
         output = []
-        # Apparently no CLS or SEP tokens in GPT2?
         for segment in segments:
+            if segment:
+                output.append(self.bos_token)
             output.extend(segment)
+            if segment:
+                output.append(self.eos_token)
         return output
 
 
@@ -228,13 +231,14 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         return text.replace("</w>", "").strip()
 
     def add_special_tokens(self, segments):
+        # See https://github.com/facebookresearch/XLM/issues/113
         output = []
         for segment in segments:
-            output.extend(segment)
             if segment:
                 output.append(self.bos_token)
-        if output:
-            output.append(self.cls_token)
+            output.extend(segment)
+            if segment:
+                output.append(self.eos_token)
         return output
 
 
@@ -288,7 +292,7 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         for segment in segments:
             output.extend(segment)
             if segment:
-                output.append(self.sep_token)
+                output.append(self.eos_token)
         if output:
             output.append(self.cls_token)
         return output
