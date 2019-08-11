@@ -34,10 +34,12 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         pytt_name = cfg.get("pytt_name", None)
         is_gpt2 = "gpt2" in pytt_name
         is_xlnet = "xlnet" in pytt_name
-        msg = (f"PyTT_TextCategorizer model architecture set to '{arch}' "
-               f"with {cfg['pytt_name']} transformer. This "
-               f"combination is incompatible, as the transformer does not "
-               f"provide that output feature.")
+        msg = (
+            f"PyTT_TextCategorizer model architecture set to '{arch}' "
+            f"with {cfg['pytt_name']} transformer. This "
+            f"combination is incompatible, as the transformer does not "
+            f"provide that output feature."
+        )
         if is_gpt2 and arch in ("softmax_class_vector", "softmax_pooler_output"):
             raise ValueError(msg)
         elif is_xlnet and arch == "softmax_pooler_output":
@@ -60,7 +62,9 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
             print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
         return loss, d_scores
 
-    def begin_training(self, get_gold_tuples=lambda: [], pipeline=None, sgd=None, **kwargs):
+    def begin_training(
+        self, get_gold_tuples=lambda: [], pipeline=None, sgd=None, **kwargs
+    ):
         if self.model is True:
             self.cfg.update(kwargs)
             self.require_labels()

@@ -93,12 +93,8 @@ def softmax_last_hidden(nr_class, *, exclusive_classes=True, **cfg):
     """
     width = cfg["token_vector_width"]
     return chain(
-        get_pytt_last_hidden,
-        flatten_add_lengths,
-        Pooling(mean_pool),
-        Softmax(2, width),
+        get_pytt_last_hidden, flatten_add_lengths, Pooling(mean_pool), Softmax(2, width)
     )
-
 
 
 @register_model("softmax_pooler_output")
@@ -144,7 +140,10 @@ def get_pytt_class_tokens(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_class_tokens
+
+
 get_pytt_class_tokens.name = "get_pytt_class_tokens"
+
 
 @layerize
 def get_pytt_pooler_output(docs, drop=0.0):
@@ -158,7 +157,8 @@ def get_pytt_pooler_output(docs, drop=0.0):
                 "Pooler output unset. Perhaps you're using the wrong architecture? "
                 "The BERT model provides a pooler output, but XLNet doesn't. "
                 "You might need to set 'architecture': 'softmax_class_vector' "
-                "instead.")
+                "instead."
+            )
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
@@ -171,6 +171,8 @@ def get_pytt_pooler_output(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_pooler_output
+
+
 get_pytt_pooler_output.name = "get_pytt_pooler_output"
 
 
@@ -196,7 +198,10 @@ def get_pytt_last_hidden(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_last_hidden
+
+
 get_pytt_last_hidden.name = "get_pytt_last_hidden"
+
 
 @layerize
 def softmax(X, drop=0.0):
@@ -224,7 +229,7 @@ def tanh(X, drop=0.0):
 
 
 def get_word_pieces(pytt_name):
-    def get_features_forward(sents, drop=0.):
+    def get_features_forward(sents, drop=0.0):
         assert isinstance(sents[0], Span)
         ids = []
         segment_ids = []
@@ -233,8 +238,10 @@ def get_word_pieces(pytt_name):
             wordpieces = sent._.pytt_word_pieces
             # This is a bit convoluted, but we need the lengths without any
             # separator tokens or class tokens. pytt_segments gives Span objects.
-            seg_lengths = [len(set(flatten_list(seg._.pytt_alignment)))
-                           for seg in sent._.pytt_segments]
+            seg_lengths = [
+                len(set(flatten_list(seg._.pytt_alignment)))
+                for seg in sent._.pytt_segments
+            ]
             if wordpieces:
                 ids.extend(wordpieces)
                 lengths.append(len(wordpieces))
@@ -245,6 +252,7 @@ def get_word_pieces(pytt_name):
         features = numpy.array(list(zip(ids, segment_ids)), dtype=numpy.int_)
         assert features.shape[0] == sum(lengths), (features.shape, sum(lengths))
         return RaggedArray(features, lengths), None
+
     return layerize(get_features_forward, name="get_features_forward")
 
 

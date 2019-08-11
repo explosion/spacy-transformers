@@ -41,8 +41,12 @@ class PyTT_Language(Language):
             Span.set_extension(attr, getter=get_span_wp_getter(attr))
             Token.set_extension(attr, getter=get_token_wp_getter(attr))
         Doc.set_extension("pytt_separator", default=None)
-        Span.set_extension("pytt_separator", getter=lambda span: span.doc._.pytt_separator)
-        Token.set_extension("pytt_separator", getter=lambda token: token.doc._.pytt_separator)
+        Span.set_extension(
+            "pytt_separator", getter=lambda span: span.doc._.pytt_separator
+        )
+        Token.set_extension(
+            "pytt_separator", getter=lambda token: token.doc._.pytt_separator
+        )
         Doc.set_extension("pytt_segments", getter=get_pytt_segments)
         Span.set_extension("pytt_segments", getter=get_pytt_segments)
         for cls in [Token, Span, Doc]:
@@ -184,12 +188,12 @@ def get_wp_end(span):
     else:
         return None
     wordpieces = span.doc._.pytt_word_pieces_
-    if (wp_end+1) < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
+    if (wp_end + 1) < len(wordpieces) and is_special_token(wordpieces[wp_end + 1]):
         wp_end += 1
     # This is a messy way to check for the XLNet-style pattern, where we can
     # have <sep> <cls>. In the BERT-style pattern, we have [cls] at start.
     if not is_special_token(wordpieces[0]):
-        if (wp_end+1) < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
+        if (wp_end + 1) < len(wordpieces) and is_special_token(wordpieces[wp_end + 1]):
             wp_end += 1
     return wp_end
 

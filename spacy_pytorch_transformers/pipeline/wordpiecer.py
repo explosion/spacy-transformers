@@ -141,7 +141,9 @@ class PyTT_WordPiecer(Pipe):
             doc._.pytt_word_pieces_ = doc_word_pieces
             doc._.pytt_alignment = doc_alignment
             nr_word = len(doc._.pytt_word_pieces)
-            words_per_sent = sum(len(sent._.pytt_word_pieces) for sent in get_sents(doc))
+            words_per_sent = sum(
+                len(sent._.pytt_word_pieces) for sent in get_sents(doc)
+            )
             if nr_word != words_per_sent:
                 for sent in get_sents(doc):
                     print(repr(sent.text))
@@ -153,7 +155,8 @@ class PyTT_WordPiecer(Pipe):
                     f"wordpieces for its sentences we get {words_per_sent}. This "
                     f"means there's a bug in the extension attributes or "
                     f"the tokenizer.add_special_tokens() logic, often when "
-                    f"a spaCy sentence aligns against 0 wordpieces.")
+                    f"a spaCy sentence aligns against 0 wordpieces."
+                )
         self.model.max_len = max_len
 
     def use_params(self, params):

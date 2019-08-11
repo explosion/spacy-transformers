@@ -28,6 +28,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     the different models expect them -- see
     https://github.com/huggingface/pytorch-transformers/blob/master/examples/utils_glue.py
     """
+
     _model: Any
     _optimizer: Any
     cfg: dict

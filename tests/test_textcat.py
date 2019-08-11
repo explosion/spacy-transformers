@@ -4,7 +4,9 @@ from spacy.gold import GoldParse
 from spacy_pytorch_transformers.util import get_sents
 
 
-@pytest.fixture(params=["softmax_last_hidden", "softmax_pooler_output", "softmax_class_vector"])
+@pytest.fixture(
+    params=["softmax_last_hidden", "softmax_pooler_output", "softmax_class_vector"]
+)
 def textcat(name, nlp, request):
     arch = request.param
     width = nlp.get_pipe("pytt_tok2vec").model.nO

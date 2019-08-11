@@ -7,7 +7,7 @@ from . import _tokenizers
 
 try:
     # This allows us to use cupy with mypy, for type checking
-    import cupy # noqa
+    import cupy  # noqa
 except ImportError:
     pass
 
@@ -26,7 +26,6 @@ SPECIAL_TOKENS: Sequence[str] = (
     "<s>",
     "</s>",
 )
-
 
 
 def get_pytt_config(name):
@@ -296,7 +295,7 @@ def get_xlm_segment_ids(length1: int, length2: int) -> List[int]:
         return [0] * length1 + [0] + [0] + [1] * length2 + [1]
     else:
         [0] * length1 + [0] + [0]
- 
+
 
 def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in GPT2's format, for an input with one or
@@ -319,7 +318,7 @@ def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
     else:
         return [0] + [0] * length1 + [0] + [1] * length2 + [1]
 
- 
+
 def get_sents(doc: Union[Span, Doc]) -> List[Span]:
     if doc.is_sentenced:
         return list(doc.sents)
@@ -343,4 +342,4 @@ def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
         step += 1
 
 
-from .activations import Activations # noqa
+from .activations import Activations  # noqa
