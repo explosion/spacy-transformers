@@ -104,7 +104,7 @@ class PyTT_Language(Language):
             super().update(
                 docs,
                 golds,
-                drop=0.0,
+                drop=0.1,
                 sgd=sgd,
                 losses=losses,
                 component_cfg=component_cfg,
