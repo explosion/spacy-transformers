@@ -269,8 +269,8 @@ def get_pytt_segments(doc):
         start = 0
         for token in doc:
             if token.text == separator:
-                yield doc[start : token.i]
-                start = token.i
+                yield doc[start : token.i+1]
+                start = token.i+1
         yield doc[start:]
     else:
         yield doc[:]
