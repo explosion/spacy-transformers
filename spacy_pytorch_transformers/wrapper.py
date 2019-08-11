@@ -195,6 +195,6 @@ class PyTT_Wrapper(PyTorchWrapper):
         )
         if getattr(sgd, "pytt_use_swa", False):
             lr = getattr(sgd, "pytt_lr", sgd.alpha)
-            optimizer = SWA(optimizer, swa_start=100, swa_freq=10, swa_lr=lr)
+            optimizer = SWA(optimizer, swa_start=1, swa_freq=1, swa_lr=lr)
         optimizer.zero_grad()
         return optimizer
