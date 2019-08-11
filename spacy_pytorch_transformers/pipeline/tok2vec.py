@@ -189,32 +189,41 @@ class PyTT_TokenVectorEncoder(Pipe):
                 )
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
-            # equals wp_tensor.sum().
-            # TODO: Obviously incrementing the rows individually is bad. Need
-            # to make this more efficient. Maybe just copy to CPU, do our stuff,
-            # copy back to GPU?
-            align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
-            for word_piece_slice in doc._.pytt_alignment:
-                for i in word_piece_slice:
-                    align_sizes[i] += 1
-            for i, word_piece_slice in enumerate(doc._.pytt_alignment):
-                for j in word_piece_slice:
-                    doc.tensor[i] += wp_tensor[j] / align_sizes[j]
-            # To make this weighting work, we "align" the boundary tokens against
-            # every token in their sentence.
-            if doc.tensor.sum() != wp_tensor.sum():
-                for sent in get_sents(doc):
-                    if sent._.pytt_start is not None and sent._.pytt_end is not None:
-                        cls_vector = wp_tensor[sent._.pytt_start]
-                        sep_vector = wp_tensor[sent._.pytt_end]
-                        doc.tensor[sent.start : sent.end + 1] += cls_vector / len(sent)
-                        doc.tensor[sent.start : sent.end + 1] += sep_vector / len(sent)
+            # equals wp_tensor.sum(). Do this with sensitivity to boundary tokens
+            wp_rows, align_sizes = _get_boundary_sensitive_alignment(doc)
+            align_sizes = xp.array(align_sizes, dtype="f")
+            wp_weighted = wp_tensor / align_sizes.reshape((-1, 1))
+            # TODO: Obviously incrementing the rows individually is bad. How
+            # to do in one shot without blowing up the memory?
+            for i, word_piece_slice in enumerate(wp_rows):
+                doc.tensor[i] += wp_weighted[word_piece_slice].sum(axis=0)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
             doc.user_hooks["similarity"] = get_similarity_via_tensor
             doc.user_span_hooks["similarity"] = get_similarity_via_tensor
             doc.user_token_hooks["similarity"] = get_similarity_via_tensor
+
+
+def _get_boundary_sensitive_alignment(doc):
+    align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
+    wp_rows = []
+    for word_piece_slice in doc._.pytt_alignment:
+        wp_rows.append(list(word_piece_slice))
+        for i in word_piece_slice:
+            align_sizes[i] += 1
+    # To make this weighting work, we "align" the boundary tokens against
+    # every token in their sentence. The boundary tokens are otherwise
+    # unaligned, which is how we identify them.
+    for sent in get_sents(doc):
+        offset = sent._.pytt_start
+        for i in range(len(sent._.pytt_word_pieces)):
+            if align_sizes[offset+i] == 0:
+                align_sizes[offset+i] = len(sent)
+                wp = doc._.pytt_word_pieces_[offset+i]
+                for tok in sent:
+                    wp_rows[tok.i].append(offset+i)
+    return wp_rows, align_sizes
 
 
 def get_doc_vector_via_tensor(doc):
