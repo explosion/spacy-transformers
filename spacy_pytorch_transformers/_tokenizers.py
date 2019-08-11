@@ -142,8 +142,11 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
         for segment in segments:
             if segment:
                 offset += 1
+            seen = set()
             for idx_group in segment:
                 output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
         return output
 
 
@@ -208,8 +211,11 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         for segment in segments:
             if segment:
                 offset += 1
+            seen = set()
             for idx_group in segment:
                 output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
             if segment:
                 offset += 1
         return output
@@ -275,15 +281,18 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         for segment in segments:
             if segment:
                 offset += 1
+            seen = set()
             for idx_group in segment:
                 output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
             if segment:
                 offset += 1
         return output
 
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
-    _replace_re = re.compile(r"[\s`'\";]+")
+    _replace_re = re.compile(r"[\s'\";]+")
     _replacements = [("º", "o"), *zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")]
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "do_lower_case",
