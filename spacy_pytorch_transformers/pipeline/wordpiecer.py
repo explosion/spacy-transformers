@@ -91,7 +91,7 @@ class PyTT_WordPiecer(Pipe):
                 sent_align = []
                 for segment in sent._.pytt_segments:
                     seg_words = self.model.tokenize(segment.text)
-                    seg_align = self._align(segment, seg_words, offset=offset)
+                    seg_words, seg_align = self._align(segment, seg_words, offset=offset)
                     assert len(segment) == len(seg_align)
                     sent_words.append(seg_words)
                     sent_align.append(seg_align)
@@ -123,7 +123,7 @@ class PyTT_WordPiecer(Pipe):
         for indices in align:
             for i in range(len(indices)):
                 indices[i] += offset
-        return align
+        return wp_tokens, align
 
     def set_annotations(self, docs, outputs, tensors=None):
         """Assign the extracted tokens and IDs to the Doc objects.
@@ -143,6 +143,12 @@ class PyTT_WordPiecer(Pipe):
                 len(sent._.pytt_word_pieces) for sent in get_sents(doc)
             )
             if nr_word != words_per_sent:
+                print([repr(w.text) for w in doc])
+                for sent in get_sents(doc):
+                    print(sent._.pytt_word_pieces_)
+                    for w in sent:
+                        print(w.text, w._.pytt_alignment)
+                print(doc._.pytt_word_pieces_)
                 raise ValueError(
                     f"Error calculating word pieces for sentences. Total number "
                     f"of wordpieces in the doc was {nr_word}, but adding up the "
@@ -203,6 +209,8 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
         # calling the sub-tokenizer on the spaCy tokens.
         return None
     output = _align(spacy_tokens, wp_tokens)
+    if len(set(flatten_list(output))) != len(wp_tokens):
+        return None
     return output
 
 
@@ -249,12 +257,12 @@ def _tokenize_individual_tokens(model, sent):
     wp_tokens = []
     sent_align = []
     offset = 0
-    # Figure out whether we're adding special tokens
-    if model.add_special_tokens([["the"]])[0] != "the":
-        offset += 1
     for token in sent:
-        subtokens = model.tokenize(token.text)
-        wp_tokens.extend(subtokens)
-        sent_align.append([offset + i for i in range(len(subtokens))])
-        offset += len(subtokens)
-    return model.add_special_tokens([wp_tokens]), sent_align
+        if token.text.strip():
+            subtokens = model.tokenize(token.text)
+            wp_tokens.extend(subtokens)
+            sent_align.append([i+offset for i in range(len(subtokens))])
+            offset += len(subtokens)
+        else:
+            sent_align.append([])
+    return wp_tokens, sent_align
