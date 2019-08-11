@@ -145,10 +145,6 @@ class PyTT_WordPiecer(Pipe):
                 len(sent._.pytt_word_pieces) for sent in get_sents(doc)
             )
             if nr_word != words_per_sent:
-                for sent in get_sents(doc):
-                    print(repr(sent.text))
-                    print(sent._.pytt_word_pieces_)
-                print(doc._.pytt_word_pieces_)
                 raise ValueError(
                     f"Error calculating word pieces for sentences. Total number "
                     f"of wordpieces in the doc was {nr_word}, but adding up the "
@@ -188,6 +184,8 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
     spacy_string = "".join(spacy_tokens).lower()
     wp_string = "".join(wp_tokens).lower()
     wp_string = wp_string.replace("<sep>", "").replace("[sep]", "")
+    if not spacy_string and not wp_string:
+        return None
     if spacy_string != wp_string:
         if retry:
             # Flag to control whether to apply a fallback strategy when we
