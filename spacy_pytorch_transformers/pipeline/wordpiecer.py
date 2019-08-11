@@ -265,7 +265,7 @@ def _tokenize_individual_tokens(model, sent):
     sent_align = []
     offset = 0
     # Figure out whether we're adding special tokens
-    if model.add_special_tokens(["the"])[0] != "the":
+    if model.add_special_tokens([["the"]])[0] != "the":
         offset += 1
     for token in sent:
         subtokens = model.tokenize(token.text)
