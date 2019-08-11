@@ -47,8 +47,8 @@ class PyTT_WordPiecer(Pipe):
         and `set_annotations()` methods.
         """
         self.require_model()
-        scores = self.predict([doc])
-        self.set_annotations([doc], scores)
+        pieces = self.predict([doc])
+        self.set_annotations([doc], pieces)
         return doc
 
     @property
