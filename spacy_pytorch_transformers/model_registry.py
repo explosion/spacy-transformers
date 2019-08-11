@@ -144,7 +144,7 @@ def get_pytt_class_tokens(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_class_tokens
-
+get_pytt_class_tokens.name = "get_pytt_class_tokens"
 
 @layerize
 def get_pytt_pooler_output(docs, drop=0.0):
@@ -171,6 +171,7 @@ def get_pytt_pooler_output(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_pooler_output
+get_pytt_pooler_output.name = "get_pytt_pooler_output"
 
 
 @layerize
@@ -182,6 +183,7 @@ def get_pytt_last_hidden(docs, drop=0.0):
     outputs = [doc._.pytt_last_hidden_state for doc in docs]
     for out in outputs:
         assert out is not None
+        assert out.size != 0
 
     def backprop_pytt_last_hidden(d_outputs, sgd=None):
         for doc, d_lh in zip(docs, d_outputs):
@@ -194,7 +196,7 @@ def get_pytt_last_hidden(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_last_hidden
-
+get_pytt_last_hidden.name = "get_pytt_last_hidden"
 
 @layerize
 def softmax(X, drop=0.0):
@@ -239,10 +241,11 @@ def get_word_pieces(pytt_name):
                 segment_ids.extend(get_segment_ids(pytt_name, *seg_lengths))
             else:
                 lengths.append(0)
+        assert len(ids) == len(segment_ids), (len(ids), len(segment_ids))
         features = numpy.array(list(zip(ids, segment_ids)), dtype=numpy.int_)
         assert features.shape[0] == sum(lengths), (features.shape, sum(lengths))
         return RaggedArray(features, lengths), None
-    return layerize(get_features_forward)
+    return layerize(get_features_forward, name="get_features_forward")
 
 
 def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
