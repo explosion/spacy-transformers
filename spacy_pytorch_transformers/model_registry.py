@@ -9,6 +9,7 @@ import numpy
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, flatten_list, get_sents, is_class_token
+from .util import get_segment_ids
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -41,9 +42,10 @@ def get_model_function(name: str):
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(pytt_model, cfg):
     max_words = cfg.get("words_per_batch", 1000)
+    name = cfg["pytt_name"]
 
     model = foreach_sentence(
-        chain(get_word_pieces, with_length_batching(pytt_model, max_words))
+        chain(get_word_pieces(name), with_length_batching(pytt_model, max_words))
     )
     return model
 
@@ -219,20 +221,26 @@ def tanh(X, drop=0.0):
     return Y, backprop_tanh
 
 
-@layerize
-def get_word_pieces(sents, drop=0.0):
-    assert isinstance(sents[0], Span)
-    ids = []
-    lengths = []
-    for sent in sents:
-        wp_start = sent._.pytt_start
-        wp_end = sent._.pytt_end
-        if wp_start is not None and wp_end is not None:
-            ids.extend(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
-            lengths.append((wp_end + 1) - wp_start)
-        else:
-            lengths.append(0)
-    return RaggedArray(numpy.array(ids, dtype=numpy.int_), lengths), None
+def get_word_pieces(pytt_name):
+    def get_features_forward(sents, drop=0.):
+        assert isinstance(sents[0], Span)
+        ids = []
+        segment_ids = []
+        lengths = []
+        for sent in sents:
+            wordpieces = sent._.pytt_word_pieces
+            if wordpieces:
+                ids.extend(wordpieces)
+                segment_ids.append(get_segment_ids(pytt_name, len(wordpieces)-2, 0))
+                lengths.append(len(wordpieces))
+            else:
+                lengths.append(0)
+        ids_array = numpy.array(ids, dtype=numpy.int_).reshape((-1, 1))
+        segments_array = numpy.concatenate(segment_ids).reshape((-1, 1))
+        features = numpy.hstack((ids_array, segments_array))
+        assert features.shape[0] == sum(lengths), (features.shape, sum(lengths))
+        return RaggedArray(features, lengths), None
+    return layerize(get_features_forward)
 
 
 def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
