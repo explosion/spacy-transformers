@@ -184,6 +184,7 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
     # Check alignment
     spacy_string = "".join(spacy_tokens).lower()
     wp_string = "".join(wp_tokens).lower()
+    wp_string = wp_string.replace("<sep>", "").replace("[sep]", "")
     if spacy_string != wp_string:
         if retry:
             # Flag to control whether to apply a fallback strategy when we
