@@ -191,12 +191,12 @@ class PyTT_TokenVectorEncoder(Pipe):
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum(). Do this with sensitivity to boundary tokens
             wp_rows, align_sizes = _get_boundary_sensitive_alignment(doc)
-            align_sizes = xp.array(align_sizes, dtype="f")
-            wp_weighted = wp_tensor / align_sizes.reshape((-1, 1))
+            wp_weighted = wp_tensor / xp.array(align_sizes, dtype="f").reshape((-1, 1))
             # TODO: Obviously incrementing the rows individually is bad. How
             # to do in one shot without blowing up the memory?
             for i, word_piece_slice in enumerate(wp_rows):
-                doc.tensor[i] += wp_weighted[word_piece_slice].sum(axis=0)
+                for j in word_piece_slice:
+                    doc.tensor[i] += wp_weighted[j]
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
