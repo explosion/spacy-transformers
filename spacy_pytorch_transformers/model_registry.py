@@ -9,7 +9,7 @@ import numpy
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, flatten_list, is_class_token
-from .util import get_segment_ids
+from .util import get_segment_ids, is_special_token
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -239,13 +239,14 @@ def get_word_pieces(pytt_name):
             # This is a bit convoluted, but we need the lengths without any
             # separator tokens or class tokens. pytt_segments gives Span objects.
             seg_lengths = [
-                len(set(flatten_list(seg._.pytt_alignment)))
+                len([w for w in seg._.pytt_word_pieces_ if not is_special_token(w)])
                 for seg in sent._.pytt_segments
             ]
             if wordpieces:
                 ids.extend(wordpieces)
                 lengths.append(len(wordpieces))
                 segment_ids.extend(get_segment_ids(pytt_name, *seg_lengths))
+                assert len(ids) == len(segment_ids), (sent._.pytt_word_pieces_, seg_lengths)
             else:
                 lengths.append(0)
         assert len(ids) == len(segment_ids), (len(ids), len(segment_ids))
