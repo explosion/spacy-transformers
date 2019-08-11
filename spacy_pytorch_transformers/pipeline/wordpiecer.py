@@ -272,4 +272,4 @@ def _tokenize_individual_tokens(model, sent):
         wp_tokens.extend(subtokens)
         sent_align.append([offset + i for i in range(len(subtokens))])
         offset += len(subtokens)
-    return model.add_special_tokens(wp_tokens), sent_align
+    return model.add_special_tokens([wp_tokens]), sent_align
