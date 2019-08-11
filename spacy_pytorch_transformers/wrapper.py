@@ -158,6 +158,8 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def get_model_kwargs(self, inputs):
         padded = inputs.to_padded()
+        if padded.ndim == 2:
+            padded = padded.reshape(padded.shape + (1,))
         if self.max_length:
             padded = padded[:, : self.max_length]
         ids = padded[:, :, 0]
