@@ -67,6 +67,14 @@ def evaluate(nlp, task, docs_golds):
         for doc, gold in zip(docs, golds):
             guess, _ = max(doc.cats.items(), key=lambda it: it[1])
             truth, _ = max(gold.cats.items(), key=lambda it: it[1])
+            if guess not in labels:
+                msg = (f"Unexpected label {guess} predicted. "
+                       f"Expectded labels: {', '.join(labels)}")
+                raise ValueError(msg)
+            if truth not in labels:
+                msg = (f"Unexpected label {truth} predicted. "
+                      f"Expectded labels: {', '.join(labels)}")
+                raise ValueError(msg)
             guesses.append(labels.index(guess))
             truths.append(labels.index(truth))
             right += guess == truth
