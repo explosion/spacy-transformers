@@ -134,6 +134,18 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
             output.insert(0, self.cls_token)
         return output
 
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+        return output
+
 
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
@@ -186,6 +198,20 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
             output.extend(segment)
             if segment:
                 output.append(self.eos_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+            if segment:
+                offset += 1
         return output
 
 
@@ -241,9 +267,23 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
                 output.append(self.eos_token)
         return output
 
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+            if segment:
+                offset += 1
+        return output
+
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
-    _replace_re = re.compile(r"[\s\.\-`'\";]+")
+    _replace_re = re.compile(r"[\s`'\";]+")
     _replacements = [("º", "o"), *zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")]
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "do_lower_case",
@@ -295,6 +335,18 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
                 output.append(self.eos_token)
         if output:
             output.append(self.cls_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+            offset += len(segment)
+            offset += 1
         return output
 
 
