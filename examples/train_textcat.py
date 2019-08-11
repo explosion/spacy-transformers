@@ -2,6 +2,7 @@
 import plac
 import re
 import random
+import json
 from pathlib import Path
 import thinc.extra.datasets
 import spacy
@@ -13,16 +14,18 @@ import unicodedata
 
 @plac.annotations(
     model=("Model name", "positional", None, str),
+    input_dir=("Optional input directory", "option", "i", Path),
     output_dir=("Optional output directory", "option", "o", Path),
     use_test=("Whether to use the actual test set", "flag", "E"),
     batch_size=("Number of docs per batch", "option", "bs", int),
     learn_rate=("Learning rate", "option", "lr", float),
     max_wpb=("Max words per sub-batch", "option", "wpb", int),
-    n_texts=("Number of texts to train from", "option", "n", int),
-    n_iter=("Number of training epochs", "option", "i", int),
+    n_texts=("Number of texts to train from", "option", "t", int),
+    n_iter=("Number of training epochs", "option", "n", int),
 )
 def main(
     model,
+    input_dir=None,
     output_dir=None,
     n_iter=20,
     n_texts=100,
@@ -41,23 +44,35 @@ def main(
             output_dir.mkdir()
 
     nlp = spacy.load(model)
+    print(nlp.pipe_names)
     print(f"Loaded model '{model}'")
     textcat = nlp.create_pipe(
-        "pytt_textcat", config={"architecture": "softmax_pooler_output"}
+        "pytt_textcat", config={"architecture": "softmax_class_vector"}
     )
-    # add label to text classifier
-    textcat.add_label("POSITIVE")
-    textcat.add_label("NEGATIVE")
-    nlp.add_pipe(textcat, last=True)
-
-    # load the IMDB dataset
-    print("Loading IMDB data...")
-    if use_test:
-        (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(
-            limit=n_texts
-        )
+    if input_dir is not None:
+        train_texts, train_cats = read_inputs(input_dir / "training.jsonl")
+        eval_texts, eval_cats = read_inputs(input_dir / "evaluation.jsonl")
+        labels = set()
+        for cats in train_cats + eval_cats:
+            labels.update(cats)
+        for label in sorted(labels):
+            textcat.add_label(label)
+ 
     else:
-        (train_texts, train_cats), (eval_texts, eval_cats) = load_data(limit=n_texts)
+        # add label to text classifier
+        textcat.add_label("POSITIVE")
+        textcat.add_label("NEGATIVE")
+        nlp.add_pipe(textcat, last=True)
+
+        # load the IMDB dataset
+        print("Loading IMDB data...")
+        if use_test:
+            (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(
+                limit=n_texts
+            )
+        else:
+            (train_texts, train_cats), (eval_texts, eval_cats) = load_data(limit=n_texts)
+    nlp.add_pipe(textcat, last=True)
     print(f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation)")
     split_training_by_sentence = False
     if split_training_by_sentence:
@@ -111,6 +126,18 @@ def main(
         print(test_text, doc2.cats)
 
 
+def read_inputs(input_path):
+    texts = []
+    cats = []
+    with input_path.open(mode="r") as file_:
+        for line in file_:
+            text, gold = json.loads(line)
+            text = preprocess_text(text)
+            texts.append(text)
+            cats.append(gold["cats"])
+    return texts, cats
+
+
 def make_sentence_examples(nlp, texts, labels):
     """Treat each sentence of the document as an instance, using the doc labels."""
     sents = []
@@ -128,6 +155,8 @@ white_re = re.compile(r"\s\s+")
 
 
 def preprocess_text(text):
+    text = text.replace("<s>", "<open-s-tag>")
+    text = text.replace("</s>", "<close-s-tag>")
     text = white_re.sub(" ", text).strip()
     return "".join(
         c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
