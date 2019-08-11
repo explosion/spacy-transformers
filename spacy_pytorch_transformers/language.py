@@ -166,10 +166,12 @@ def get_wp_start(span):
     else:
         return None
     wordpieces = span.doc._.pytt_word_pieces_
-    if wp_start >= 1 and is_special_token(wordpieces[wp_start - 1]):
-        return wp_start - 1
-    else:
-        return wp_start
+    # This is a messy way to check for the XLNet-style pattern, where we can
+    # have <sep> <cls>. In the BERT-style pattern, we have [cls] at start.
+    if is_special_token(wordpieces[0]):
+        if wp_start >= 1 and is_special_token(wordpieces[wp_start - 1]):
+            return wp_start - 1
+    return wp_start
 
 
 def get_wp_end(span):
@@ -182,10 +184,13 @@ def get_wp_end(span):
     else:
         return None
     wordpieces = span.doc._.pytt_word_pieces_
-    # We can have a sequence SEP, CLS for XLNet and XLM. Maybe we should check
-    # for two iterations specifically? Unsure.
-    while (wp_end+1) < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
+    if (wp_end+1) < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
         wp_end += 1
+    # This is a messy way to check for the XLNet-style pattern, where we can
+    # have <sep> <cls>. In the BERT-style pattern, we have [cls] at start.
+    if not is_special_token(wordpieces[0]):
+        if (wp_end+1) < len(wordpieces) and is_special_token(wordpieces[wp_end+1]):
+            wp_end += 1
     return wp_end
 
 
