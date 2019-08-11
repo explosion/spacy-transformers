@@ -232,7 +232,7 @@ def get_segment_ids(name: str, *lengths) -> List[int]:
     elif "gpt2" in name:
         return get_gpt2_segment_ids(length1, length2)
     else:
-        raise ValueError("Unexpected model name: %s" % model_name)
+        raise ValueError(f"Unexpected model name: {name}")
 
 
 def get_bert_segment_ids(length1: int, length2: int) -> List[int]:

@@ -220,7 +220,6 @@ def _get_boundary_sensitive_alignment(doc):
         for i in range(len(sent._.pytt_word_pieces)):
             if align_sizes[offset+i] == 0:
                 align_sizes[offset+i] = len(sent)
-                wp = doc._.pytt_word_pieces_[offset+i]
                 for tok in sent:
                     wp_rows[tok.i].append(offset+i)
     return wp_rows, align_sizes

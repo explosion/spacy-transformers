@@ -8,7 +8,7 @@ import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
-from .util import batch_by_length, flatten_list, get_sents, is_class_token
+from .util import batch_by_length, flatten_list, is_class_token
 from .util import get_segment_ids
 from .activations import Activations as Acts
 from .activations import RaggedArray
