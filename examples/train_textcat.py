@@ -58,13 +58,10 @@ def main(
             labels.update(cats)
         for label in sorted(labels):
             textcat.add_label(label)
- 
     else:
         # add label to text classifier
         textcat.add_label("POSITIVE")
         textcat.add_label("NEGATIVE")
-        nlp.add_pipe(textcat, last=True)
-
         # load the IMDB dataset
         print("Loading IMDB data...")
         if use_test:
