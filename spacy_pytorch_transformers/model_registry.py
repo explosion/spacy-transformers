@@ -231,10 +231,8 @@ def get_word_pieces(pytt_name):
             wordpieces = sent._.pytt_word_pieces
             # This is a bit convoluted, but we need the lengths without any
             # separator tokens or class tokens. pytt_segments gives Span objects.
-            seg_lengths = [len(flatten_list(seg._.pytt_alignment))
+            seg_lengths = [len(set(flatten_list(seg._.pytt_alignment)))
                            for seg in sent._.pytt_segments]
-            seg_total = sum(seg_lengths) + len(seg_lengths) + 1
-            assert seg_total == len(wordpieces), (seg_total, len(wordpieces))
             if wordpieces:
                 ids.extend(wordpieces)
                 lengths.append(len(wordpieces))
