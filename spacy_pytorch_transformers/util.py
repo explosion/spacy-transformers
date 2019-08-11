@@ -214,7 +214,20 @@ def is_class_token(text: str) -> bool:
     return text == "[CLS]" or text == "<cls>"
 
 
-def get_bert_segment_ids(length1: int, length2: int, *, xp=numpy) -> Array:
+def get_segment_ids(name: str, length1: int, length2: int) -> List[int]:
+    if "bert" in name:
+        return get_bert_segment_ids(length1, length2)
+    elif "xlnet" in name:
+        return get_xlnet_segment_ids(length1, length2)
+    elif "xlm" in name:
+        return get_xlm_segment_ids(length1, length2)
+    elif "gpt2" in name:
+        return get_gpt2_segment_ids(length1, length2)
+    else:
+        raise ValueError("Unexpected model name: %s" % model_name)
+
+
+def get_bert_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in BERT's format, for an input with one or
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
@@ -230,13 +243,12 @@ def get_bert_segment_ids(length1: int, length2: int, *, xp=numpy) -> Array:
         type_ids:   0   0   0   0  0     0   0  
     """
     if length2:
-        ids = [0] * (length1+2) + [1] * (length2 + 1)
+        return [0] * length1 + [0] + [0] + [1] * length2 + [1]
     else:
-        ids = [0] * (length1+2)
-    return xp.array(ids, dtype=xp.int_)
+        [0] * length1 + [0] + [0]
 
 
-def get_xlnet_segment_ids(length1: int, length2: int, *, xp=numpy) -> Array:
+def get_xlnet_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in XLNet's format, for an input with one or
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
@@ -252,12 +264,54 @@ def get_xlnet_segment_ids(length1: int, length2: int, *, xp=numpy) -> Array:
         type_ids:   0   0 0   0    0   0   2
     """
     if length2:
-        ids = [0] * length1 + [0] + [1] * length2 + [1, 2]
+        return [0] * length1 + [0] + [1] * length2 + [1, 2]
     else:
-        ids = [0] * length1 + [0, 2]
-    return xp.array(ids, dtype=xp.int_)
+        return [0] * length1 + [0, 2]
 
 
+def get_xlm_segment_ids(length1: int, length2: int) -> List[int]:
+    """Get an array of segment IDs in XLNet's format, for an input with one or
+    two segments (set length2=0 for one segment). The lengths should be just the
+    wordpiece lengths, not including the SEP and CLS tokens.
+    
+    According to the HF glue_utils.py script, the convention is:
+
+    (a) For sequence pairs:
+        tokens: [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
+        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1 
+
+    (b) For single sequences:
+        tokens:   [CLS] the dog is hairy . [SEP]
+        type_ids:   0   0   0   0  0     0   0  
+    """
+    if length2:
+        return [0] * length1 + [0] + [0] + [1] * length2 + [1]
+    else:
+        [0] * length1 + [0] + [0]
+ 
+
+def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
+    """Get an array of segment IDs in GPT2's format, for an input with one or
+    two segments (set length2=0 for one segment). The lengths should be just the
+    wordpiece lengths, not including the SEP and CLS tokens.
+    
+    I'm really not sure how this should look? I guess there's no sep and cls
+    tokens, so just denote the segments...
+
+    (a) For sequence pairs:
+        tokens:    is this jack ##son ##ville ? no it is not . 
+        type_ids:   0   0  0    0    0     0    1  1  1  1   1 
+
+    (b) For single sequences:
+        tokens:   the dog is hairy .
+        type_ids:   0   0   0   0  0
+    """
+    if not length2:
+        return [0] * length1
+    else:
+        return [0] * length1 + [1] * length2
+
+ 
 def get_sents(doc: Union[Span, Doc]) -> List[Span]:
     if doc.is_sentenced:
         return list(doc.sents)
