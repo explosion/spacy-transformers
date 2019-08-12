@@ -15,9 +15,9 @@ from spacy.util import minibatch
 from spacy_pytorch_transformers.util import warmup_linear_rates
 from spacy_pytorch_transformers.hyper_params import get_hyper_params
 
-from .glue_util import read_train_data, read_dev_data
-from .glue_util import describe_task
-from .metrics import compute_metrics
+from glue_util import read_train_data, read_dev_data
+from glue_util import describe_task
+from metrics import compute_metrics
 
 
 def create_model(model_name, *, task_type, task_name, labels):
