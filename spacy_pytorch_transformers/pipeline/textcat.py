@@ -29,7 +29,22 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The model.
         """
-        make_model = get_model_function(cfg.get("architecture", "softmax_class_vector"))
+        arch = cfg.get("architecture", "softmax_class_vector")
+        # This is optional -- but if it's set, we can debug config errors.
+        pytt_name = cfg.get("pytt_name", "")
+        is_gpt2 = "gpt2" in pytt_name
+        is_xlnet = "xlnet" in pytt_name
+        msg = (
+            f"PyTT_TextCategorizer model architecture set to '{arch}' "
+            f"with {pytt_name} transformer. This "
+            f"combination is incompatible, as the transformer does not "
+            f"provide that output feature."
+        )
+        if is_gpt2 and arch in ("softmax_class_vector", "softmax_pooler_output"):
+            raise ValueError(msg)
+        elif is_xlnet and arch == "softmax_pooler_output":
+            raise ValueError(msg)
+        make_model = get_model_function(arch)
         return make_model(nr_class, exclusive_classes=exclusive_classes, **cfg)
 
     def get_loss(self, docs, golds, scores):
@@ -46,3 +61,14 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         if DEBUG_LOSS:
             print("L", "%.4f" % loss, "m", "%.3f" % mean_score, "v", "%.6f" % var_score)
         return loss, d_scores
+
+    def begin_training(
+        self, get_gold_tuples=lambda: [], pipeline=None, sgd=None, **kwargs
+    ):
+        if self.model is True:
+            self.cfg.update(kwargs)
+            self.require_labels()
+            self.model = self.Model(len(self.labels), **self.cfg)
+        if sgd is None:
+            sgd = self.create_optimizer()
+        return sgd

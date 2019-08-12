@@ -1,12 +1,13 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
 import pytorch_transformers as pytt
 import numpy
+from spacy.tokens import Doc, Span
 
 from . import _tokenizers
 
 try:
     # This allows us to use cupy with mypy, for type checking
-    import cupy # noqa
+    import cupy  # noqa
 except ImportError:
     pass
 
@@ -208,6 +209,123 @@ def is_special_token(text: str) -> bool:
     return text in SPECIAL_TOKENS
 
 
+def is_class_token(text: str) -> bool:
+    return text == "[CLS]" or text == "<cls>"
+
+
+def get_segment_ids(name: str, *lengths) -> List[int]:
+    if len(lengths) == 1:
+        length1 = lengths[0]
+        length2 = 0
+    elif len(lengths) == 2:
+        length1, length2 = lengths
+    else:
+        msg = f"Expected 1 or 2 segments. Got {len(lengths)}"
+        raise ValueError(msg)
+    if "bert" in name:
+        return get_bert_segment_ids(length1, length2)
+    elif "xlnet" in name:
+        return get_xlnet_segment_ids(length1, length2)
+    elif "xlm" in name:
+        return get_xlm_segment_ids(length1, length2)
+    elif "gpt2" in name:
+        return get_gpt2_segment_ids(length1, length2)
+    else:
+        raise ValueError(f"Unexpected model name: {name}")
+
+
+def get_bert_segment_ids(length1: int, length2: int) -> List[int]:
+    """Get an array of segment IDs in BERT's format, for an input with one or
+    two segments (set length2=0 for one segment). The lengths should be just the
+    wordpiece lengths, not including the SEP and CLS tokens.
+    
+    According to the HF glue_utils.py module, the convention for BERT is:
+
+    (a) For sequence pairs:
+        tokens: [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
+        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1 
+
+    (b) For single sequences:
+        tokens:   [CLS] the dog is hairy . [SEP]
+        type_ids:   0   0   0   0  0     0   0  
+    """
+    if length2:
+        return [0] * length1 + [0] + [0] + [1] * length2 + [1]
+    else:
+        return [0] * length1 + [0] + [0]
+
+
+def get_xlnet_segment_ids(length1: int, length2: int) -> List[int]:
+    """Get an array of segment IDs in XLNet's format, for an input with one or
+    two segments (set length2=0 for one segment). The lengths should be just the
+    wordpiece lengths, not including the SEP and CLS tokens.
+    
+    According to the XLNet code classifer_utils.py module, the convention is:
+
+    (a) For sequence pairs:
+        tokens:    is this jack ##son ##ville ? <sep> no it is not . <sep> <cls>
+        type_ids:   0   0  0    0      0      0  0    1   1  1  1  1   1   2
+
+    (b) For single sequences:
+        tokens:   the dog is hairy . <sep> <cls>
+        type_ids:   0   0 0   0    0   0   2
+    """
+    if length2:
+        return [0] * length1 + [0] + [1] * length2 + [1, 2]
+    else:
+        return [0] * length1 + [0, 2]
+
+
+def get_xlm_segment_ids(length1: int, length2: int) -> List[int]:
+    """Get an array of segment IDs in XLNet's format, for an input with one or
+    two segments (set length2=0 for one segment). The lengths should be just the
+    wordpiece lengths, not including the SEP and CLS tokens.
+    
+    According to the HF glue_utils.py script, the convention is:
+
+    (a) For sequence pairs:
+        tokens: [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
+        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1 
+
+    (b) For single sequences:
+        tokens:   [CLS] the dog is hairy . [SEP]
+        type_ids:   0   0   0   0  0     0   0  
+    """
+    if length2:
+        return [0] * length1 + [0] + [0] + [1] * length2 + [1]
+    else:
+        [0] * length1 + [0] + [0]
+
+
+def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
+    """Get an array of segment IDs in GPT2's format, for an input with one or
+    two segments (set length2=0 for one segment). The lengths should be just the
+    wordpiece lengths, not including the SEP and CLS tokens.
+    
+    I'm really not sure how this should look? We currently require segment
+    boundaries, so we're just using the <|endoftext|> markers in their vocab?
+
+    (a) For sequence pairs:
+        tokens:   <|eot|> is this jack ##son ##ville ? <|eot|> no it is not . <|eot|> 
+        type_ids:   0     0  0    0    0     0       0  0      1  1  1  1   1 1
+
+    (b) For single sequences:
+        tokens:   <|eot|> the dog is hairy . <|eot|>
+        type_ids:   0      0   0   0   0   0 0
+    """
+    if not length2:
+        return [0] + [0] * length1 + [0]
+    else:
+        return [0] + [0] * length1 + [0] + [1] * length2 + [1]
+
+
+def get_sents(doc: Union[Span, Doc]) -> List[Span]:
+    if doc.is_sentenced:
+        return list(doc.sents)
+    else:
+        return [doc[:]]
+
+
 def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
     """Generate a series, starting from an initial rate, and then with a warmup
     period, and then a linear decline. Used for learning rates.
@@ -224,4 +342,4 @@ def warmup_linear_rates(initial_rate, warmup_steps, total_steps):
         step += 1
 
 
-from .activations import Activations # noqa
+from .activations import Activations  # noqa

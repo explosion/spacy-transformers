@@ -26,12 +26,13 @@ def test_from_pretrained(tok2vec, docs):
         assert abs(diff) <= 1e-2
 
 
-def test_set_annotations(tok2vec, docs):
+def test_set_annotations(name, tok2vec, docs):
     scores = tok2vec.predict(docs)
     tok2vec.set_annotations(docs, scores)
     for doc in docs:
         assert doc._.pytt_last_hidden_state is not None
-        assert doc._.pytt_pooler_output is not None
+        if "bert" in name:
+            assert doc._.pytt_pooler_output is not None
         assert doc._.pytt_d_last_hidden_state is not None
         assert doc._.pytt_d_last_hidden_state.ndim == 2
         assert doc._.pytt_d_pooler_output.ndim == 2

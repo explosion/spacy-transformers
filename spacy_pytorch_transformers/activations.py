@@ -2,7 +2,7 @@ from thinc.neural.util import get_array_module
 from dataclasses import dataclass
 import numpy
 
-from .util import List, Array, Union
+from .util import List, Array
 from .util import lengths2mask
 
 

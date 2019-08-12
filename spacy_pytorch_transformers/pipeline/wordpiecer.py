@@ -3,7 +3,7 @@ from spacy.util import minibatch
 import re
 import numpy
 
-from ..util import get_pytt_tokenizer, flatten_list, is_special_token
+from ..util import get_pytt_tokenizer, flatten_list, is_special_token, get_sents
 
 
 class PyTT_WordPiecer(Pipe):
@@ -47,8 +47,8 @@ class PyTT_WordPiecer(Pipe):
         and `set_annotations()` methods.
         """
         self.require_model()
-        scores = self.predict([doc])
-        self.set_annotations([doc], scores)
+        pieces = self.predict([doc])
+        self.set_annotations([doc], pieces)
         return doc
 
     @property
@@ -56,7 +56,7 @@ class PyTT_WordPiecer(Pipe):
         """Mostly used for debugging to make the WordPiecer raise error on
         misaligned tokens and prevent forcing alignment.
         """
-        retry_alignment = self.cfg.get("retry_alignment", True)
+        retry_alignment = self.cfg.get("retry_alignment", False)
         force_alignment = self.cfg.get("force_alignment", True)
         return (retry_alignment, force_alignment)
 
@@ -83,14 +83,47 @@ class PyTT_WordPiecer(Pipe):
         """
         output = []
         for doc in docs:
-            output.append([])
-            for sent in doc.sents:
-                tokens = self.model.tokenize(sent.text)
-                if tokens:
-                    output[-1].append(self.model.add_special_tokens(tokens))
-                else:
-                    output[-1].append(tokens)
+            doc_words = []
+            doc_align = []
+            offset = 0
+            for sent in get_sents(doc):
+                sent_words = []
+                sent_align = []
+                for segment in sent._.pytt_segments:
+                    seg_words = self.model.tokenize(segment.text)
+                    seg_words, seg_align = self._align(segment, seg_words, offset=offset)
+                    assert len(segment) == len(seg_align)
+                    sent_words.append(seg_words)
+                    sent_align.append(seg_align)
+                sw_flat = self.model.add_special_tokens(sent_words)
+                sa_flat = self.model.fix_alignment(sent_align)
+                doc_words.extend(sw_flat)
+                doc_align.extend(sa_flat)
+                offset += len(sw_flat)
+            output.append((doc_words, doc_align))
         return output
+
+    def _align(self, segment, wp_tokens, *, offset=0):
+        retry, force = self.alignment_strategy
+        spacy_tokens = [self.model.clean_token(w.text) for w in segment]
+        new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
+        assert len(wp_tokens) == len(new_wp_tokens)
+        align = align_word_pieces(spacy_tokens, new_wp_tokens, retry=retry)
+        if align is None and not force:
+            spacy_string = "".join(spacy_tokens).lower()
+            wp_string = "".join(new_wp_tokens).lower()
+            print("spaCy:", spacy_string)
+            print("WP:", wp_string)
+            raise AssertionError((spacy_string, wp_string))
+        elif align is None and force:
+            # As a final fallback, we resort to word-piece tokenizing
+            # the spaCy tokens individually, to make the alignment
+            # trivial.
+            wp_tokens, align = _tokenize_individual_tokens(self.model, segment)
+        for indices in align:
+            for i in range(len(indices)):
+                indices[i] += offset
+        return wp_tokens, align
 
     def set_annotations(self, docs, outputs, tensors=None):
         """Assign the extracted tokens and IDs to the Doc objects.
@@ -101,45 +134,29 @@ class PyTT_WordPiecer(Pipe):
         # Set model.max_len to some high value, to avoid annoying prints.
         max_len = self.model.max_len
         self.model.max_len = 1e12
-        retry, force = self.alignment_strategy
-        for doc, output in zip(docs, outputs):
-            offset = 0
-            doc_word_pieces = []
-            doc_alignment = []
-            doc_word_piece_ids = []
-            for sent, wp_tokens in zip(doc.sents, output):
-                spacy_tokens = [self.model.clean_token(w.text) for w in sent]
-                new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
-                assert len(wp_tokens) == len(new_wp_tokens)
-                sent_align = align_word_pieces(spacy_tokens, new_wp_tokens, retry=retry)
-                if sent_align is None:
-                    if not force:
-                        spacy_string = "".join(spacy_tokens).lower()
-                        wp_string = "".join(new_wp_tokens).lower()
-                        print("spaCy:", spacy_string)
-                        print("WP:", wp_string)
-                        raise AssertionError((spacy_string, wp_string))
-                    # As a final fallback, we resort to word-piece tokenizing
-                    # the spaCy tokens individually, to make the alignment
-                    # trivial.
-                    wp_tokens, sent_align = _tokenize_individual_tokens(
-                        self.model, sent
-                    )
-                # We need to align into the flattened document list, instead
-                # of just into this sentence. So offset by number of wp tokens.
-                for token_align in sent_align:
-                    for i in range(len(token_align)):
-                        token_align[i] += offset
-                offset += len(wp_tokens)
-                doc_alignment.extend(sent_align)
-                doc_word_pieces.extend(wp_tokens)
-                doc_word_piece_ids.extend(self.model.convert_tokens_to_ids(wp_tokens))
-            assert len(doc_alignment) == len(doc)
-            max_aligned = max(flatten_list(doc_alignment), default=0)
-            assert max_aligned <= len(doc_word_pieces)
-            doc._.pytt_word_pieces = doc_word_piece_ids
-            doc._.pytt_word_pieces_ = doc_word_pieces
-            doc._.pytt_alignment = doc_alignment
+        for doc, (wordpieces, alignment) in zip(docs, outputs):
+            doc._.pytt_word_pieces_ = wordpieces
+            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(wordpieces)
+            doc._.pytt_alignment = alignment
+            nr_word = len(doc._.pytt_word_pieces)
+            words_per_sent = sum(
+                len(sent._.pytt_word_pieces) for sent in get_sents(doc)
+            )
+            if nr_word != words_per_sent:
+                print([repr(w.text) for w in doc])
+                for sent in get_sents(doc):
+                    print(sent._.pytt_word_pieces_)
+                    for w in sent:
+                        print(w.text, w._.pytt_alignment)
+                print(doc._.pytt_word_pieces_)
+                raise ValueError(
+                    f"Error calculating word pieces for sentences. Total number "
+                    f"of wordpieces in the doc was {nr_word}, but adding up the "
+                    f"wordpieces for its sentences we get {words_per_sent}. This "
+                    f"means there's a bug in the extension attributes or "
+                    f"the tokenizer.add_special_tokens() logic, often when "
+                    f"a spaCy sentence aligns against 0 wordpieces."
+                )
         self.model.max_len = max_len
 
     def use_params(self, params):
@@ -157,12 +174,6 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
     """
     spacy_tokens = list(spacy_tokens)
     wp_tokens = list(wp_tokens)
-    offset = 0
-    while wp_tokens and is_special_token(wp_tokens[0]):
-        wp_tokens.pop(0)
-        offset += 1
-    while wp_tokens and is_special_token(wp_tokens[-1]):
-        wp_tokens.pop(-1)
     if not wp_tokens:
         return [[] for _ in spacy_tokens]
     elif not spacy_tokens:
@@ -170,6 +181,8 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
     # Check alignment
     spacy_string = "".join(spacy_tokens).lower()
     wp_string = "".join(wp_tokens).lower()
+    if not spacy_string and not wp_string:
+        return None
     if spacy_string != wp_string:
         if retry:
             # Flag to control whether to apply a fallback strategy when we
@@ -186,20 +199,18 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
             spacy_string = "".join(spacy_tokens).lower()
             wp_string = "".join(wp_tokens).lower()
             if spacy_string == wp_string:
-                return _align(spacy_tokens, wp_tokens, offset)
-        else:
-            print("spaCy:", spacy_string)
-            print("WP:", wp_string)
-            raise AssertionError((spacy_string, wp_string))
+                return _align(spacy_tokens, wp_tokens)
         # If either we're not trying the fallback alignment, or the fallback
         # fails, we return None. This tells the wordpiecer to align by
         # calling the sub-tokenizer on the spaCy tokens.
         return None
-    output = _align(spacy_tokens, wp_tokens, offset)
+    output = _align(spacy_tokens, wp_tokens)
+    if len(set(flatten_list(output))) != len(wp_tokens):
+        return None
     return output
 
 
-def _align(seq1, seq2, offset):
+def _align(seq1, seq2):
     # Map character positions to tokens
     map1 = _get_char_map(seq1)
     map2 = _get_char_map(seq2)
@@ -223,10 +234,6 @@ def _align(seq1, seq2, offset):
             last = len(seq2) - 1
             while indices[-1] < last and indices[-1] + 1 in unaligned:
                 indices.append(indices[-1] + 1)
-    # Add offset
-    for indices in output:
-        for i in range(len(indices)):
-            indices[i] += offset
     return output
 
 
@@ -246,12 +253,12 @@ def _tokenize_individual_tokens(model, sent):
     wp_tokens = []
     sent_align = []
     offset = 0
-    # Figure out whether we're adding special tokens
-    if model.add_special_tokens(["the"])[0] != "the":
-        offset += 1
     for token in sent:
-        subtokens = model.tokenize(token.text)
-        wp_tokens.extend(subtokens)
-        sent_align.append([offset + i for i in range(len(subtokens))])
-        offset += len(subtokens)
-    return model.add_special_tokens(wp_tokens), sent_align
+        if token.text.strip():
+            subtokens = model.tokenize(token.text)
+            wp_tokens.extend(subtokens)
+            sent_align.append([i+offset for i in range(len(subtokens))])
+            offset += len(subtokens)
+        else:
+            sent_align.append([])
+    return wp_tokens, sent_align

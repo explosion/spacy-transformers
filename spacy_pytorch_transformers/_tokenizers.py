@@ -123,8 +123,31 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
     def clean_wp_token(self, token):
         return token.replace("##", "", 1).strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.cls_token] + tokens + [self.sep_token]
+    def add_special_tokens(self, segments):
+        output = []
+        for segment in segments:
+            output.extend(segment)
+            if segment:
+                output.append(self.sep_token)
+        if output:
+            # If we otherwise would have an empty output, don't add cls
+            output.insert(0, self.cls_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            seen = set()
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
+        return output
 
 
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
@@ -170,8 +193,32 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         text = clean_extended_unicode(text)
         return text.strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.bos_token] + tokens + [self.eos_token]
+    def add_special_tokens(self, segments):
+        output = []
+        for segment in segments:
+            if segment:
+                output.append(self.bos_token)
+            output.extend(segment)
+            if segment:
+                output.append(self.eos_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            seen = set()
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
+            if segment:
+                offset += 1
+        return output
 
 
 class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
@@ -215,12 +262,37 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         text = self._replace_re.sub("", text)
         return text.replace("</w>", "").strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.bos_token] + tokens + [self.cls_token]
+    def add_special_tokens(self, segments):
+        # See https://github.com/facebookresearch/XLM/issues/113
+        output = []
+        for segment in segments:
+            if segment:
+                output.append(self.bos_token)
+            output.extend(segment)
+            if segment:
+                output.append(self.eos_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            seen = set()
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
+            if segment:
+                offset += 1
+        return output
 
 
 class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
-    _replace_re = re.compile(r"[\s\.\-`'\";]+")
+    _replace_re = re.compile(r"[\s'\";]+")
     _replacements = [("º", "o"), *zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")]
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "do_lower_case",
@@ -264,8 +336,30 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         text = self._replace_re.sub("", text)
         return text.strip()
 
-    def add_special_tokens(self, tokens):
-        return [self.sep_token] + tokens + [self.cls_token]
+    def add_special_tokens(self, segments):
+        output = []
+        for segment in segments:
+            output.extend(segment)
+            if segment:
+                output.append(self.eos_token)
+        if output:
+            output.append(self.cls_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            seen = set()
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
+            if segment:
+                offset += 1
+        return output
 
 
 def clean_accents(text):

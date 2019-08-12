@@ -8,7 +8,8 @@ import numpy
 
 from .wrapper import PyTT_Wrapper
 from .util import Array, Dropout, Optimizer
-from .util import batch_by_length, flatten_list
+from .util import batch_by_length, flatten_list, is_class_token
+from .util import get_segment_ids, is_special_token
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -40,10 +41,11 @@ def get_model_function(name: str):
 
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(pytt_model, cfg):
-    max_words = cfg.get("words_per_batch", 2000)
+    max_words = cfg.get("words_per_batch", 1000)
+    name = cfg["pytt_name"]
 
     model = foreach_sentence(
-        chain(get_word_pieces, with_length_batching(pytt_model, max_words))
+        chain(get_word_pieces(name), with_length_batching(pytt_model, max_words))
     )
     return model
 
@@ -91,12 +93,8 @@ def softmax_last_hidden(nr_class, *, exclusive_classes=True, **cfg):
     """
     width = cfg["token_vector_width"]
     return chain(
-        get_pytt_last_hidden,
-        flatten_add_lengths,
-        Pooling(mean_pool),
-        Softmax(2, width),
+        get_pytt_last_hidden, flatten_add_lengths, Pooling(mean_pool), Softmax(2, width)
     )
-
 
 
 @register_model("softmax_pooler_output")
@@ -122,31 +120,29 @@ def get_pytt_class_tokens(docs, drop=0.0):
     """
     xp = get_array_module(docs[0]._.pytt_last_hidden_state)
     outputs = []
+    doc_class_tokens = []
     for doc in docs:
+        class_tokens = []
+        for i, wp in enumerate(doc._.pytt_word_pieces_):
+            if is_class_token(wp):
+                class_tokens.append(i)
+        doc_class_tokens.append(xp.array(class_tokens, dtype="i"))
         wp_tensor = doc._.pytt_last_hidden_state
-        class_vectors = []
-        for sent in doc.sents:
-            if sent._.pytt_start is not None:
-                class_vectors.append(wp_tensor[sent._.pytt_start])
-            else:
-                class_vectors.append(xp.zeros((wp_tensor.shape[-1],), dtype="f"))
-        Y = xp.vstack(class_vectors)
-        outputs.append(Y)
+        outputs.append(wp_tensor[doc_class_tokens[-1]])
 
     def backprop_pytt_class_tokens(d_outputs, sgd=None):
-        for doc, dY in zip(docs, d_outputs):
+        for doc, class_tokens, dY in zip(docs, doc_class_tokens, d_outputs):
             if doc._.pytt_d_last_hidden_state.size == 0:
                 xp = get_array_module(doc._.pytt_last_hidden_state)
                 grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype="f")
                 doc._.pytt_d_last_hidden_state = grads
-            nr_word_pieces = len(doc._.pytt_word_pieces)
-            assert doc._.pytt_d_last_hidden_state.shape[0] == nr_word_pieces
-            for i, sent in enumerate(doc.sents):
-                if sent._.pytt_start is not None:
-                    doc._.pytt_d_last_hidden_state[sent._.pytt_start] += dY[i]
+            doc._.pytt_d_last_hidden_state[class_tokens] += dY
         return None
 
     return outputs, backprop_pytt_class_tokens
+
+
+get_pytt_class_tokens.name = "get_pytt_class_tokens"
 
 
 @layerize
@@ -161,7 +157,8 @@ def get_pytt_pooler_output(docs, drop=0.0):
                 "Pooler output unset. Perhaps you're using the wrong architecture? "
                 "The BERT model provides a pooler output, but XLNet doesn't. "
                 "You might need to set 'architecture': 'softmax_class_vector' "
-                "instead.")
+                "instead."
+            )
     outputs = [doc._.pytt_pooler_output for doc in docs]
 
     def backprop_pytt_pooler_output(d_outputs, sgd=None):
@@ -176,6 +173,9 @@ def get_pytt_pooler_output(docs, drop=0.0):
     return outputs, backprop_pytt_pooler_output
 
 
+get_pytt_pooler_output.name = "get_pytt_pooler_output"
+
+
 @layerize
 def get_pytt_last_hidden(docs, drop=0.0):
     """Output a List[array], where the array is the last hidden vector vector
@@ -185,6 +185,7 @@ def get_pytt_last_hidden(docs, drop=0.0):
     outputs = [doc._.pytt_last_hidden_state for doc in docs]
     for out in outputs:
         assert out is not None
+        assert out.size != 0
 
     def backprop_pytt_last_hidden(d_outputs, sgd=None):
         for doc, d_lh in zip(docs, d_outputs):
@@ -197,6 +198,9 @@ def get_pytt_last_hidden(docs, drop=0.0):
         return None
 
     return outputs, backprop_pytt_last_hidden
+
+
+get_pytt_last_hidden.name = "get_pytt_last_hidden"
 
 
 @layerize
@@ -224,20 +228,33 @@ def tanh(X, drop=0.0):
     return Y, backprop_tanh
 
 
-@layerize
-def get_word_pieces(sents, drop=0.0):
-    assert isinstance(sents[0], Span)
-    ids = []
-    lengths = []
-    for sent in sents:
-        wp_start = sent._.pytt_start
-        wp_end = sent._.pytt_end
-        if wp_start is not None and wp_end is not None:
-            ids.extend(sent.doc._.pytt_word_pieces[wp_start : wp_end + 1])
-            lengths.append((wp_end + 1) - wp_start)
-        else:
-            lengths.append(0)
-    return RaggedArray(numpy.array(ids, dtype=numpy.int_), lengths), None
+def get_word_pieces(pytt_name):
+    def get_features_forward(sents, drop=0.0):
+        assert isinstance(sents[0], Span)
+        ids = []
+        segment_ids = []
+        lengths = []
+        for sent in sents:
+            wordpieces = sent._.pytt_word_pieces
+            wordpieces_ = sent._.pytt_word_pieces_
+            # This is a bit convoluted, but we need the lengths without any
+            # separator tokens or class tokens. pytt_segments gives Span objects.
+            seg_lengths = [len([w for w in seg._.pytt_word_pieces_ if not is_special_token(w)])
+                           for seg in sent._.pytt_segments]
+            if wordpieces:
+                ids.extend(wordpieces)
+                lengths.append(len(wordpieces))
+                sent_seg_ids = get_segment_ids(pytt_name, *seg_lengths)
+                segment_ids.extend(sent_seg_ids)
+                assert len(wordpieces) == len(sent_seg_ids), (sent._.pytt_word_pieces_, seg_lengths, len(wordpieces), len(sent_seg_ids))
+            else:
+                lengths.append(0)
+        assert len(ids) == len(segment_ids), (len(ids), len(segment_ids))
+        features = numpy.array(list(zip(ids, segment_ids)), dtype=numpy.int_)
+        assert features.shape[0] == sum(lengths), (features.shape, sum(lengths))
+        return RaggedArray(features, lengths), None
+
+    return layerize(get_features_forward, name="get_features_forward")
 
 
 def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
@@ -279,7 +296,8 @@ def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
             lh_rows = outputs.xp.array(lh_rows, dtype="i")
             po_rows = outputs.xp.array(po_rows, dtype="i")
             outputs.lh.data[lh_rows] = Y.lh.data
-            outputs.po.data[po_rows] = Y.po.data
+            if outputs.has_po and po_rows.size:
+                outputs.po.data[po_rows] = Y.po.data
             backprops.append((get_dX, lh_rows, po_rows, lengths))
 
         def backprop_batched(d_outputs: Acts, sgd: Optimizer = None):
@@ -310,6 +328,8 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
     """Map a layer across sentences (assumes spaCy-esque .sents interface)"""
 
     def sentence_fwd(docs: List[Doc], drop: Dropout = 0.0) -> Tuple[Acts, Callable]:
+        if not all(doc.is_sentenced for doc in docs):
+            return layer.begin_update([d[:] for d in docs], drop=drop)
         sents = flatten_list([list(doc.sents) for doc in docs])
         words_per_doc = [len(d._.pytt_word_pieces) for d in docs]
         words_per_sent = [len(s._.pytt_word_pieces) for s in sents]
@@ -336,5 +356,4 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
 
         return acts, sentence_bwd
 
-    model = wrap(sentence_fwd, layer)
-    return model
+    return wrap(sentence_fwd, layer)

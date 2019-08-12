@@ -13,10 +13,11 @@ from pathlib import Path
 from spacy.util import minibatch
 
 from spacy_pytorch_transformers.util import warmup_linear_rates
-from spacy_pytorch_transformers._extra.hyper_params import get_hyper_params
-from spacy_pytorch_transformers._extra.glue_tasks import read_train_data, read_dev_data
-from spacy_pytorch_transformers._extra.glue_tasks import describe_task
-from spacy_pytorch_transformers._extra.metrics import compute_metrics
+from spacy_pytorch_transformers.hyper_params import get_hyper_params
+
+from glue_util import read_train_data, read_dev_data
+from glue_util import describe_task
+from metrics import compute_metrics
 
 
 def create_model(model_name, *, task_type, task_name, labels):
@@ -67,6 +68,18 @@ def evaluate(nlp, task, docs_golds):
         for doc, gold in zip(docs, golds):
             guess, _ = max(doc.cats.items(), key=lambda it: it[1])
             truth, _ = max(gold.cats.items(), key=lambda it: it[1])
+            if guess not in labels:
+                msg = (
+                    f"Unexpected label {guess} predicted. "
+                    f"Expectded labels: {', '.join(labels)}"
+                )
+                raise ValueError(msg)
+            if truth not in labels:
+                msg = (
+                    f"Unexpected label {truth} predicted. "
+                    f"Expectded labels: {', '.join(labels)}"
+                )
+                raise ValueError(msg)
             guesses.append(labels.index(guess))
             truths.append(labels.index(truth))
             right += guess == truth
@@ -91,16 +104,14 @@ def process_data(nlp, task, examples):
     docs = []
     golds = []
     for eg in examples:
-        assert "\n" not in eg.text_a
-        assert "\n" not in eg.text_b
-        doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
-        # Set "sentence boundary"
-        for token in doc:
-            if token.text == "\n":
-                token.is_sent_start = True
+        if eg.text_b:
+            assert "\n" not in eg.text_a
+            assert "\n" not in eg.text_b
+            doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
+            doc._.pytt_separator = "\n"
+        else:
+            doc = nlp.make_doc(eg.text_a)
         doc = wordpiecer(doc)
-        for token in doc[1:]:
-            token.is_sent_start = False
         cats = {label: 0.0 for label in textcat.labels}
         cats[eg.label] = 1.0
         gold = GoldParse(doc, cats=cats)

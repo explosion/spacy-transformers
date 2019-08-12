@@ -1,15 +1,28 @@
 import pytest
 from spacy_pytorch_transformers.pipeline import PyTT_TextCategorizer
 from spacy.gold import GoldParse
+from spacy_pytorch_transformers.util import get_sents
 
 
-@pytest.fixture(params=["softmax_pooler_output", "softmax_class_vector"])
-def textcat(nlp, request):
+@pytest.fixture(
+    params=["softmax_last_hidden", "softmax_pooler_output", "softmax_class_vector"]
+)
+def textcat(name, nlp, request):
     arch = request.param
     width = nlp.get_pipe("pytt_tok2vec").model.nO
     textcat = PyTT_TextCategorizer(nlp.vocab, token_vector_width=width)
     textcat.add_label("Hello")
-    textcat.begin_training(config={"architecture": arch})
+    config = {"architecture": arch, "pytt_name": name}
+    if "gpt2" in name and arch in ("softmax_pooler_output", "softmax_class_vector"):
+        with pytest.raises(ValueError):
+            textcat.begin_training(**config)
+        textcat.begin_training(pytt_name=name, architecture="softmax_last_hidden")
+    elif "xlnet" in name and arch == "softmax_pooler_output":
+        with pytest.raises(ValueError):
+            textcat.begin_training(**config)
+        textcat.begin_training(pytt_name=name, architecture="softmax_last_hidden")
+    else:
+        textcat.begin_training(**config)
     return textcat
 
 

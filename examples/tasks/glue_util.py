@@ -86,7 +86,9 @@ class DataProcessor:
             for i, line in enumerate(reader):
                 if i == 0:
                     continue
-                yield self.create_example(i, set_type, line)
+                example = self.create_example(i, set_type, line)
+                if example is not None:
+                    yield example
 
     def create_example(self, i: int, set_type: str, line: List[str]) -> InputExample:
         raise NotImplementedError

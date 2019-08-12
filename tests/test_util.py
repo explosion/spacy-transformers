@@ -16,7 +16,6 @@ from spacy_pytorch_transformers.util import pad_batch, batch_by_length, lengths2
         (["a", "b", "c"], ["ab", "c"], [[0], [0], [1]]),
         (["ab", "cd"], ["a", "bc", "d"], [[0, 1], [1, 2]]),
         (["abcd"], ["ab", "cd"], [[0, 1]]),
-        (["d", "e", "f"], ["[CLS]", "d", "e", "f"], [[1], [2], [3]]),
         ([], [], []),
         (
             ["it", "realllllllly", "sucks", "."],
@@ -93,17 +92,3 @@ def test_lengths2mask(lengths):
     assert mask.ndim == 1
     assert mask.sum() == sum(lengths)
     assert mask.size == max(lengths) * len(lengths)
-
-
-@pytest.mark.parametrize(
-    "wp_tokens,span,expected_start",
-    [
-        (["[CLS]", "hello", "world", "[SEP]"], slice(0, 1), 0),
-        (["[CLS]", "hello", "world", "[SEP]"], slice(1, 2), 2),
-    ],
-)
-def test_wp_start(wp_tokens, span, expected_start):
-    doc = Doc(Vocab(), words=wp_tokens[1:-1])
-    doc._.pytt_word_pieces_ = wp_tokens
-    doc._.pytt_alignment = align_word_pieces([w.text for w in doc], wp_tokens)
-    assert doc[span]._.pytt_start == expected_start

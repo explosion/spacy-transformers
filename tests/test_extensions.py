@@ -24,7 +24,9 @@ def test_alignment_extension_attr(vocab):
     assert doc[1:3]._.pytt_alignment == [[3, 4], [5, 6]]
 
 
-def test_wp_span_extension_attr(vocab, wordpiecer):
+def test_wp_span_extension_attr(name, vocab, wordpiecer):
+    if name == "gpt2":
+        return
     doc = Doc(vocab, words=["hello", "world"])
     for w in doc[1:]:
         w.is_sent_start = False
