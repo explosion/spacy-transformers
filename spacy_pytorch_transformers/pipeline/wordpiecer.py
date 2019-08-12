@@ -105,6 +105,7 @@ class PyTT_WordPiecer(Pipe):
 
     def _align(self, segment, wp_tokens, *, offset=0):
         retry, force = self.alignment_strategy
+        retry = False
         spacy_tokens = [self.model.clean_token(w.text) for w in segment]
         new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
         assert len(wp_tokens) == len(new_wp_tokens)
@@ -200,10 +201,10 @@ def align_word_pieces(spacy_tokens, wp_tokens, retry=True):
             wp_string = "".join(wp_tokens).lower()
             if spacy_string == wp_string:
                 return _align(spacy_tokens, wp_tokens)
-        else:
-            print("spaCy:", spacy_string)
-            print("WP:", wp_string)
-            raise AssertionError((spacy_string, wp_string))
+        #else:
+        #    print("spaCy:", spacy_string)
+        #    print("WP:", wp_string)
+        #    raise AssertionError((spacy_string, wp_string))
         # If either we're not trying the fallback alignment, or the fallback
         # fails, we return None. This tells the wordpiecer to align by
         # calling the sub-tokenizer on the spaCy tokens.
