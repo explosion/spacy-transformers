@@ -310,9 +310,10 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         return self
 
     def prepare_for_serialization(self):
-        vocab_path = Path(self.vocab_file)
-        with vocab_path.open("rb") as f:
-            self.vocab_bytes = f.read()
+        if hasattr(self, "vocab_file"):
+            vocab_path = Path(self.vocab_file)
+            with vocab_path.open("rb") as f:
+                self.vocab_bytes = f.read()
 
     def finish_deserializing(self):
         self.sp_model = sentencepiece.SentencePieceProcessor()
