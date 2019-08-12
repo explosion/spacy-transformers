@@ -238,16 +238,16 @@ def get_bert_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in BERT's format, for an input with one or
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
-    
+
     According to the HF glue_utils.py module, the convention for BERT is:
 
     (a) For sequence pairs:
         tokens: [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1 
+        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1
 
     (b) For single sequences:
         tokens:   [CLS] the dog is hairy . [SEP]
-        type_ids:   0   0   0   0  0     0   0  
+        type_ids:   0   0   0   0  0     0   0
     """
     if length2:
         return [0] * length1 + [0] + [0] + [1] * length2 + [1]
@@ -259,7 +259,7 @@ def get_xlnet_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in XLNet's format, for an input with one or
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
-    
+
     According to the XLNet code classifer_utils.py module, the convention is:
 
     (a) For sequence pairs:
@@ -280,16 +280,16 @@ def get_xlm_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in XLNet's format, for an input with one or
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
-    
+
     According to the HF glue_utils.py script, the convention is:
 
     (a) For sequence pairs:
         tokens: [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1 
+        type_ids:   0   0  0    0    0     0     0   0   1  1  1  1   1   1
 
     (b) For single sequences:
         tokens:   [CLS] the dog is hairy . [SEP]
-        type_ids:   0   0   0   0  0     0   0  
+        type_ids:   0   0   0   0  0     0   0
     """
     if length2:
         return [0] * length1 + [0] + [0] + [1] * length2 + [1]
@@ -301,12 +301,12 @@ def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
     """Get an array of segment IDs in GPT2's format, for an input with one or
     two segments (set length2=0 for one segment). The lengths should be just the
     wordpiece lengths, not including the SEP and CLS tokens.
-    
+
     I'm really not sure how this should look? We currently require segment
     boundaries, so we're just using the <|endoftext|> markers in their vocab?
 
     (a) For sequence pairs:
-        tokens:   <|eot|> is this jack ##son ##ville ? <|eot|> no it is not . <|eot|> 
+        tokens:   <|eot|> is this jack ##son ##ville ? <|eot|> no it is not . <|eot|>
         type_ids:   0     0  0    0    0     0       0  0      1  1  1  1   1 1
 
     (b) For single sequences:

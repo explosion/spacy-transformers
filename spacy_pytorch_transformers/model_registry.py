@@ -236,17 +236,23 @@ def get_word_pieces(pytt_name):
         lengths = []
         for sent in sents:
             wordpieces = sent._.pytt_word_pieces
-            wordpieces_ = sent._.pytt_word_pieces_
             # This is a bit convoluted, but we need the lengths without any
             # separator tokens or class tokens. pytt_segments gives Span objects.
-            seg_lengths = [len([w for w in seg._.pytt_word_pieces_ if not is_special_token(w)])
-                           for seg in sent._.pytt_segments]
+            seg_lengths = [
+                len([w for w in seg._.pytt_word_pieces_ if not is_special_token(w)])
+                for seg in sent._.pytt_segments
+            ]
             if wordpieces:
                 ids.extend(wordpieces)
                 lengths.append(len(wordpieces))
                 sent_seg_ids = get_segment_ids(pytt_name, *seg_lengths)
                 segment_ids.extend(sent_seg_ids)
-                assert len(wordpieces) == len(sent_seg_ids), (sent._.pytt_word_pieces_, seg_lengths, len(wordpieces), len(sent_seg_ids))
+                assert len(wordpieces) == len(sent_seg_ids), (
+                    sent._.pytt_word_pieces_,
+                    seg_lengths,
+                    len(wordpieces),
+                    len(sent_seg_ids),
+                )
             else:
                 lengths.append(0)
         assert len(ids) == len(segment_ids), (len(ids), len(segment_ids))

@@ -7,7 +7,7 @@ from pathlib import Path
 import thinc.extra.datasets
 import spacy
 import torch
-from spacy.util import minibatch, compounding
+from spacy.util import minibatch
 import tqdm
 import unicodedata
 from spacy_pytorch_transformers.util import warmup_linear_rates
@@ -65,11 +65,14 @@ def main(
         # load the IMDB dataset
         print("Loading IMDB data...")
         if use_test:
-            (train_texts, train_cats), (eval_texts, eval_cats) = load_data_for_final_test(
+            (train_texts, train_cats), (
+                eval_texts,
+                eval_cats,
+            ) = load_data_for_final_test(limit=n_texts)
+        else:
+            (train_texts, train_cats), (eval_texts, eval_cats) = load_data(
                 limit=n_texts
             )
-        else:
-            (train_texts, train_cats), (eval_texts, eval_cats) = load_data(limit=n_texts)
     nlp.add_pipe(textcat, last=True)
     print(f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation)")
     split_training_by_sentence = False
@@ -86,7 +89,9 @@ def main(
     # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
     optimizer.alpha = 0.001
-    learn_rates = warmup_linear_rates(learn_rate, 0, n_iter * len(train_data) // batch_size)
+    learn_rates = warmup_linear_rates(
+        learn_rate, 0, n_iter * len(train_data) // batch_size
+    )
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
     for i in range(n_iter):

@@ -3,7 +3,7 @@ from spacy.util import minibatch
 import re
 import numpy
 
-from ..util import get_pytt_tokenizer, flatten_list, is_special_token, get_sents
+from ..util import get_pytt_tokenizer, flatten_list, get_sents
 
 
 class PyTT_WordPiecer(Pipe):
@@ -91,7 +91,9 @@ class PyTT_WordPiecer(Pipe):
                 sent_align = []
                 for segment in sent._.pytt_segments:
                     seg_words = self.model.tokenize(segment.text)
-                    seg_words, seg_align = self._align(segment, seg_words, offset=offset)
+                    seg_words, seg_align = self._align(
+                        segment, seg_words, offset=offset
+                    )
                     assert len(segment) == len(seg_align)
                     sent_words.append(seg_words)
                     sent_align.append(seg_align)
@@ -257,7 +259,7 @@ def _tokenize_individual_tokens(model, sent):
         if token.text.strip():
             subtokens = model.tokenize(token.text)
             wp_tokens.extend(subtokens)
-            sent_align.append([i+offset for i in range(len(subtokens))])
+            sent_align.append([i + offset for i in range(len(subtokens))])
             offset += len(subtokens)
         else:
             sent_align.append([])

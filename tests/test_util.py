@@ -1,8 +1,6 @@
 import pytest
 import numpy
 from numpy.testing import assert_equal
-from spacy.tokens import Doc
-from spacy.vocab import Vocab
 from spacy_pytorch_transformers.pipeline.wordpiecer import align_word_pieces
 from spacy_pytorch_transformers.util import pad_batch, batch_by_length, lengths2mask
 

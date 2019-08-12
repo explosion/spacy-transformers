@@ -1,7 +1,6 @@
 import pytest
 from spacy_pytorch_transformers.pipeline import PyTT_TextCategorizer
 from spacy.gold import GoldParse
-from spacy_pytorch_transformers.util import get_sents
 
 
 @pytest.fixture(
