@@ -13,7 +13,7 @@ from pathlib import Path
 from spacy.util import minibatch
 
 from spacy_pytorch_transformers.util import warmup_linear_rates
-from spacy_pytorch_transformers._extra.hyper_params import get_hyper_params
+from spacy_pytorch_transformers.hyper_params import get_hyper_params
 
 from .glue_util import read_train_data, read_dev_data
 from .glue_util import describe_task
