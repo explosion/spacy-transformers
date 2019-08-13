@@ -165,7 +165,6 @@ def main(
     if HP.max_steps < 1:
         HP.max_steps = nr_batch * HP.num_train_epochs
     # Set up printing
-    progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch, leave=False)
     table_widths = [2, 4, 4]
     msg.info(f"Training. Initial learn rate: {optimizer.alpha}")
     msg.row(["#", "Loss", "Score"], widths=table_widths)
@@ -182,32 +181,31 @@ def main(
     # spends too long flat, which harms the transfer learning.
     optimizer.alpha = 0.001
     step = 0
+    if HP.eval_every < 1:
+        HP.eval_every = nr_batch
+    pbar = tqdm.tqdm(total=HP.eval_every, leave=False)
     for i in range(HP.num_train_epochs):
         if step >= HP.max_steps:
             break
         # Train and evaluate
         losses = Counter()
-        for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
+        for batch, loss in train_epoch(nlp, optimizer, train_data):
+            pbar.update(1)
             losses.update(loss)
             if HP.use_learn_rate_schedule:
                 optimizer.pytt_lr = next(learn_rates)
-            step += 1
-            if step >= HP.max_steps:
-                break
-            if HP.eval_every != 0 and (step % HP.eval_every) == 0:
+            if HP.eval_every != 0 and step and (step % HP.eval_every) == 0:
                 with nlp.use_params(optimizer.averages):
                     main_score, accuracies = evaluate(nlp, task, dev_data)
                 msg.row(
                     [str(step), "%.2f" % losses["pytt_textcat"], main_score],
                     widths=table_widths,
                 )
-        if not HP.eval_every:
-            with nlp.use_params(optimizer.averages):
-                main_score, accuracies = evaluate(nlp, task, dev_data)
-            msg.row(
-                [str(i), "%.2f" % losses["pytt_textcat"], main_score],
-                widths=table_widths,
-            )
+                pbar.close()
+                pbar = tqdm.tqdm(total=HP.eval_every, leave=False)
+            step += 1
+            if step >= HP.max_steps:
+                break
 
 
 if __name__ == "__main__":
