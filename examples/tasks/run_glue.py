@@ -206,16 +206,17 @@ def main(
             step += 1
         epoch += 1
         # Stop if no improvement in HP.patience checkpoints
-        best_score, best_step, best_epoch = max(results)
-        if ((step - best_step) // HP.eval_every) >= HP.patience:
-            break
+        if results:
+            best_score, best_step, best_epoch = max(results)
+            if ((step - best_step) // HP.eval_every) >= HP.patience:
+                break
 
-    table_widths = [2, 4, 4]
+    table_widths = [2, 4, 6]
     msg.info(f"Best scoring checkpoints")
     msg.row(["Epoch", "Step", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     for score, step, epoch in sorted(results, reverse=True)[:10]:
-        msg.row([epoch, step, "%.2f" % score], widths=table_widths)
+        msg.row([epoch, step, "%.2f" % (score*100)], widths=table_widths)
 
 
 if __name__ == "__main__":
