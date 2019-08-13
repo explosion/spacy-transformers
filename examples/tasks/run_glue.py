@@ -12,8 +12,7 @@ from collections import Counter
 from pathlib import Path
 from spacy.util import minibatch
 
-from spacy_pytorch_transformers.util import warmup_linear_rates
-from spacy_pytorch_transformers.util import slanted_triangular_rate
+from spacy_pytorch_transformers.util import cyclic_triangular_rate
 from spacy_pytorch_transformers.hyper_params import get_hyper_params
 
 from glue_util import read_train_data, read_dev_data
@@ -169,7 +168,7 @@ def main(
     msg.row(["#", "Loss", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     # Set up learning rate schedule
-    learn_rates = slanted_triangular_rate(
+    learn_rates = cyclic_triangular_rate(
         HP.learning_rate / HP.lr_range, HP.learning_rate * HP.lr_range,
         nr_batch * HP.lr_period)
     optimizer.pytt_lr = next(learn_rates)
