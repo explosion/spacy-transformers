@@ -64,7 +64,7 @@ def softmax_tanh_class_vector(nr_class, *, exclusive_classes=True, **cfg):
         flatten_add_lengths,
         with_getitem(0, chain(Affine(width, width), tanh)),
         Pooling(mean_pool),
-        Softmax(2, width),
+        Softmax(nr_class, width),
     )
 
 
@@ -80,7 +80,7 @@ def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
         get_pytt_class_tokens,
         flatten_add_lengths,
         Pooling(mean_pool),
-        Softmax(2, width),
+        Softmax(nr_class, width),
     )
 
 
