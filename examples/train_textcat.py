@@ -23,6 +23,7 @@ from spacy_pytorch_transformers.util import warmup_linear_rates
     max_wpb=("Max words per sub-batch", "option", "wpb", int),
     n_texts=("Number of texts to train from", "option", "t", int),
     n_iter=("Number of training epochs", "option", "n", int),
+    pos_label=("Positive label for evaluation", "option", "pl", str),
 )
 def main(
     model,
@@ -34,8 +35,9 @@ def main(
     learn_rate=2e-5,
     max_wpb=1000,
     use_test=False,
+    pos_label=None,
 ):
-    random.seed(0)
+    spacy.util.fix_random_seed(0)
     is_using_gpu = spacy.prefer_gpu()
     if is_using_gpu:
         torch.set_default_tensor_type("torch.cuda.FloatTensor")
@@ -56,12 +58,18 @@ def main(
         labels = set()
         for cats in train_cats + eval_cats:
             labels.update(cats)
+        # use the first label in the set as the positive label if one isn't
+        # provided
         for label in sorted(labels):
+            if not pos_label:
+                pos_label = label
             textcat.add_label(label)
     else:
         # add label to text classifier
         textcat.add_label("POSITIVE")
         textcat.add_label("NEGATIVE")
+        if not pos_label:
+            pos_label = "POSITIVE"
         # load the IMDB dataset
         print("Loading IMDB data...")
         if use_test:
@@ -73,8 +81,11 @@ def main(
             (train_texts, train_cats), (eval_texts, eval_cats) = load_data(
                 limit=n_texts
             )
+
+    print("Labels:", textcat.labels)
+    print("Positive label for evaluation:", pos_label)
     nlp.add_pipe(textcat, last=True)
-    print(f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation)")
+    print(f"Using {len(train_texts)} training docs, {len(eval_texts)} evaluation")
     split_training_by_sentence = False
     if split_training_by_sentence:
         # If we're using a model that averages over sentence predictions (we are),
@@ -107,7 +118,7 @@ def main(
                 pbar.update(sum(len(text.split()) for text in texts))
         # evaluate on the dev data split off in load_data()
         with nlp.use_params(optimizer.averages):
-            scores = evaluate(nlp, eval_texts, eval_cats)
+            scores = evaluate(nlp, eval_texts, eval_cats, pos_label)
         print(
             "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
                 losses["pytt_textcat"],
@@ -118,7 +129,7 @@ def main(
         )
 
     # Test the trained model
-    test_text = "This movie sucked"
+    test_text = eval_texts[0]
     doc = nlp(test_text)
     print(test_text, doc.cats)
 
@@ -206,7 +217,7 @@ def _prepare_partition(text_label_tuples, *, preprocess=False):
     return texts, cats
 
 
-def evaluate(nlp, texts, cats):
+def evaluate(nlp, texts, cats, pos_label):
     tp = 0.0  # True positives
     fp = 0.0  # False positives
     fn = 0.0  # False negatives
@@ -218,7 +229,7 @@ def evaluate(nlp, texts, cats):
             for label, score in doc.cats.items():
                 if label not in gold:
                     continue
-                if label == "NEGATIVE":
+                if label != pos_label:
                     continue
                 if score >= 0.5 and gold[label] >= 0.5:
                     tp += 1.0
