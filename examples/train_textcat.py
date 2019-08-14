@@ -4,13 +4,15 @@ import re
 import random
 import json
 from pathlib import Path
+from collections import Counter
 import thinc.extra.datasets
 import spacy
 import torch
 from spacy.util import minibatch
 import tqdm
 import unicodedata
-from spacy_pytorch_transformers.util import warmup_linear_rates
+import wasabi
+from spacy_pytorch_transformers.util import cyclic_triangular_rate
 
 
 @plac.annotations(
@@ -100,33 +102,58 @@ def main(
     # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
     optimizer.alpha = 0.001
-    learn_rates = warmup_linear_rates(
-        learn_rate, 0, n_iter * len(train_data) // batch_size
-    )
+    optimizer.pytt_weight_decay = 0.005
+    optimizer.L2 = 0.0
+    learn_rates = cyclic_triangular_rate(learn_rate / 3, learn_rate * 3,
+        2 * len(train_data) // batch_size)
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
-    for i in range(n_iter):
-        losses = {}
-        # batch up the examples using spaCy's minibatch
+
+    pbar = tqdm.tqdm(total=100, leave=False)
+    results = []
+    epoch = 0
+    step = 0
+    eval_every = 100
+    patience = 3
+    while True:
+        # Train and evaluate
+        losses = Counter()
         random.shuffle(train_data)
         batches = minibatch(train_data, size=batch_size)
-        with tqdm.tqdm(total=total_words, leave=False) as pbar:
-            for batch in batches:
-                optimizer.pytt_lr = next(learn_rates)
-                texts, annotations = zip(*batch)
-                nlp.update(texts, annotations, sgd=optimizer, drop=0.1, losses=losses)
-                pbar.update(sum(len(text.split()) for text in texts))
-        # evaluate on the dev data split off in load_data()
-        with nlp.use_params(optimizer.averages):
-            scores = evaluate(nlp, eval_texts, eval_cats, pos_label)
-        print(
-            "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
-                losses["pytt_textcat"],
-                scores["textcat_p"],
-                scores["textcat_r"],
-                scores["textcat_f"],
-            )
-        )
+        for batch in batches:
+            optimizer.pytt_lr = next(learn_rates)
+            texts, annotations = zip(*batch)
+            nlp.update(texts, annotations, sgd=optimizer, drop=0.1, losses=losses)
+            pbar.update(1)
+            if step and (step % eval_every) == 0:
+                pbar.close()
+                with nlp.use_params(optimizer.averages):
+                    scores = evaluate(nlp, eval_texts, eval_cats, pos_label)
+                results.append((scores["textcat_f"], step, epoch))
+                print(
+                    "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
+                        losses["pytt_textcat"],
+                        scores["textcat_p"],
+                        scores["textcat_r"],
+                        scores["textcat_f"],
+                    )
+                )
+                pbar = tqdm.tqdm(total=eval_every, leave=False)
+            step += 1
+        epoch += 1
+        # Stop if no improvement in HP.patience checkpoints
+        if results:
+            best_score, best_step, best_epoch = max(results)
+            if ((step - best_step) // eval_every) >= patience:
+                break
+
+    msg = wasabi.Printer()
+    table_widths = [2, 4, 6]
+    msg.info(f"Best scoring checkpoints")
+    msg.row(["Epoch", "Step", "Score"], widths=table_widths)
+    msg.row(["-" * width for width in table_widths])
+    for score, step, epoch in sorted(results, reverse=True)[:10]:
+        msg.row([epoch, step, "%.2f" % (score*100)], widths=table_widths)
 
     # Test the trained model
     test_text = eval_texts[0]

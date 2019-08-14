@@ -7,6 +7,8 @@ FIELDS = dict(
     batch_size=int,
     eval_batch_size=int,
     learning_rate=float,
+    lr_range=float,
+    lr_period=int,
     weight_decay=float,
     adam_epsilon=float,
     max_grad_norm=float,
@@ -18,6 +20,7 @@ FIELDS = dict(
     eval_every=int,
     use_learn_rate_schedule=int,
     use_swa=int,
+    patience=int,
 )
 
 

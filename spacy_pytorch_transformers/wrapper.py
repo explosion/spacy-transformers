@@ -7,7 +7,8 @@ import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 import numpy
-from torchcontrib.optim import SWA
+import srsly
+import contextlib
 
 from .util import get_pytt_model
 from .util import Dropout
@@ -123,15 +124,30 @@ class PyTT_Wrapper(PyTorchWrapper):
                             self._model.parameters(), sgd.max_grad_norm
                         )
                     optimizer = self._optimizer
-
-                    for params in optimizer.param_groups:
-                        params["lr"] = getattr(sgd, "pytt_lr", sgd.alpha)
+                    for group in optimizer.param_groups:
+                        group["lr"] = getattr(sgd, "pytt_lr", sgd.alpha)
                     optimizer.step()
                     optimizer.zero_grad()
+                    self._update_pytorch_averages(sgd)
             return None
 
         self._model.eval()
         return output, backward_pytorch
+    
+    @contextlib.contextmanager
+    def use_params(self, params):
+        key_prefix = f"pytorch_{self.id}_"
+        state_dict = {}
+        for k, v in params.items():
+            if hasattr(k, "startswith") and k.startswith(key_prefix):
+                state_dict[k.replace(key_prefix, "")] = xp2torch(v)
+        if state_dict:
+            backup = {k: v.clone() for k, v in self._model.state_dict().items()}
+            self._model.load_state_dict(state_dict)
+            yield
+            self._model.load_state_dict(backup)
+        else:
+            yield
 
     def make_activations(self, fields, lengths) -> Activations:
         """Create Activations from the output tuples produced by PyTorch Transformers.
@@ -193,8 +209,21 @@ class PyTT_Wrapper(PyTorchWrapper):
             betas=(sgd.b1, sgd.b2),
             weight_decay=getattr(sgd, "pytt_weight_decay", 0.0),
         )
-        if getattr(sgd, "pytt_use_swa", False):
-            lr = getattr(sgd, "pytt_lr", sgd.alpha)
-            optimizer = SWA(optimizer, swa_start=1, swa_freq=1, swa_lr=lr)
         optimizer.zero_grad()
         return optimizer
+
+    def _update_pytorch_averages(self, sgd, *, init_steps=1):
+        if sgd.averages is None:
+            return
+        id_ = self.id
+        # Collect parameters if we don't have them
+        for name, param in self._model.state_dict().items():
+            key = f"pytorch_{self.id}_{name}"
+            sgd.nr_update[key] += 1
+            xp_param = torch2xp(param)
+            if key in sgd.averages:
+                self.ops.update_averages(
+                    sgd.averages[key], xp_param, sgd.nr_update[key])
+            else:
+                sgd.averages[key] = xp_param.copy()
+                sgd.nr_update[key] = init_steps

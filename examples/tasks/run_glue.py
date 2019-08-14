@@ -12,7 +12,7 @@ from collections import Counter
 from pathlib import Path
 from spacy.util import minibatch
 
-from spacy_pytorch_transformers.util import warmup_linear_rates
+from spacy_pytorch_transformers.util import cyclic_triangular_rate
 from spacy_pytorch_transformers.hyper_params import get_hyper_params
 
 from glue_util import read_train_data, read_dev_data
@@ -162,18 +162,15 @@ def main(
         dev_data = process_data(nlp, task, raw_dev_data)
 
     nr_batch = len(train_data) // HP.batch_size
-    if HP.max_steps < 1:
-        HP.max_steps = nr_batch * HP.num_train_epochs
     # Set up printing
-    progress_bar = lambda func: tqdm.tqdm(func, total=nr_batch, leave=False)
     table_widths = [2, 4, 4]
     msg.info(f"Training. Initial learn rate: {optimizer.alpha}")
     msg.row(["#", "Loss", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     # Set up learning rate schedule
-    learn_rates = warmup_linear_rates(
-        HP.learning_rate, HP.warmup_steps, nr_batch * HP.num_train_epochs
-    )
+    learn_rates = cyclic_triangular_rate(
+        HP.learning_rate / HP.lr_range, HP.learning_rate * HP.lr_range,
+        nr_batch * HP.lr_period)
     optimizer.pytt_lr = next(learn_rates)
     optimizer.pytt_weight_decay = HP.weight_decay
     optimizer.pytt_use_swa = HP.use_swa
@@ -182,32 +179,43 @@ def main(
     # spends too long flat, which harms the transfer learning.
     optimizer.alpha = 0.001
     step = 0
-    for i in range(HP.num_train_epochs):
-        if step >= HP.max_steps:
-            break
+    if HP.eval_every < 1:
+        HP.eval_every = nr_batch
+    pbar = tqdm.tqdm(total=HP.eval_every, leave=False)
+    results = []
+    epoch = 0
+    while True:
         # Train and evaluate
         losses = Counter()
-        for batch, loss in progress_bar(train_epoch(nlp, optimizer, train_data)):
+        for batch, loss in train_epoch(nlp, optimizer, train_data):
+            pbar.update(1)
             losses.update(loss)
-            if HP.use_learn_rate_schedule:
-                optimizer.pytt_lr = next(learn_rates)
-            step += 1
-            if step >= HP.max_steps:
-                break
-            if HP.eval_every != 0 and (step % HP.eval_every) == 0:
+            
+            optimizer.pytt_lr = next(learn_rates)
+            if step and (step % HP.eval_every) == 0:
                 with nlp.use_params(optimizer.averages):
                     main_score, accuracies = evaluate(nlp, task, dev_data)
+                results.append((main_score, step, epoch))
                 msg.row(
                     [str(step), "%.2f" % losses["pytt_textcat"], main_score],
                     widths=table_widths,
                 )
-        if not HP.eval_every:
-            with nlp.use_params(optimizer.averages):
-                main_score, accuracies = evaluate(nlp, task, dev_data)
-            msg.row(
-                [str(i), "%.2f" % losses["pytt_textcat"], main_score],
-                widths=table_widths,
-            )
+                pbar.close()
+                pbar = tqdm.tqdm(total=HP.eval_every, leave=False)
+            step += 1
+        epoch += 1
+        # Stop if no improvement in HP.patience checkpoints
+        if results:
+            best_score, best_step, best_epoch = max(results)
+            if ((step - best_step) // HP.eval_every) >= HP.patience:
+                break
+
+    table_widths = [2, 4, 6]
+    msg.info(f"Best scoring checkpoints")
+    msg.row(["Epoch", "Step", "Score"], widths=table_widths)
+    msg.row(["-" * width for width in table_widths])
+    for score, step, epoch in sorted(results, reverse=True)[:10]:
+        msg.row([epoch, step, "%.2f" % (score*100)], widths=table_widths)
 
 
 if __name__ == "__main__":
