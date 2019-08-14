@@ -97,15 +97,16 @@ def main(
         # not obviously better -- but it does seem to work well.
         train_texts, train_cats = make_sentence_examples(nlp, train_texts, train_cats)
         print(f"Extracted {len(train_texts)} training sents")
-    total_words = sum(len(text.split()) for text in train_texts)
+    # total_words = sum(len(text.split()) for text in train_texts)
     train_data = list(zip(train_texts, [{"cats": cats} for cats in train_cats]))
     # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
     optimizer.alpha = 0.001
     optimizer.pytt_weight_decay = 0.005
     optimizer.L2 = 0.0
-    learn_rates = cyclic_triangular_rate(learn_rate / 3, learn_rate * 3,
-        2 * len(train_data) // batch_size)
+    learn_rates = cyclic_triangular_rate(
+        learn_rate / 3, learn_rate * 3, 2 * len(train_data) // batch_size
+    )
     print("Training the model...")
     print("{:^5}\t{:^5}\t{:^5}\t{:^5}".format("LOSS", "P", "R", "F"))
 
@@ -153,7 +154,7 @@ def main(
     msg.row(["Epoch", "Step", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     for score, step, epoch in sorted(results, reverse=True)[:10]:
-        msg.row([epoch, step, "%.2f" % (score*100)], widths=table_widths)
+        msg.row([epoch, step, "%.2f" % (score * 100)], widths=table_widths)
 
     # Test the trained model
     test_text = eval_texts[0]

@@ -169,8 +169,10 @@ def main(
     msg.row(["-" * width for width in table_widths])
     # Set up learning rate schedule
     learn_rates = cyclic_triangular_rate(
-        HP.learning_rate / HP.lr_range, HP.learning_rate * HP.lr_range,
-        nr_batch * HP.lr_period)
+        HP.learning_rate / HP.lr_range,
+        HP.learning_rate * HP.lr_range,
+        nr_batch * HP.lr_period,
+    )
     optimizer.pytt_lr = next(learn_rates)
     optimizer.pytt_weight_decay = HP.weight_decay
     optimizer.pytt_use_swa = HP.use_swa
@@ -190,7 +192,7 @@ def main(
         for batch, loss in train_epoch(nlp, optimizer, train_data):
             pbar.update(1)
             losses.update(loss)
-            
+
             optimizer.pytt_lr = next(learn_rates)
             if step and (step % HP.eval_every) == 0:
                 with nlp.use_params(optimizer.averages):
@@ -215,7 +217,7 @@ def main(
     msg.row(["Epoch", "Step", "Score"], widths=table_widths)
     msg.row(["-" * width for width in table_widths])
     for score, step, epoch in sorted(results, reverse=True)[:10]:
-        msg.row([epoch, step, "%.2f" % (score*100)], widths=table_widths)
+        msg.row([epoch, step, "%.2f" % (score * 100)], widths=table_widths)
 
 
 if __name__ == "__main__":

@@ -348,7 +348,7 @@ def cyclic_triangular_rate(min_lr, max_lr, period):
         # https://towardsdatascience.com/adaptive-and-cyclical-learning-rates-using-pytorch-2bf904d18dee
         cycle = numpy.floor(1 + it / (2 * period))
         x = numpy.abs(it / period - 2 * cycle + 1)
-        relative = max(0, 1-x)
+        relative = max(0, 1 - x)
         yield min_lr + (max_lr - min_lr) * relative
         it += 1
 

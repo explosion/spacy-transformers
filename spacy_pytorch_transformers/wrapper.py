@@ -7,12 +7,12 @@ import torch
 from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 import numpy
-import srsly
 import contextlib
 
 from .util import get_pytt_model
 from .util import Dropout
 from .activations import RaggedArray, Activations
+
 
 FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
@@ -133,7 +133,7 @@ class PyTT_Wrapper(PyTorchWrapper):
 
         self._model.eval()
         return output, backward_pytorch
-    
+
     @contextlib.contextmanager
     def use_params(self, params):
         key_prefix = f"pytorch_{self.id}_"
@@ -215,7 +215,6 @@ class PyTT_Wrapper(PyTorchWrapper):
     def _update_pytorch_averages(self, sgd, *, init_steps=1):
         if sgd.averages is None:
             return
-        id_ = self.id
         # Collect parameters if we don't have them
         for name, param in self._model.state_dict().items():
             key = f"pytorch_{self.id}_{name}"
@@ -223,7 +222,8 @@ class PyTT_Wrapper(PyTorchWrapper):
             xp_param = torch2xp(param)
             if key in sgd.averages:
                 self.ops.update_averages(
-                    sgd.averages[key], xp_param, sgd.nr_update[key])
+                    sgd.averages[key], xp_param, sgd.nr_update[key]
+                )
             else:
                 sgd.averages[key] = xp_param.copy()
                 sgd.nr_update[key] = init_steps
