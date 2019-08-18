@@ -104,11 +104,11 @@ def train_while_improving(nlp, train_data, evaluate, *,
         steps_per_epoch
     )
     optimizer.pytt_lr = next(learn_rates)
-    optimizer.pytt_weight_decay = HP.weight_decay
+    optimizer.pytt_weight_decay = weight_decay
     # This sets the learning rate for the Thinc layers, i.e. just the final
     # softmax. By keeping this LR high, we avoid a problem where the model
     # spends too long flat, which harms the transfer learning.
-    optimizer.alpha = HP.classifier_lr
+    optimizer.alpha = classifier_lr
     epoch = 0
     step = 0
     results = []
@@ -118,7 +118,7 @@ def train_while_improving(nlp, train_data, evaluate, *,
             optimizer.pytt_lr = next(learn_rates)
             docs, golds = zip(*batch)
             losses = {}
-            nlp.update(docs, golds, drop=HP.dropout, losses=losses,
+            nlp.update(docs, golds, drop=dropout, losses=losses,
                 sgd=(optimizer if (step % steps_per_batch == 0) else None))
             if step != 0 and not (step % (eval_every * steps_per_batch)):
                 with nlp.use_params(optimizer.averages):
@@ -134,8 +134,8 @@ def train_while_improving(nlp, train_data, evaluate, *,
             yield batch, info, is_best_checkpoint
             step += 1
         epoch += 1
-        # Stop if no improvement in HP.patience checkpoints
+        # Stop if no improvement in patience checkpoints
         if results:
             best_score, best_step, best_epoch = max(results)
-            if ((step - best_step) // HP.eval_every) >= HP.patience:
+            if ((step - best_step) // eval_every) >= patience:
                 break
