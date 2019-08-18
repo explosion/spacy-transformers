@@ -1,5 +1,5 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch, torch2xp
-from pytorch_transformers.optimization import AdamW
+from ._radam import RAdam
 import pytorch_transformers as pytt
 import torch.autograd
 import torch.nn.utils.clip_grad
@@ -202,7 +202,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             return {"input_ids": ids, "token_type_ids": segment_ids}
 
     def _create_optimizer(self, sgd):
-        optimizer = AdamW(
+        optimizer = RAdam(
             self._model.parameters(),
             lr=getattr(sgd, "pytt_lr", sgd.alpha),
             eps=sgd.eps,
