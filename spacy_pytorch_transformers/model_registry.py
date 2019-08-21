@@ -93,7 +93,7 @@ def softmax_last_hidden(nr_class, *, exclusive_classes=True, **cfg):
     """
     width = cfg["token_vector_width"]
     return chain(
-        get_pytt_last_hidden, flatten_add_lengths, Pooling(mean_pool), Softmax(2, width)
+        get_pytt_last_hidden, flatten_add_lengths, Pooling(mean_pool), Softmax(nr_class, width)
     )
 
 
