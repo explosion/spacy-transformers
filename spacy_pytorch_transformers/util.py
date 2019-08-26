@@ -31,7 +31,9 @@ SPECIAL_TOKENS: Sequence[str] = (
 def get_pytt_config(name):
     """Map a name to the appropriate pytorch_transformers.*Config class."""
     name = name.lower()
-    if "bert" in name:
+    if "roberta" in name:
+        return pytt.RobertaConfig
+    elif "bert" in name:
         return pytt.BertConfig
     elif "xlnet" in name:
         return pytt.XLNetConfig
@@ -46,7 +48,9 @@ def get_pytt_config(name):
 def get_pytt_model(name):
     """Map a name to the appropriate pytorch_transformers.*Model class."""
     name = name.lower()
-    if "bert" in name:
+    if "roberta" in name:
+        return pytt.RobertaModel
+    elif "bert" in name:
         return pytt.BertModel
     elif "xlnet" in name:
         return pytt.XLNetModel
@@ -61,7 +65,9 @@ def get_pytt_model(name):
 def get_pytt_tokenizer(name):
     """Get a pytorch_transformers.*Tokenizer class from a name."""
     name = name.lower()
-    if "bert" in name:
+    if "roberta" in name:
+        return _tokenizers.SerializableRobertaTokenizer
+    elif "bert" in name:
         return _tokenizers.SerializableBertTokenizer
     elif "xlnet" in name:
         return _tokenizers.SerializableXLNetTokenizer
@@ -230,6 +236,9 @@ def get_segment_ids(name: str, *lengths) -> List[int]:
         return get_xlm_segment_ids(length1, length2)
     elif "gpt2" in name:
         return get_gpt2_segment_ids(length1, length2)
+    elif "roberta" in name:
+        return get_roberta_segment_ids(length1, length2)
+ 
     else:
         raise ValueError(f"Unexpected model name: {name}")
 
@@ -317,6 +326,12 @@ def get_gpt2_segment_ids(length1: int, length2: int) -> List[int]:
         return [0] + [0] * length1 + [0]
     else:
         return [0] + [0] * length1 + [0] + [1] * length2 + [1]
+
+
+def get_roberta_segment_ids(length1: int, length2: int) -> List[int]:
+    # Roberta doesn't use Segment IDs
+    total = 1 + length1 + 1 + (1 + length2 + 1) * bool(length2)
+    return [0] * total
 
 
 def get_sents(doc: Union[Span, Doc]) -> List[Span]:

@@ -363,6 +363,81 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         return output
 
 
+class SerializableRobertaTokenizer(pytt.RobertaTokenizer, SerializationMixin):
+    serialization_fields = list(BASE_CLASS_FIELDS) + [
+        "encoder",
+        "_bpe_ranks",
+        "errors",
+        "_regex_pattern",
+    ]
+
+    @classmethod
+    def blank(cls):
+        self = cls.__new__(cls)
+        for field in self.serialization_fields:
+            setattr(self, field, None)
+        self.byte_encoder = None
+        self.byte_decoder = None
+        self.bpe_ranks = {}
+        self.cache = None
+        self.pat = None
+        return self
+
+    def finish_deserializing(self):
+        self.bpe_ranks = deserialize_bpe_ranks(self._bpe_ranks)
+        self.decoder = {v: k for k, v in self.encoder.items()}
+        self.byte_encoder = bytes_to_unicode()
+        self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
+        self.cache = {}
+        self.pat = regex.compile(self._regex_pattern, flags=regex.V0)
+
+    def prepare_for_serialization(self):
+        self._regex_pattern = self.pat.pattern
+        self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
+
+    def clean_token(self, text):
+        text = clean_extended_unicode(text)
+        return text.strip()
+
+    def clean_wp_token(self, text):
+        text = text.replace("\u0120", "", 1)
+        text = text.replace("\u010a", "", 1)
+        text = ftfy.fix_text(text)
+        text = clean_extended_unicode(text)
+        return text.strip()
+
+    def add_special_tokens(self, segments):
+        # A RoBERTa sequence pair has the following format: [CLS] A [SEP][SEP] B [SEP]
+        output = []
+        for segment in segments:
+            if output:
+                output.append(self.sep_token)
+            output.extend(segment)
+            if segment:
+                output.append(self.sep_token)
+        if output:
+            # If we otherwise would have an empty output, don't add cls
+            output.insert(0, self.cls_token)
+        return output
+
+    def fix_alignment(self, segments):
+        """Turn a nested segment alignment into an alignment for the whole input,
+        by offsetting and accounting for special tokens."""
+        offset = 0
+        output = []
+        for segment in segments:
+            if segment:
+                offset += 1
+            seen = set()
+            for idx_group in segment:
+                output.append([idx + offset for idx in idx_group])
+                seen.update({idx for idx in idx_group})
+            offset += len(seen)
+            if segment:
+                offset += 1
+        return output
+
+
 def clean_accents(text):
     return "".join(
         c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
