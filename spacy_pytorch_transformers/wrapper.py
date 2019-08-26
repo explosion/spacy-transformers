@@ -8,6 +8,7 @@ from typing import Tuple, Callable, Any
 from thinc.neural.optimizers import Optimizer
 import numpy
 import contextlib
+from thinc.compat import BytesIO
 
 from .util import get_pytt_model
 from .util import Dropout
@@ -227,3 +228,30 @@ class PyTT_Wrapper(PyTorchWrapper):
             else:
                 sgd.averages[key] = xp_param.copy()
                 sgd.nr_update[key] = init_steps
+
+    def to_disk(self, path):
+        torch.save(self._model.state_dict(), str(path))
+
+    def from_disk(self, path):
+        if self.ops.device == "cpu":
+            map_location = torch.device(self.ops.device)
+        else:
+            map_location = torch.device("cuda")
+        self._model.load_state_dict(torch.load(path, map_location=map_location))
+
+    def to_bytes(self):
+        filelike = BytesIO()
+        torch.save(self._model.state_dict(), filelike)
+        filelike.seek(0)
+        return filelike.getvalue()
+
+    def from_bytes(self, data):
+        filelike = BytesIO(data)
+        filelike.seek(0)
+        if self.ops.device == "cpu":
+            map_location = torch.device(self.ops.device)
+        else:
+            map_location = torch.device("cuda")
+        self._model.load_state_dict(torch.load(filelike, map_location=map_location))
+
+ 
