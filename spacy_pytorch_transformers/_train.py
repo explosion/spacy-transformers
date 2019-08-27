@@ -4,11 +4,22 @@ from spacy.util import minibatch
 from .util import cyclic_triangular_rate
 
 
-def train_while_improving(nlp, train_data, evaluate, *,
-    learning_rate: float, batch_size: int,
-    weight_decay: float, classifier_lr: float, dropout: float,
-    lr_range: int, lr_period: int,
-    steps_per_batch: int, patience: int, eval_every: int):
+def train_while_improving(
+    nlp,
+    train_data,
+    evaluate,
+    *,
+    learning_rate: float,
+    batch_size: int,
+    weight_decay: float,
+    classifier_lr: float,
+    dropout: float,
+    lr_range: int,
+    lr_period: int,
+    steps_per_batch: int,
+    patience: int,
+    eval_every: int
+):
     """Train until an evaluation stops improving. Works as a generator,
     with each iteration yielding a tuple `(batch, info, is_best_checkpoint)`,
     where info is a dict, and is_best_checkpoint is in [True, False, None] -- 
@@ -99,9 +110,7 @@ def train_while_improving(nlp, train_data, evaluate, *,
     steps_per_epoch = nr_batch * steps_per_batch
     optimizer = nlp.resume_training()
     learn_rates = cyclic_triangular_rate(
-        learning_rate / lr_range,
-        learning_rate * lr_range,
-        steps_per_epoch
+        learning_rate / lr_range, learning_rate * lr_range, steps_per_epoch
     )
     optimizer.pytt_lr = next(learn_rates)
     optimizer.pytt_weight_decay = HP.weight_decay
@@ -118,8 +127,13 @@ def train_while_improving(nlp, train_data, evaluate, *,
             optimizer.pytt_lr = next(learn_rates)
             docs, golds = zip(*batch)
             losses = {}
-            nlp.update(docs, golds, drop=HP.dropout, losses=losses,
-                sgd=(optimizer if (step % steps_per_batch == 0) else None))
+            nlp.update(
+                docs,
+                golds,
+                drop=HP.dropout,
+                losses=losses,
+                sgd=(optimizer if (step % steps_per_batch == 0) else None),
+            )
             if step != 0 and not (step % (eval_every * steps_per_batch)):
                 with nlp.use_params(optimizer.averages):
                     score, other_scores = evaluate()
@@ -128,9 +142,14 @@ def train_while_improving(nlp, train_data, evaluate, *,
             else:
                 score, other_scores = (None, None)
                 is_best_checkpoint = None
-            info = {"epoch": epoch, "step": step, "score": score,
-                    "other_scores": other_scores, "loss": losses,
-                    "checkpoints": results}
+            info = {
+                "epoch": epoch,
+                "step": step,
+                "score": score,
+                "other_scores": other_scores,
+                "loss": losses,
+                "checkpoints": results,
+            }
             yield batch, info, is_best_checkpoint
             step += 1
         epoch += 1

@@ -253,5 +253,3 @@ class PyTT_Wrapper(PyTorchWrapper):
         else:
             map_location = torch.device("cuda")
         self._model.load_state_dict(torch.load(filelike, map_location=map_location))
-
- 
