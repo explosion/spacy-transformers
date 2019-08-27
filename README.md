@@ -18,7 +18,8 @@ more details and background, check out
 
 ## Features
 
--   Use **BERT**, **XLNet** and **GPT-2** directly in your spaCy pipeline.
+-   Use **BERT**, **RoBERTa**, **XLNet** and **GPT-2** directly in your spaCy
+    pipeline.
 -   **Fine-tune** pretrained transformer models on your task using spaCy's API.
 -   Custom component for **text classification** using transformer features.
 -   Automatic **alignment** of wordpieces and outputs to linguistic tokens.
@@ -48,16 +49,18 @@ We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name                 | Pretrained model         | Language | Author                                                     |  Size |                                            Release                                             |
-| ---------------------------- | ------------------------ | -------- | ---------------------------------------------------------- | ----: | :--------------------------------------------------------------------------------------------: |
-| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased`      | English  | [Google Research](https://github.com/google-research/bert) | 406MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.1) |
-| `de_pytt_bertbasecased_lg`   | `bert-base-german-cased` | German   | [deepset](https://deepset.ai/german-bert)                  | 406MB |  [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.1)  |
-| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`       | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)    | 434MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.1)  |
+| Package name                 | Pretrained model         | Language | Author                                                                      |  Size |                                            Release                                             |
+| ---------------------------- | ------------------------ | -------- | --------------------------------------------------------------------------- | ----: | :--------------------------------------------------------------------------------------------: |
+| `en_pytt_bertbaseuncased_lg` | `bert-base-uncased`      | English  | [Google Research](https://github.com/google-research/bert)                  | 406MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.1) |
+| `de_pytt_bertbasecased_lg`   | `bert-base-german-cased` | German   | [deepset](https://deepset.ai/german-bert)                                   | 406MB |  [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.1)  |
+| `en_pytt_xlnetbasecased_lg`  | `xlnet-base-cased`       | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 434MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.1)  |
+| `en_pytt_robertabase_lg`     | `roberta-base`           | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 292MB |   [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_robertabase_lg-2.1.0)   |
 
 ```bash
 python -m spacy download en_pytt_bertbaseuncased_lg
 python -m spacy download de_pytt_bertbasecased_lg
 python -m spacy download en_pytt_xlnetbasecased_lg
+python -m spacy download en_pytt_robertabase_lg
 ```
 
 Once the model is installed, you can load it in spaCy like any other model
