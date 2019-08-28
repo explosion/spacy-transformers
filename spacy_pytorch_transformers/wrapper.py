@@ -54,7 +54,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             return self.cfg["hidden_size"]
         elif "hidden_dim" in self.cfg:
             # DistilBERT
-            return self.cfg["hidden_dim"]
+            return self.cfg["hidden_dim"] // 4
         elif "n_embd" in self.cfg:
             # GPT2
             return self.cfg["n_embd"]
@@ -201,6 +201,15 @@ class PyTT_Wrapper(PyTorchWrapper):
                 "input_ids": ids,
                 "attention_mask": mask,
                 "token_type_ids": segment_ids,
+            }
+        elif isinstance(self._model, (pytt.DistilBertModel)):
+            # Mask, but no token type IDs for DistilBert (sigh again...)
+            mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
+            mask[neg_idx] = 0
+            mask = xp2torch(mask)
+            return {
+                "input_ids": ids,
+                "attention_mask": mask,
             }
         else:
             return {"input_ids": ids, "token_type_ids": segment_ids}
