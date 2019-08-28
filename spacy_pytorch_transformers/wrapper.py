@@ -52,6 +52,9 @@ class PyTT_Wrapper(PyTorchWrapper):
         if "hidden_size" in self.cfg:
             # BERT
             return self.cfg["hidden_size"]
+        elif "hidden_dim" in self.cfg:
+            # DistilBERT
+            return self.cfg["hidden_dim"]
         elif "n_embd" in self.cfg:
             # GPT2
             return self.cfg["n_embd"]

@@ -71,6 +71,8 @@ def get_pytt_tokenizer(name):
     name = name.lower()
     if "roberta" in name:
         return _tokenizers.SerializableRobertaTokenizer
+    elif "distilbert" in name:
+        return _tokenizers.SerializableDistilBertTokenizer
     elif "bert" in name:
         return _tokenizers.SerializableBertTokenizer
     elif "xlnet" in name:
