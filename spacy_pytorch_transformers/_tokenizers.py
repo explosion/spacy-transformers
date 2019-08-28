@@ -149,6 +149,7 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
             offset += len(seen)
         return output
 
+
 class SerializableDistilBertTokenizer(pytt.DistilBertTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "vocab",
@@ -222,7 +223,6 @@ class SerializableDistilBertTokenizer(pytt.DistilBertTokenizer, SerializationMix
                 seen.update({idx for idx in idx_group})
             offset += len(seen)
         return output
-
 
 
 class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
