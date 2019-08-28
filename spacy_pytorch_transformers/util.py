@@ -33,6 +33,8 @@ def get_pytt_config(name):
     name = name.lower()
     if "roberta" in name:
         return pytt.RobertaConfig
+    elif "distilbert" in name:
+        return pytt.DistilBertConfig
     elif "bert" in name:
         return pytt.BertConfig
     elif "xlnet" in name:
@@ -50,6 +52,8 @@ def get_pytt_model(name):
     name = name.lower()
     if "roberta" in name:
         return pytt.RobertaModel
+    elif "distilbert" in name:
+        return pytt.DistilBertModel
     elif "bert" in name:
         return pytt.BertModel
     elif "xlnet" in name:
