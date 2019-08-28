@@ -246,10 +246,11 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     def from_disk(self, path):
         if self.ops.device == "cpu":
-            map_location = torch.device(self.ops.device)
+            map_location = "cpu"
         else:
-            map_location = torch.device("cuda")
+            map_location = "cuda:0"
         self._model.load_state_dict(torch.load(path, map_location=map_location))
+        self._model.to(map_location)
 
     def to_bytes(self):
         filelike = BytesIO()
@@ -261,7 +262,8 @@ class PyTT_Wrapper(PyTorchWrapper):
         filelike = BytesIO(data)
         filelike.seek(0)
         if self.ops.device == "cpu":
-            map_location = torch.device(self.ops.device)
+            map_location = "cpu"
         else:
-            map_location = torch.device("cuda")
+            map_location = "cuda:0"
         self._model.load_state_dict(torch.load(filelike, map_location=map_location))
+        self._model.to(map_location)
