@@ -52,7 +52,7 @@ def main(
     print(nlp.pipe_names)
     print(f"Loaded model '{model}'")
     textcat = nlp.create_pipe(
-        "pytt_textcat", config={"architecture": "softmax_last_hidden"}
+        "pytt_textcat", config={"architecture": "softmax_last_hidden", "words_per_batch": max_wpb}
     )
     if input_dir is not None:
         train_texts, train_cats = read_inputs(input_dir / "training.jsonl")
