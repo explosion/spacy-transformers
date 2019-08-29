@@ -20,6 +20,8 @@ try:
     pytt.DistilBertTokenizer
 except AttributeError:
     pytt.DistilBertTokenizer = pytt.BertTokenizer
+    pytt.DistilBertModel = pytt.BertModel
+    pytt.DistilBertConfig = pytt.BertConfig
 
 
 FINE_TUNE = True
