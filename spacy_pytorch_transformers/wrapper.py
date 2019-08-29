@@ -22,7 +22,6 @@ except AttributeError:
     pytt.DistilBertTokenizer = pytt.BertTokenizer
 
 
-
 FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
@@ -215,10 +214,7 @@ class PyTT_Wrapper(PyTorchWrapper):
             mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
             mask[neg_idx] = 0
             mask = xp2torch(mask)
-            return {
-                "input_ids": ids,
-                "attention_mask": mask,
-            }
+            return {"input_ids": ids, "attention_mask": mask}
         else:
             return {"input_ids": ids, "token_type_ids": segment_ids}
 
