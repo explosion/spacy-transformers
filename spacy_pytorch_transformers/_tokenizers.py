@@ -21,12 +21,6 @@ from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
 from pytorch_transformers.tokenization_bert import BasicTokenizer, WordpieceTokenizer
 
 
-# Allows us to be forward-compatible until DistilBert version is released.
-try:
-    pytt.DistilBertTokenizer
-except AttributeError:
-    pytt.DistilBertTokenizer = pytt.BertTokenizer
-
 BASE_CLASS_FIELDS = [
     "_bos_token",
     "_eos_token",

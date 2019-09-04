@@ -15,15 +15,6 @@ from .util import Dropout
 from .activations import RaggedArray, Activations
 
 
-# Allows us to be forward-compatible until DistilBert version is released.
-try:
-    pytt.DistilBertTokenizer
-except AttributeError:
-    pytt.DistilBertTokenizer = pytt.BertTokenizer
-    pytt.DistilBertModel = pytt.BertModel
-    pytt.DistilBertConfig = pytt.BertConfig
-
-
 FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
