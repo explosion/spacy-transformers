@@ -31,7 +31,7 @@ def setup_package():
         packages=find_packages(),
         install_requires=[
             "spacy>=2.1.7,<2.2.0",
-            "pytorch_transformers>=1.1.0,<1.2.0",
+            "pytorch_transformers>=1.2.0,<1.3.0",
             "torch>=1.0.0",
             "torchcontrib>=0.0.2,<0.1.0",
             "srsly>=0.0.7,<1.1.0",
