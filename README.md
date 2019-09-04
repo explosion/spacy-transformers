@@ -367,7 +367,7 @@ point, so it can also be created using
 [`nlp.create_pipe`](https://spacy.io/api/language#create_pipe):
 
 ```python
-wordpiecer = nlp.create_pipe("wordpiecer")
+wordpiecer = nlp.create_pipe("pytt_wordpiecer")
 ```
 
 #### Config
