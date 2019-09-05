@@ -69,7 +69,6 @@ class SerializationMixin:
         return self.from_bytes(data, **kwargs)
 
     def to_disk(self, path, exclude=tuple(), **kwargs):
-        self.prepare_for_serialization()
         data = self.to_bytes(**kwargs)
         with (path / "pytt_tokenizer.msg").open("wb") as file_:
             file_.write(data)
