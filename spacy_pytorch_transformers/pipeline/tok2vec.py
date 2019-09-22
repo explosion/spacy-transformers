@@ -195,8 +195,7 @@ class PyTT_TokenVectorEncoder(Pipe):
             # TODO: Obviously incrementing the rows individually is bad. How
             # to do in one shot without blowing up the memory?
             for i, word_piece_slice in enumerate(wp_rows):
-                for j in word_piece_slice:
-                    doc.tensor[i] += wp_weighted[j]
+                doc.tensor[i] = wp_weighted[word_piece_slice].sum(0)
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
