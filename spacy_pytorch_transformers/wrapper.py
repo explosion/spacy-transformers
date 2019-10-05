@@ -1,6 +1,6 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch, torch2xp
-from pytorch_transformers.optimization import AdamW
-import pytorch_transformers as pytt
+from transformers.optimization import AdamW
+import transformers as pytt
 import torch.autograd
 import torch.nn.utils.clip_grad
 import torch

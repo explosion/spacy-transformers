@@ -16,9 +16,9 @@ from pathlib import Path
 import unicodedata
 import re
 
-import pytorch_transformers as pytt
-from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
-from pytorch_transformers.tokenization_bert import BasicTokenizer, WordpieceTokenizer
+import transformers as pytt
+from transformers.tokenization_gpt2 import bytes_to_unicode
+from transformers.tokenization_bert import BasicTokenizer, WordpieceTokenizer
 
 
 BASE_CLASS_FIELDS = [

@@ -1,5 +1,5 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
-import pytorch_transformers as pytt
+import transformers as pytt
 import numpy
 from spacy.tokens import Doc, Span
 
