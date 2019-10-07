@@ -1,5 +1,5 @@
 from typing import Union, List, Sequence, Callable, Any, Optional
-import transformers as pytt
+import transformers
 import numpy
 from spacy.tokens import Doc, Span
 
@@ -28,46 +28,82 @@ SPECIAL_TOKENS: Sequence[str] = (
 )
 
 
-def get_pytt_config(name):
+class ATTRS(object):
+    alignment = "pytt_alignment"
+    word_pieces = "pytt_word_pieces"
+    word_pieces_ = "pytt_word_pieces_"
+    separator = "pytt_separator"
+    segments = "pytt_segments"
+    start = "pytt_start"
+    end = "pytt_end"
+    last_hidden_state = "pytt_last_hidden_state"
+    pooler_output = "pytt_pooler_output"
+    all_hidden_states = "pytt_all_hidden_states"
+    all_attentions = "pytt_all_attentions"
+    d_last_hidden_state = "pytt_d_last_hidden_state"
+    d_pooler_output = "pytt_d_pooler_output"
+    d_all_hidden_states = "pytt_d_all_hidden_states"
+    d_all_attentions = "pytt_d_all_attentions"
+
+
+class PIPES(object):
+    wordpiecer = "pytt_wordpiecer"
+    tok2vec = "pytt_tok2vec"
+    textcat = "pytt_textcat"
+    ner = "pytt_ner"
+
+
+class CFG(object):
+    name = "pytt_name"
+    config = "pytt_config"
+    lr = "pytt_lr"
+    weight_decay = "pytt_weight_decay"
+    use_swa = "pytt_use_swa"
+
+
+LANG_FACTORY = "pytt"
+
+
+def get_config(name):
     """Map a name to the appropriate pytorch_transformers.*Config class."""
     name = name.lower()
     if "roberta" in name:
-        return pytt.RobertaConfig
+        return transformers.RobertaConfig
     elif "distilbert" in name:
-        return pytt.DistilBertConfig
+        return transformers.DistilBertConfig
     elif "bert" in name:
-        return pytt.BertConfig
+        return transformers.BertConfig
     elif "xlnet" in name:
-        return pytt.XLNetConfig
+        return transformers.XLNetConfig
     elif "gpt2" in name:
-        return pytt.GPT2Config
+        return transformers.GPT2Config
     elif "xlm" in name:
-        return pytt.XLMConfig
+        return transformers.XLMConfig
     else:
-        raise ValueError(f"Unsupported PyTT config name: '{name}'")
+        raise ValueError(f"Unsupported transformers config name: '{name}'")
 
 
-def get_pytt_model(name):
+def get_model(name):
     """Map a name to the appropriate pytorch_transformers.*Model class."""
     name = name.lower()
     if "roberta" in name:
-        return pytt.RobertaModel
+        return transformers.RobertaModel
     elif "distilbert" in name:
-        return pytt.DistilBertModel
+        return transformers.DistilBertModel
     elif "bert" in name:
-        return pytt.BertModel
+        return transformers.BertModel
     elif "xlnet" in name:
-        return pytt.XLNetModel
+        return transformers.XLNetModel
     elif "gpt2" in name:
-        return pytt.GPT2Model
+        return transformers.GPT2Model
     elif "xlm" in name:
-        return pytt.XLMModel
+        return transformers.XLMModel
     else:
-        raise ValueError(f"Unsupported PyTT config name: '{name}'")
+        raise ValueError(f"Unsupported transformers config name: '{name}'")
 
 
-def get_pytt_tokenizer(name):
-    """Get a pytorch_transformers.*Tokenizer class from a name."""
+def get_tokenizer(name):
+    """Get a transformers.*Tokenizer class from a name."""
     name = name.lower()
     if "roberta" in name:
         return _tokenizers.SerializableRobertaTokenizer
@@ -82,7 +118,7 @@ def get_pytt_tokenizer(name):
     elif "xlm" in name:
         return _tokenizers.SerializableXLMTokenizer
     else:
-        raise ValueError(f"Unsupported PyTT config name: '{name}'")
+        raise ValueError(f"Unsupported transformers config name: '{name}'")
 
 
 def pad_batch(

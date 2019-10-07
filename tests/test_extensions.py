@@ -1,5 +1,6 @@
 import pytest
-from spacy_pytorch_transformers import PyTT_WordPiecer
+from spacy_pytorch_transformers import TransformersWordPiecer
+from spacy_pytorch_transformers.util import ATTRS
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 
@@ -11,17 +12,17 @@ def vocab():
 
 @pytest.fixture
 def wordpiecer(name):
-    return PyTT_WordPiecer.from_pretrained(vocab, pytt_name=name)
+    return TransformersWordPiecer.from_pretrained(vocab, pytt_name=name)
 
 
 def test_alignment_extension_attr(vocab):
     doc = Doc(vocab, words=["hello", "world", "test"])
-    doc._.pytt_alignment = [[1, 2], [3, 4], [5, 6]]
-    assert doc[0]._.pytt_alignment == [1, 2]
-    assert doc[1]._.pytt_alignment == [3, 4]
-    assert doc[2]._.pytt_alignment == [5, 6]
-    assert doc[0:2]._.pytt_alignment == [[1, 2], [3, 4]]
-    assert doc[1:3]._.pytt_alignment == [[3, 4], [5, 6]]
+    doc._.set(ATTRS.alignment, [[1, 2], [3, 4], [5, 6]])
+    assert doc[0]._.get(ATTRS.alignment) == [1, 2]
+    assert doc[1]._.get(ATTRS.alignment) == [3, 4]
+    assert doc[2]._.get(ATTRS.alignment) == [5, 6]
+    assert doc[0:2]._.get(ATTRS.alignment) == [[1, 2], [3, 4]]
+    assert doc[1:3]._.get(ATTRS.alignment) == [[3, 4], [5, 6]]
 
 
 def test_wp_span_extension_attr(name, vocab, wordpiecer):
@@ -31,7 +32,7 @@ def test_wp_span_extension_attr(name, vocab, wordpiecer):
     for w in doc[1:]:
         w.is_sent_start = False
     doc = wordpiecer(doc)
-    assert len(doc._.pytt_word_pieces) == 4
-    assert doc[0]._.pytt_start == 0
-    assert doc[-1]._.pytt_end == 3
-    assert len(doc[:]._.pytt_word_pieces) == 4
+    assert len(doc._.get(ATTRS.word_pieces)) == 4
+    assert doc[0]._.get(ATTRS.start) == 0
+    assert doc[-1]._.get(ATTRS.end) == 3
+    assert len(doc[:]._.get(ATTRS.word_pieces)) == 4

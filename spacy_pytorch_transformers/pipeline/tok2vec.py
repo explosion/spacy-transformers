@@ -5,23 +5,23 @@ from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.util import minibatch
 
-from ..wrapper import PyTT_Wrapper
+from ..wrapper import TransformersWrapper
 from ..model_registry import get_model_function
 from ..activations import Activations, RaggedArray
-from ..util import get_pytt_config, get_pytt_model, get_sents
+from ..util import get_config, get_model, get_sents, PIPES, CFG, ATTRS
 
 
-class PyTT_TokenVectorEncoder(Pipe):
+class TransformersTok2Vec(Pipe):
     """spaCy pipeline component to use PyTorch-Transformers models.
 
-    The component assigns the output of the transformer to the `doc._.pytt_outputs`
-    extension attribute. We also calculate an alignment between the word-piece
+    The component assigns the output of the transformer to the Doc's
+    extension attributes. We also calculate an alignment between the word-piece
     tokens and the spaCy tokenization, so that we can use the last hidden states
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
 
-    name = "pytt_tok2vec"
+    name = PIPES.tok2vec
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):
@@ -30,52 +30,50 @@ class PyTT_TokenVectorEncoder(Pipe):
 
     @classmethod
     def from_pretrained(cls, vocab: Vocab, name: str, **cfg):
-        """Create a PyTT_TokenVectorEncoder instance using pre-trained weights
+        """Create a TransformersTok2Vec instance using pre-trained weights
         from a PyTorch Transformer model, even if it's not installed as a
         spaCy package.
 
         vocab (spacy.vocab.Vocab): The spaCy vocab to use.
         name (unicode): Name of pre-trained model, e.g. 'bert-base-uncased'.
-        RETURNS (PyTT_TokenVectorEncoder): The token vector encoder.
+        RETURNS (TransformersTok2Vec): The token vector encoder.
         """
-        cfg["pytt_name"] = name
+        cfg[CFG.name] = name
         model = cls.Model(from_pretrained=True, **cfg)
-        cfg["pytt_config"] = dict(model._model.pytt_model.config.to_dict())
+        cfg[CFG.config] = dict(model._model.transformers_model.config.to_dict())
         self = cls(vocab, model=model, **cfg)
         return self
 
     @classmethod
     def Model(cls, **cfg) -> Any:
-        """Create an instance of `PyTT_Wrapper`, which holds the
-        PyTorch-Transformers model.
+        """Create an instance of `TransformersWrapper`, which holds the
+        Transformers model.
 
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The wrapped model.
         """
-        name = cfg.get("pytt_name")
+        name = cfg.get(CFG.name)
         if not name:
-            raise ValueError("Need pytt_name argument, e.g. 'bert-base-uncased'")
+            raise ValueError(f"Need {CFG.name} argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
-            pytt_wrap = PyTT_Wrapper.from_pretrained(name)
+            wrap = TransformersWrapper.from_pretrained(name)
         else:
-            pytt_config = cfg["pytt_config"]
+            config = cfg[CFG.config]
             # Work around floating point limitation in ujson:
-            # If we have the setting cfg["pytt_config"]["layer_norm_eps"] as 0,
+            # If we have the setting "layer_norm_eps" as 0,
             # that's because of misprecision in serializing. Fix that.
-            pytt_config["layer_norm_eps"] = 1e-12
-            config_cls = get_pytt_config(name)
-            model_cls = get_pytt_model(name)
+            config["layer_norm_eps"] = 1e-12
+            config_cls = get_config(name)
+            model_cls = get_model(name)
             # Need to match the name their constructor expects.
-            if "vocab_size" in cfg["pytt_config"]:
-                vocab_size = cfg["pytt_config"]["vocab_size"]
-                cfg["pytt_config"]["vocab_size_or_config_json_file"] = vocab_size
-            pytt_wrap = PyTT_Wrapper(
-                name, pytt_config, model_cls(config_cls(**pytt_config))
-            )
+            if "vocab_size" in cfg[CFG.config]:
+                vocab_size = cfg[CFG.config]["vocab_size"]
+                cfg[CFG.config]["vocab_size_or_config_json_file"] = vocab_size
+            wrap = TransformersWrapper(name, config, model_cls(config_cls(**config)))
         make_model = get_model_function(cfg.get("architecture", "tok2vec_per_sentence"))
-        model = make_model(pytt_wrap, cfg)
-        setattr(model, "nO", pytt_wrap.nO)
-        setattr(model, "_model", pytt_wrap)
+        model = make_model(wrap, cfg)
+        setattr(model, "nO", wrap.nO)
+        setattr(model, "_model", wrap)
         return model
 
     def __init__(self, vocab, model=True, **cfg):
@@ -94,8 +92,8 @@ class PyTT_TokenVectorEncoder(Pipe):
         return self.model._model.nO
 
     @property
-    def pytt_model(self):
-        return self.model._model.pytt_model
+    def transformers_model(self):
+        return self.model._model.transformers_model
 
     def __call__(self, doc):
         """Process a Doc and assign the extracted features.
@@ -124,7 +122,7 @@ class PyTT_TokenVectorEncoder(Pipe):
 
     def begin_update(self, docs, drop=None, **cfg):
         """Get the predictions and a callback to complete the gradient update.
-        This is only used internally within PyTT_Language.update.
+        This is only used internally within TransformersLanguage.update.
         """
         outputs, backprop = self.model.begin_update(docs, drop=drop)
 
@@ -135,10 +133,10 @@ class PyTT_TokenVectorEncoder(Pipe):
             lh_lengths = []
             po_lengths = []
             for doc in docs:
-                d_lh.append(doc._.pytt_d_last_hidden_state)
-                d_po.append(doc._.pytt_d_pooler_output)
-                lh_lengths.append(doc._.pytt_d_last_hidden_state.shape[0])
-                po_lengths.append(doc._.pytt_d_pooler_output.shape[0])
+                d_lh.append(doc._.get(ATTRS.d_last_hidden_state))
+                d_po.append(doc._.get(ATTRS.d_pooler_output))
+                lh_lengths.append(doc._.get(ATTRS.d_last_hidden_state).shape[0])
+                po_lengths.append(doc._.get(ATTRS.d_pooler_output).shape[0])
             xp = self.model.ops.xp
             gradients = Activations(
                 RaggedArray(xp.vstack(d_lh), lh_lengths),
@@ -146,8 +144,8 @@ class PyTT_TokenVectorEncoder(Pipe):
             )
             backprop(gradients, sgd=sgd)
             for doc in docs:
-                doc._.pytt_d_last_hidden_state.fill(0)
-                doc._.pytt_d_pooler_output.fill(0)
+                doc._.get(ATTRS.d_last_hidden_state).fill(0)
+                doc._.get(ATTRS.d_last_hidden_state).fill(0)
             return None
 
         return outputs, finish_update
@@ -173,15 +171,17 @@ class PyTT_TokenVectorEncoder(Pipe):
             # Make it 2d -- acts are always 3d, to represent batch size.
             wp_tensor = activations.lh.get(i)
             doc.tensor = self.model.ops.allocate((len(doc), self.model.nO))
-            doc._.pytt_last_hidden_state = wp_tensor
+            doc._.set(ATTRS.last_hidden_state, wp_tensor)
             if activations.has_po:
                 pooler_output = activations.po.get(i)
-                doc._.pytt_pooler_output = pooler_output
-            doc._.pytt_d_last_hidden_state = xp.zeros((0, 0), dtype=wp_tensor.dtype)
-            doc._.pytt_d_pooler_output = xp.zeros((0, 0), dtype=wp_tensor.dtype)
-            doc._.pytt_d_all_hidden_states = []
-            doc._.pytt_d_all_attentions = []
-            if wp_tensor.shape != (len(doc._.pytt_word_pieces), self.model.nO):
+                doc._.set(ATTRS.pooler_output, pooler_output)
+            doc._.set(
+                ATTRS.d_last_hidden_state, xp.zeros((0, 0), dtype=wp_tensor.dtype)
+            )
+            doc._.set(ATTRS.d_pooler_output, xp.zeros((0, 0), dtype=wp_tensor.dtype))
+            doc._.set(ATTRS.d_all_hidden_states, [])
+            doc._.set(ATTRS.d_all_attentions, [])
+            if wp_tensor.shape != (len(doc._.get(ATTRS.word_pieces)), self.model.nO):
                 raise ValueError(
                     "Mismatch between tensor shape and word pieces. This usually "
                     "means we did something wrong in the sentence reshaping, "
@@ -206,9 +206,9 @@ class PyTT_TokenVectorEncoder(Pipe):
 
 
 def _get_boundary_sensitive_alignment(doc):
-    align_sizes = [0 for _ in range(len(doc._.pytt_word_pieces))]
+    align_sizes = [0 for _ in range(len(doc._.get(ATTRS.word_pieces)))]
     wp_rows = []
-    for word_piece_slice in doc._.pytt_alignment:
+    for word_piece_slice in doc._.get(ATTRS.alignment):
         wp_rows.append(list(word_piece_slice))
         for i in word_piece_slice:
             align_sizes[i] += 1
@@ -216,8 +216,8 @@ def _get_boundary_sensitive_alignment(doc):
     # every token in their sentence. The boundary tokens are otherwise
     # unaligned, which is how we identify them.
     for sent in get_sents(doc):
-        offset = sent._.pytt_start
-        for i in range(len(sent._.pytt_word_pieces)):
+        offset = sent._.get(ATTRS.start)
+        for i in range(len(sent._.get(ATTRS.word_pieces))):
             if align_sizes[offset + i] == 0:
                 align_sizes[offset + i] = len(sent)
                 for tok in sent:

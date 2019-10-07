@@ -3,16 +3,16 @@ from spacy.util import minibatch
 import re
 import numpy
 
-from ..util import get_pytt_tokenizer, flatten_list, get_sents
+from ..util import get_tokenizer, flatten_list, get_sents, PIPES, ATTRS
 
 
-class PyTT_WordPiecer(Pipe):
+class TransformersWordPiecer(Pipe):
     """spaCy pipeline component to assign PyTorch-Transformers word-piece
     tokenization to the Doc, which can then be used by the token vector
     encoder. Note that this component doesn't modify spaCy's tokenization. It
     only sets extension attributes and aligns the tokens."""
 
-    name = "pytt_wordpiecer"
+    name = PIPES.wordpiecer
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):
@@ -21,12 +21,12 @@ class PyTT_WordPiecer(Pipe):
 
     @classmethod
     def from_pretrained(cls, vocab, pytt_name, **cfg):
-        model = get_pytt_tokenizer(pytt_name).from_pretrained(pytt_name)
+        model = get_tokenizer(pytt_name).from_pretrained(pytt_name)
         return cls(vocab, model=model, pytt_name=pytt_name, **cfg)
 
     @classmethod
     def Model(cls, pytt_name, **kwargs):
-        return get_pytt_tokenizer(pytt_name).blank()
+        return get_tokenizer(pytt_name).blank()
 
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.
@@ -89,7 +89,7 @@ class PyTT_WordPiecer(Pipe):
             for sent in get_sents(doc):
                 sent_words = []
                 sent_align = []
-                for segment in sent._.pytt_segments:
+                for segment in sent._.get(ATTRS.segments):
                     seg_words = self.model.tokenize(segment.text)
                     seg_words, seg_align = self._align(
                         segment, seg_words, offset=offset
@@ -137,20 +137,20 @@ class PyTT_WordPiecer(Pipe):
         max_len = self.model.max_len
         self.model.max_len = 1e12
         for doc, (wordpieces, alignment) in zip(docs, outputs):
-            doc._.pytt_word_pieces_ = wordpieces
-            doc._.pytt_word_pieces = self.model.convert_tokens_to_ids(wordpieces)
-            doc._.pytt_alignment = alignment
-            nr_word = len(doc._.pytt_word_pieces)
+            doc._.set(ATTRS.word_pieces_, wordpieces)
+            doc._.set(ATTRS.word_pieces, self.model.convert_tokens_to_ids(wordpieces))
+            doc._.set(ATTRS.alignment, alignment)
+            nr_word = len(doc._.get(ATTRS.word_pieces))
             words_per_sent = sum(
-                len(sent._.pytt_word_pieces) for sent in get_sents(doc)
+                len(sent._.get(ATTRS.word_pieces)) for sent in get_sents(doc)
             )
             if nr_word != words_per_sent:
                 print([repr(w.text) for w in doc])
                 for sent in get_sents(doc):
-                    print(sent._.pytt_word_pieces_)
+                    print(sent._.get(ATTRS.word_pieces_))
                     for w in sent:
-                        print(w.text, w._.pytt_alignment)
-                print(doc._.pytt_word_pieces_)
+                        print(w.text, w._.get(ATTRS.alignment))
+                print(doc._.get(ATTRS.word_pieces_))
                 raise ValueError(
                     f"Error calculating word pieces for sentences. Total number "
                     f"of wordpieces in the doc was {nr_word}, but adding up the "

@@ -1,14 +1,13 @@
 import numpy
 import pytest
 from thinc.neural.optimizers import Adam
-
 from spacy_pytorch_transformers.activations import Activations, RaggedArray
-from spacy_pytorch_transformers.util import get_pytt_tokenizer
+from spacy_pytorch_transformers.util import get_tokenizer, PIPES
 
 
 @pytest.fixture
 def tokenizer(name):
-    return get_pytt_tokenizer(name).from_pretrained(name)
+    return get_tokenizer(name).from_pretrained(name)
 
 
 @pytest.fixture
@@ -24,7 +23,7 @@ def inputs(ids):
 
 @pytest.fixture
 def model(nlp):
-    return nlp.get_pipe("pytt_tok2vec").model._model
+    return nlp.get_pipe(PIPES.tok2vec).model._model
 
 
 def test_wrapper_from_pretrained(name, model, inputs):

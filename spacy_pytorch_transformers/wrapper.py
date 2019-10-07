@@ -1,6 +1,6 @@
 from thinc.extra.wrappers import PyTorchWrapper, xp2torch, torch2xp
 from transformers.optimization import AdamW
-import transformers as pytt
+import transformers
 import torch.autograd
 import torch.nn.utils.clip_grad
 import torch
@@ -10,8 +10,7 @@ import numpy
 import contextlib
 from thinc.compat import BytesIO
 
-from .util import get_pytt_model
-from .util import Dropout
+from .util import get_model, Dropout, CFG
 from .activations import RaggedArray, Activations
 
 
@@ -19,8 +18,8 @@ FINE_TUNE = True
 CONFIG = {"output_hidden_states": True, "output_attentions": True}
 
 
-class PyTT_Wrapper(PyTorchWrapper):
-    """Wrap a PyTorch-Transformers model for use in Thinc.
+class TransformersWrapper(PyTorchWrapper):
+    """Wrap a Transformers model for use in Thinc.
 
     The model will take as input a spacy_pytorch_transformers.util.RaggedArray
     object that will specify the input IDs and optionally the segment IDs. The
@@ -28,7 +27,7 @@ class PyTT_Wrapper(PyTorchWrapper):
     for a whole batch (this format allows the data to be contiguous even if
     the sequences are different lengths). The segment IDs should be coded as
     the different models expect them -- see
-    https://github.com/huggingface/pytorch-transformers/blob/master/examples/utils_glue.py
+    https://github.com/huggingface/transformers/blob/master/examples/utils_glue.py
     """
 
     _model: Any
@@ -37,10 +36,10 @@ class PyTT_Wrapper(PyTorchWrapper):
 
     @classmethod
     def from_pretrained(cls, name):
-        model_cls = get_pytt_model(name)
+        model_cls = get_model(name)
         model = model_cls.from_pretrained(name, **CONFIG)
         self = cls(name, model.config.to_dict(), model)
-        self.cfg.update(self.pytt_model.config.to_dict())
+        self.cfg.update(self.transformers_model.config.to_dict())
         return self
 
     def __init__(self, name, config, model):
@@ -61,15 +60,15 @@ class PyTT_Wrapper(PyTorchWrapper):
         elif "d_model" in self.cfg:
             # XLNet
             return self.cfg["d_model"]
-        elif hasattr(self.pytt_model, "dim"):
+        elif hasattr(self.transformers_model, "dim"):
             # XLM
-            return self.pytt_model.dim
+            return self.transformers_model.dim
         else:
             keys = ", ".join(self.cfg.keys())
             raise ValueError(f"Unexpected config. Keys: {keys}")
 
     @property
-    def pytt_model(self):
+    def transformers_model(self):
         return self._model
 
     @property
@@ -129,7 +128,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                         )
                     optimizer = self._optimizer
                     for group in optimizer.param_groups:
-                        group["lr"] = getattr(sgd, "pytt_lr", sgd.alpha)
+                        group["lr"] = getattr(sgd, CFG.lr, sgd.alpha)
                     optimizer.step()
                     optimizer.zero_grad()
                     self._update_pytorch_averages(sgd)
@@ -193,7 +192,7 @@ class PyTT_Wrapper(PyTorchWrapper):
         else:
             segment_ids = torch.zeros_like(ids)
         # Calculate "attention mask" for BERT and  XLNet, but not GPT2 (sigh)
-        if isinstance(self._model, (pytt.BertModel, pytt.XLNetModel)):
+        if isinstance(self._model, (transformers.BertModel, transformers.XLNetModel)):
             mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
             mask[neg_idx] = 0
             mask = xp2torch(mask)
@@ -202,7 +201,7 @@ class PyTT_Wrapper(PyTorchWrapper):
                 "attention_mask": mask,
                 "token_type_ids": segment_ids,
             }
-        elif isinstance(self._model, (pytt.DistilBertModel)):
+        elif isinstance(self._model, (transformers.DistilBertModel)):
             # Mask, but no token type IDs for DistilBert (sigh again...)
             mask = self.ops.xp.ones(ids.shape, dtype=numpy.int_)
             mask[neg_idx] = 0
@@ -214,10 +213,10 @@ class PyTT_Wrapper(PyTorchWrapper):
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
             self._model.parameters(),
-            lr=getattr(sgd, "pytt_lr", sgd.alpha),
+            lr=getattr(sgd, CFG.lr, sgd.alpha),
             eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
-            weight_decay=getattr(sgd, "pytt_weight_decay", 0.0),
+            weight_decay=getattr(sgd, CFG.weight_decay, 0.0),
         )
         optimizer.zero_grad()
         return optimizer

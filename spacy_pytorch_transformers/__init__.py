@@ -1,8 +1,8 @@
-from .language import PyTT_Language
-from .pipeline.tok2vec import PyTT_TokenVectorEncoder  # noqa
-from .pipeline.textcat import PyTT_TextCategorizer  # noqa
-from .pipeline.wordpiecer import PyTT_WordPiecer  # noqa
+from .language import TransformersLanguage
+from .pipeline.tok2vec import TransformersTok2Vec  # noqa
+from .pipeline.textcat import TransformersTextCategorizer  # noqa
+from .pipeline.wordpiecer import TransformersWordPiecer  # noqa
 from .model_registry import register_model, get_model_function  # noqa
 from .about import __version__  # noqa
 
-PyTT_Language.install_extensions()
+TransformersLanguage.install_extensions()

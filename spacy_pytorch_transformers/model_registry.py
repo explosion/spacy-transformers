@@ -6,10 +6,10 @@ from thinc.neural.util import get_array_module
 from spacy.tokens import Span, Doc
 import numpy
 
-from .wrapper import PyTT_Wrapper
+from .wrapper import TransformersWrapper
 from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, flatten_list, is_class_token
-from .util import get_segment_ids, is_special_token
+from .util import get_segment_ids, is_special_token, CFG, ATTRS
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -40,12 +40,12 @@ def get_model_function(name: str):
 
 
 @register_model("tok2vec_per_sentence")
-def tok2vec_per_sentence(pytt_model, cfg):
+def tok2vec_per_sentence(model_name, cfg):
     max_words = cfg.get("words_per_batch", 1000)
-    name = cfg["pytt_name"]
+    name = cfg[CFG.name]
 
     model = foreach_sentence(
-        chain(get_word_pieces(name), with_length_batching(pytt_model, max_words))
+        chain(get_word_pieces(name), with_length_batching(model_name, max_words))
     )
     return model
 
@@ -60,7 +60,7 @@ def softmax_tanh_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     """
     width = cfg["token_vector_width"]
     return chain(
-        get_pytt_class_tokens,
+        get_class_tokens,
         flatten_add_lengths,
         with_getitem(0, chain(Affine(width, width), tanh)),
         Pooling(mean_pool),
@@ -77,7 +77,7 @@ def softmax_class_vector(nr_class, *, exclusive_classes=True, **cfg):
     """
     width = cfg["token_vector_width"]
     return chain(
-        get_pytt_class_tokens,
+        get_class_tokens,
         flatten_add_lengths,
         Pooling(mean_pool),
         Softmax(nr_class, width),
@@ -93,7 +93,7 @@ def softmax_last_hidden(nr_class, *, exclusive_classes=True, **cfg):
     """
     width = cfg["token_vector_width"]
     return chain(
-        get_pytt_last_hidden,
+        get_last_hidden,
         flatten_add_lengths,
         Pooling(mean_pool),
         Softmax(nr_class, width),
@@ -108,7 +108,7 @@ def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
     to allow fine-tuning.
     """
     return chain(
-        get_pytt_pooler_output,
+        get_pooler_output,
         flatten_add_lengths,
         with_getitem(0, Softmax(nr_class, cfg["token_vector_width"])),
         Pooling(mean_pool),
@@ -116,94 +116,96 @@ def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
 
 
 @layerize
-def get_pytt_class_tokens(docs, drop=0.0):
+def get_class_tokens(docs, drop=0.0):
     """Output a List[array], where the array is the class vector
     for each sentence in the document. To backprop, we increment the values
-    in the doc._.pytt_d_last_hidden_state array.
+    in the Doc's d_last_hidden_state array.
     """
-    xp = get_array_module(docs[0]._.pytt_last_hidden_state)
+    xp = get_array_module(docs[0]._.get(ATTRS.last_hidden_state))
     outputs = []
     doc_class_tokens = []
     for doc in docs:
         class_tokens = []
-        for i, wp in enumerate(doc._.pytt_word_pieces_):
+        for i, wp in enumerate(doc._.get(ATTRS.word_pieces_)):
             if is_class_token(wp):
                 class_tokens.append(i)
         doc_class_tokens.append(xp.array(class_tokens, dtype="i"))
-        wp_tensor = doc._.pytt_last_hidden_state
+        wp_tensor = doc._.get(ATTRS.last_hidden_state)
         outputs.append(wp_tensor[doc_class_tokens[-1]])
 
-    def backprop_pytt_class_tokens(d_outputs, sgd=None):
+    def backprop_class_tokens(d_outputs, sgd=None):
         for doc, class_tokens, dY in zip(docs, doc_class_tokens, d_outputs):
-            if doc._.pytt_d_last_hidden_state.size == 0:
-                xp = get_array_module(doc._.pytt_last_hidden_state)
-                grads = xp.zeros(doc._.pytt_last_hidden_state.shape, dtype="f")
-                doc._.pytt_d_last_hidden_state = grads
-            doc._.pytt_d_last_hidden_state[class_tokens] += dY
+            if doc._.get(ATTRS.d_last_hidden_state).size == 0:
+                xp = get_array_module(doc._.get(ATTRS.last_hidden_state))
+                grads = xp.zeros(doc._.get(ATTRS.last_hidden_state).shape, dtype="f")
+                doc._.set(ATTRS.d_last_hidden_state, grads)
+            doc._.get(ATTRS.d_last_hidden_state)[class_tokens] += dY
         return None
 
-    return outputs, backprop_pytt_class_tokens
+    return outputs, backprop_class_tokens
 
 
-get_pytt_class_tokens.name = "get_pytt_class_tokens"
+get_class_tokens.name = "get_class_tokens"
 
 
 @layerize
-def get_pytt_pooler_output(docs, drop=0.0):
+def get_pooler_output(docs, drop=0.0):
     """Output a List[array], where the array is the class vector
     for each sentence in the document. To backprop, we increment the values
-    in the doc._.pytt_d_last_hidden_state array.
+    in the Doc's d_last_hidden_state array.
     """
     for doc in docs:
-        if doc._.pytt_pooler_output is None:
+        if doc._.get(ATTRS.pooler_output) is None:
             raise ValueError(
                 "Pooler output unset. Perhaps you're using the wrong architecture? "
                 "The BERT model provides a pooler output, but XLNet doesn't. "
                 "You might need to set 'architecture': 'softmax_class_vector' "
                 "instead."
             )
-    outputs = [doc._.pytt_pooler_output for doc in docs]
+    outputs = [doc._.get(ATTRS.pooler_output) for doc in docs]
 
-    def backprop_pytt_pooler_output(d_outputs, sgd=None):
+    def backprop_pooler_output(d_outputs, sgd=None):
         for doc, dY in zip(docs, d_outputs):
-            if doc._.pytt_d_pooler_output.size == 0:
-                xp = get_array_module(doc._.pytt_pooler_output)
-                grads = xp.zeros(doc._.pytt_pooler_output.shape, dtype="f")
-                doc._.pytt_d_pooler_output = grads
-            doc._.pytt_d_pooler_output += dY
+            if doc._.get(ATTRS.d_pooler_output).size == 0:
+                xp = get_array_module(doc._.get(ATTRS.pooler_output))
+                grads = xp.zeros(doc._.get(ATTRS.pooler_output).shape, dtype="f")
+                doc._.set(ATTRS.d_pooler_output, grads)
+            doc._.set(ATTRS.d_pooler_output, doc._.get(ATTRS.d_pooler_output) + dY)
         return None
 
-    return outputs, backprop_pytt_pooler_output
+    return outputs, backprop_pooler_output
 
 
-get_pytt_pooler_output.name = "get_pytt_pooler_output"
+get_pooler_output.name = "get_pooler_output"
 
 
 @layerize
-def get_pytt_last_hidden(docs, drop=0.0):
+def get_last_hidden(docs, drop=0.0):
     """Output a List[array], where the array is the last hidden vector vector
     for each document. To backprop, we increment the values
-    in the doc._.pytt_d_last_hidden_state array.
+    in the Doc's d_last_hidden_state array.
     """
-    outputs = [doc._.pytt_last_hidden_state for doc in docs]
+    outputs = [doc._.get(ATTRS.last_hidden_state) for doc in docs]
     for out in outputs:
         assert out is not None
         assert out.size != 0
 
-    def backprop_pytt_last_hidden(d_outputs, sgd=None):
+    def backprop_last_hidden(d_outputs, sgd=None):
         for doc, d_lh in zip(docs, d_outputs):
             xp = get_array_module(d_lh)
             shape = d_lh.shape
             dtype = d_lh.dtype
-            if doc._.pytt_d_last_hidden_state.size == 0:
-                doc._.pytt_d_last_hidden_state = xp.zeros(shape, dtype=dtype)
-            doc._.pytt_d_last_hidden_state += d_lh
+            if doc._.get(ATTRS.d_last_hidden_state).size == 0:
+                doc._.set(ATTRS.d_last_hidden_state, xp.zeros(shape, dtype=dtype))
+            doc._.set(
+                ATTRS.d_last_hidden_state, doc._.get(ATTRS.d_last_hidden_state) + d_lh
+            )
         return None
 
-    return outputs, backprop_pytt_last_hidden
+    return outputs, backprop_last_hidden
 
 
-get_pytt_last_hidden.name = "get_pytt_last_hidden"
+get_last_hidden.name = "get_last_hidden"
 
 
 @layerize
@@ -231,27 +233,33 @@ def tanh(X, drop=0.0):
     return Y, backprop_tanh
 
 
-def get_word_pieces(pytt_name):
+def get_word_pieces(transformers_name):
     def get_features_forward(sents, drop=0.0):
         assert isinstance(sents[0], Span)
         ids = []
         segment_ids = []
         lengths = []
         for sent in sents:
-            wordpieces = sent._.pytt_word_pieces
+            wordpieces = sent._.get(ATTRS.word_pieces)
             # This is a bit convoluted, but we need the lengths without any
-            # separator tokens or class tokens. pytt_segments gives Span objects.
+            # separator tokens or class tokens. `segments` gives Span objects.
             seg_lengths = [
-                len([w for w in seg._.pytt_word_pieces_ if not is_special_token(w)])
-                for seg in sent._.pytt_segments
+                len(
+                    [
+                        w
+                        for w in seg._.get(ATTRS.word_pieces_)
+                        if not is_special_token(w)
+                    ]
+                )
+                for seg in sent._.get(ATTRS.segments)
             ]
             if wordpieces:
                 ids.extend(wordpieces)
                 lengths.append(len(wordpieces))
-                sent_seg_ids = get_segment_ids(pytt_name, *seg_lengths)
+                sent_seg_ids = get_segment_ids(transformers_name, *seg_lengths)
                 segment_ids.extend(sent_seg_ids)
                 assert len(wordpieces) == len(sent_seg_ids), (
-                    sent._.pytt_word_pieces_,
+                    sent._.get(ATTRS.word_pieces_),
                     seg_lengths,
                     len(wordpieces),
                     len(sent_seg_ids),
@@ -266,7 +274,9 @@ def get_word_pieces(pytt_name):
     return layerize(get_features_forward, name="get_features_forward")
 
 
-def with_length_batching(model: PyTT_Wrapper, max_words: int) -> PyTT_Wrapper:
+def with_length_batching(
+    model: TransformersWrapper, max_words: int
+) -> TransformersWrapper:
     ops = model.ops
 
     def apply_model_to_batches(
@@ -340,8 +350,8 @@ def foreach_sentence(layer: Model, drop_factor: float = 1.0) -> Model:
         if not all(doc.is_sentenced for doc in docs):
             return layer.begin_update([d[:] for d in docs], drop=drop)
         sents = flatten_list([list(doc.sents) for doc in docs])
-        words_per_doc = [len(d._.pytt_word_pieces) for d in docs]
-        words_per_sent = [len(s._.pytt_word_pieces) for s in sents]
+        words_per_doc = [len(d._.get(ATTRS.word_pieces)) for d in docs]
+        words_per_sent = [len(s._.get(ATTRS.word_pieces)) for s in sents]
         sents_per_doc = [len(list(d.sents)) for d in docs]
         assert sum(words_per_doc) == sum(words_per_sent)
         acts, bp_acts = layer.begin_update(sents, drop=drop)

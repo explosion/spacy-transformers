@@ -1,6 +1,7 @@
 import pytest
 from numpy.testing import assert_equal
-from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
+from spacy_pytorch_transformers import TransformersTok2Vec
+from spacy_pytorch_transformers.util import PIPES, ATTRS
 from spacy.vocab import Vocab
 import pickle
 
@@ -15,14 +16,14 @@ def docs(nlp):
 
 @pytest.fixture(scope="session")
 def tok2vec(name, nlp):
-    return nlp.get_pipe("pytt_tok2vec")
+    return nlp.get_pipe(PIPES.tok2vec)
 
 
 def test_from_pretrained(tok2vec, docs):
     docs_out = list(tok2vec.pipe(docs))
     assert len(docs_out) == len(docs)
     for doc in docs_out:
-        diff = doc.tensor.sum() - doc._.pytt_last_hidden_state.sum()
+        diff = doc.tensor.sum() - doc._.get(ATTRS.last_hidden_state).sum()
         assert abs(diff) <= 1e-2
 
 
@@ -30,12 +31,12 @@ def test_set_annotations(name, tok2vec, docs):
     scores = tok2vec.predict(docs)
     tok2vec.set_annotations(docs, scores)
     for doc in docs:
-        assert doc._.pytt_last_hidden_state is not None
+        assert doc._.get(ATTRS.last_hidden_state) is not None
         if "bert" in name:
-            assert doc._.pytt_pooler_output is not None
-        assert doc._.pytt_d_last_hidden_state is not None
-        assert doc._.pytt_d_last_hidden_state.ndim == 2
-        assert doc._.pytt_d_pooler_output.ndim == 2
+            assert doc._.get(ATTRS.pooler_output) is not None
+        assert doc._.get(ATTRS.d_last_hidden_state) is not None
+        assert doc._.get(ATTRS.d_last_hidden_state).ndim == 2
+        assert doc._.get(ATTRS.d_pooler_output).ndim == 2
 
 
 def test_begin_finish_update(tok2vec, docs):
@@ -64,7 +65,7 @@ def test_tok2vec_to_from_bytes(tok2vec, docs):
     doc = tok2vec(docs[0])
     assert is_valid_tensor(doc.tensor)
     bytes_data = tok2vec.to_bytes()
-    new_tok2vec = PyTT_TokenVectorEncoder(Vocab(), **tok2vec.cfg)
+    new_tok2vec = TransformersTok2Vec(Vocab(), **tok2vec.cfg)
     with pytest.raises(ValueError):
         new_doc = new_tok2vec(docs[0])
     new_tok2vec.from_bytes(bytes_data)
@@ -79,7 +80,7 @@ def test_tok2vec_to_from_disk(tok2vec, docs):
     with make_tempdir() as tempdir:
         file_path = tempdir / "tok2vec"
         tok2vec.to_disk(file_path)
-        new_tok2vec = PyTT_TokenVectorEncoder(Vocab())
+        new_tok2vec = TransformersTok2Vec(Vocab())
         new_tok2vec.from_disk(file_path)
     new_doc = new_tok2vec(docs[0])
     assert is_valid_tensor(new_doc.tensor)

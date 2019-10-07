@@ -1,17 +1,18 @@
 import spacy.pipeline
 from ..model_registry import get_model_function
+from ..util import PIPES, CFG
 
 DEBUG_LOSS = False
 
 
-class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
+class TransformersTextCategorizer(spacy.pipeline.TextCategorizer):
     """Subclass of spaCy's built-in TextCategorizer component that supports
     using the features assigned by the PyTorch-Transformers models via the token
-    vector encoder. It requires the PyTT_TokenVectorEncoder to run before it in
-    the pipeline.
+    vector encoder. It requires the TransformerTokenVectorEncoder to run before
+    it in the pipeline.
     """
 
-    name = "pytt_textcat"
+    name = PIPES.textcat
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):
@@ -31,12 +32,12 @@ class PyTT_TextCategorizer(spacy.pipeline.TextCategorizer):
         """
         arch = cfg.get("architecture", "softmax_class_vector")
         # This is optional -- but if it's set, we can debug config errors.
-        pytt_name = cfg.get("pytt_name", "")
-        is_gpt2 = "gpt2" in pytt_name
-        is_xlnet = "xlnet" in pytt_name
+        transformers_name = cfg.get(CFG.name, "")
+        is_gpt2 = "gpt2" in transformers_name
+        is_xlnet = "xlnet" in transformers_name
         msg = (
-            f"PyTT_TextCategorizer model architecture set to '{arch}' "
-            f"with {pytt_name} transformer. This "
+            f"TransformerTextCategorizer model architecture set to '{arch}' "
+            f"with {transformers_name} transformer. This "
             f"combination is incompatible, as the transformer does not "
             f"provide that output feature."
         )

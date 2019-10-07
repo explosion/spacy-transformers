@@ -3,55 +3,55 @@ from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 from spacy.gold import GoldParse
 
-from .util import is_special_token
+from .util import is_special_token, ATTRS, PIPES, LANG_FACTORY
 from . import about
 
 
-class PyTT_Language(Language):
-    """A subclass of spacy.Language that holds a PyTorch-Transformer (PyTT) pipeline.
+class TransformersLanguage(Language):
+    """A subclass of spacy.Language that holds a Transformer pipeline.
 
-    PyTT pipelines work only slightly differently from spaCy's default pipelines.
-    Specifically, we introduce a new pipeline component at the start of the pipeline,
-    PyTT_TokenVectorEncoder. We then modify the nlp.update() function to run
-    the PyTT_TokenVectorEncoder before the other pipeline components, and
-    backprop it after the other components are done.
+    Transformer pipelines work only slightly differently from spaCy's default
+    pipelines. Specifically, we introduce a new pipeline component at the start
+    of the pipeline, TransformerTok2Vec. We then modify the nlp.update()
+    function to run the TransformerTok2Vec before the other pipeline components,
+    and backprop it after the other components are done.
     """
 
-    lang_factory_name = "pytt"
+    lang_factory_name = LANG_FACTORY
 
     @staticmethod
     def install_extensions():
         tok2vec_attrs = [
-            "pytt_last_hidden_state",
-            "pytt_pooler_output",
-            "pytt_all_hidden_states",
-            "pytt_all_attentions",
-            "pytt_d_last_hidden_state",
-            "pytt_d_pooler_output",
-            "pytt_d_all_hidden_states",
-            "pytt_d_all_attentions",
+            ATTRS.last_hidden_state,
+            ATTRS.pooler_output,
+            ATTRS.all_hidden_states,
+            ATTRS.all_attentions,
+            ATTRS.d_last_hidden_state,
+            ATTRS.d_pooler_output,
+            ATTRS.d_all_hidden_states,
+            ATTRS.d_all_attentions,
         ]
         for attr in tok2vec_attrs:
             Doc.set_extension(attr, default=None)
             Span.set_extension(attr, getter=get_span_tok2vec_getter(attr))
             Token.set_extension(attr, getter=get_token_tok2vec_getter(attr))
-        wp_attrs = ["pytt_alignment", "pytt_word_pieces", "pytt_word_pieces_"]
+        wp_attrs = [ATTRS.alignment, ATTRS.word_pieces, ATTRS.word_pieces_]
         for attr in wp_attrs:
             Doc.set_extension(attr, default=None)
             Span.set_extension(attr, getter=get_span_wp_getter(attr))
             Token.set_extension(attr, getter=get_token_wp_getter(attr))
-        Doc.set_extension("pytt_separator", default=None)
+        Doc.set_extension(ATTRS.separator, default=None)
         Span.set_extension(
-            "pytt_separator", getter=lambda span: span.doc._.pytt_separator
+            ATTRS.separator, getter=lambda span: span.doc._.get(ATTRS.separator)
         )
         Token.set_extension(
-            "pytt_separator", getter=lambda token: token.doc._.pytt_separator
+            ATTRS.separator, getter=lambda token: token.doc._.get(ATTRS.separator)
         )
-        Doc.set_extension("pytt_segments", getter=get_pytt_segments)
-        Span.set_extension("pytt_segments", getter=get_pytt_segments)
+        Doc.set_extension(ATTRS.segments, getter=get_segments)
+        Span.set_extension(ATTRS.segments, getter=get_segments)
         for cls in [Token, Span, Doc]:
-            cls.set_extension("pytt_start", getter=get_wp_start)
-            cls.set_extension("pytt_end", getter=get_wp_end)
+            cls.set_extension(ATTRS.start, getter=get_wp_start)
+            cls.set_extension(ATTRS.end, getter=get_wp_end)
 
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
@@ -76,11 +76,11 @@ class PyTT_Language(Language):
             sentencizer = self.get_pipe("sentencizer")
         else:
             sentencizer = lambda doc: doc
-        if self.has_pipe("pytt_wordpiecer"):
-            wp = self.get_pipe("pytt_wordpiecer")
+        if self.has_pipe(PIPES.wordpiecer):
+            wp = self.get_pipe(PIPES.wordpiecer)
         else:
             wp = lambda doc: doc
-        tok2vec = self.get_pipe("pytt_tok2vec")
+        tok2vec = self.get_pipe(PIPES.tok2vec)
         new_docs = []
         new_golds = []
         for doc, gold in zip(docs, golds):
@@ -94,13 +94,13 @@ class PyTT_Language(Language):
             new_golds.append(gold)
         docs = new_docs
         golds = new_golds
-        pytt_outputs, backprop_tok2vec = tok2vec.begin_update(
-            docs, drop=drop, **component_cfg.get("pytt_tok2vec", {})
+        outputs, backprop_tok2vec = tok2vec.begin_update(
+            docs, drop=drop, **component_cfg.get(PIPES.tok2vec, {})
         )
-        tok2vec.set_annotations(docs, pytt_outputs)
+        tok2vec.set_annotations(docs, outputs)
         for doc in docs:
-            assert doc._.pytt_last_hidden_state is not None
-        with self.disable_pipes("pytt_tok2vec"):
+            assert doc._.get(ATTRS.last_hidden_state) is not None
+        with self.disable_pipes(PIPES.tok2vec):
             super().update(
                 docs,
                 golds,
@@ -117,18 +117,18 @@ class PyTT_Language(Language):
         Before running the normal Language.resume_training method, we do the
         following:
 
-        * Look for a tok2vec pipeline component. By default we look for the name
-            'pytt_tok2vec'. This can be changed with the tok2vec_name keyword
+        * Look for a tok2vec pipeline component. The component name can be
+            changed with the tok2vec_name keyword
             argument. If no component is found, a ValueError is raised.
-        * If any other components have `component.model == True` and a `.begin_training()`
-            method, we call the `.begin_training()` method. Configuration can
-            be passed in using the component_cfg keyword argument. If unset,
-            we also pass in a value for token_vector_width, which we read from
-            the tok2vec component.
+        * If any other components have `component.model == True` and a
+            `.begin_training()` method, we call the `.begin_training()` method.
+            Configuration can be passed in using the component_cfg keyword
+            argument. If unset, we also pass in a value for token_vector_width,
+            which we read from the tok2vec component.
         """
         if component_cfg is None:
             component_cfg = {}
-        tok2vec_name = kwargs.get("tok2vec_name", "pytt_tok2vec")
+        tok2vec_name = kwargs.get("tok2vec_name", PIPES.tok2vec)
         tok2vec = self.get_pipe(tok2vec_name)
         token_vector_width = tok2vec.token_vector_width
         for name, component in self.pipeline:
@@ -164,12 +164,12 @@ def get_wp_start(span):
     if isinstance(span, Token):
         span = span.doc[span.i : span.i + 1]
     for token in span:
-        if token._.pytt_alignment:
-            wp_start = token._.pytt_alignment[0]
+        if token._.get(ATTRS.alignment):
+            wp_start = token._.get(ATTRS.alignment)[0]
             break
     else:
         return None
-    wordpieces = span.doc._.pytt_word_pieces_
+    wordpieces = span.doc._.get(ATTRS.word_pieces_)
     # This is a messy way to check for the XLNet-style pattern, where we can
     # have <sep> <cls>. In the BERT-style pattern, we have [cls] at start.
     if is_special_token(wordpieces[0]):
@@ -182,12 +182,12 @@ def get_wp_end(span):
     if isinstance(span, Token):
         span = span.doc[span.i : span.i + 1]
     for token in reversed(span):
-        if token._.pytt_alignment:
-            wp_end = token._.pytt_alignment[-1]
+        if token._.get(ATTRS.alignment):
+            wp_end = token._.get(ATTRS.alignment)[-1]
             break
     else:
         return None
-    wordpieces = span.doc._.pytt_word_pieces_
+    wordpieces = span.doc._.get(ATTRS.word_pieces_)
     if (wp_end + 1) < len(wordpieces) and is_special_token(wordpieces[wp_end + 1]):
         wp_end += 1
     # This is a messy way to check for the XLNet-style pattern, where we can
@@ -203,8 +203,8 @@ def get_span_wp_getter(attr):
         return [token._.get(attr) for token in span]
 
     def span_getter(span):
-        start = span._.pytt_start
-        end = span._.pytt_end
+        start = span._.get(ATTRS.start)
+        end = span._.get(ATTRS.end)
         if start is None and end is None:
             return []
         doc_values = span.doc._.get(attr)
@@ -213,7 +213,7 @@ def get_span_wp_getter(attr):
             return doc_values[start:]
         return doc_values[start : end + 1]
 
-    if attr == "pytt_alignment":
+    if attr == ATTRS.alignment:
         return span_alignment_getter
     else:
         return span_getter
@@ -226,13 +226,13 @@ def get_token_wp_getter(attr):
 
     def token_wordpiece_getter(token):
         doc_values = token.doc._.get(attr)
-        start = token._.pytt_start
-        end = token._.pytt_end
+        start = token._.get(ATTRS.start)
+        end = token._.get(ATTRS.end)
         if start is None and end is None:
             return []
         return [doc_values[i] for i in range(start, end + 1)]
 
-    if attr == "pytt_alignment":
+    if attr == ATTRS.alignment:
         return token_alignment_getter
     else:
         return token_wordpiece_getter
@@ -243,8 +243,8 @@ def get_span_tok2vec_getter(attr):
         doc_activations = span.doc._.get(attr)
         if doc_activations is None:
             return None
-        wp_start = span[0]._.pytt_wp_start
-        wp_end = span[-1]._.pytt_wp_end
+        wp_start = span[0]._.get(ATTRS.start)
+        wp_end = span[-1]._.get(ATTRS.end)
         if wp_start is not None and wp_end is not None:
             return doc_activations[wp_start : wp_end + 1]
         else:
@@ -263,8 +263,8 @@ def get_token_tok2vec_getter(attr):
     return token_getter
 
 
-def get_pytt_segments(doc):
-    separator = doc._.pytt_separator
+def get_segments(doc):
+    separator = doc._.get(ATTRS.separator)
     if separator is not None:
         start = 0
         for token in doc:

@@ -1,7 +1,7 @@
 """Adjust the initialization and serialization of the PyTorch Transformers
-tokenizers, so that they work more nicely with spaCy. Specifically, the PyTT
-classes take file paths as arguments to their __init__, which means we can't
-easily use to_bytes() and from_bytes() with them.
+tokenizers, so that they work more nicely with spaCy. Specifically, the
+Transformers classes take file paths as arguments to their __init__, which means
+we can't easily use to_bytes() and from_bytes() with them.
 
 Additionally, provide a .clean_text() method that is used to match the preprocessing,
 so that we can get the alignment working.
@@ -16,7 +16,7 @@ from pathlib import Path
 import unicodedata
 import re
 
-import transformers as pytt
+import transformers
 from transformers.tokenization_gpt2 import bytes_to_unicode
 from transformers.tokenization_bert import BasicTokenizer, WordpieceTokenizer
 
@@ -64,18 +64,18 @@ class SerializationMixin:
         return srsly.msgpack_dumps(msg)
 
     def from_disk(self, path, exclude=tuple(), **kwargs):
-        with (path / "pytt_tokenizer.msg").open("rb") as file_:
+        with (path / "transformers_tokenizer.msg").open("rb") as file_:
             data = file_.read()
         return self.from_bytes(data, **kwargs)
 
     def to_disk(self, path, exclude=tuple(), **kwargs):
         self.prepare_for_serialization()
         data = self.to_bytes(**kwargs)
-        with (path / "pytt_tokenizer.msg").open("wb") as file_:
+        with (path / "transformers_tokenizer.msg").open("wb") as file_:
             file_.write(data)
 
 
-class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
+class SerializableBertTokenizer(transformers.BertTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "vocab",
         "do_basic_tokenize",
@@ -150,7 +150,9 @@ class SerializableBertTokenizer(pytt.BertTokenizer, SerializationMixin):
         return output
 
 
-class SerializableDistilBertTokenizer(pytt.DistilBertTokenizer, SerializationMixin):
+class SerializableDistilBertTokenizer(
+    transformers.DistilBertTokenizer, SerializationMixin
+):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "vocab",
         "do_basic_tokenize",
@@ -225,7 +227,7 @@ class SerializableDistilBertTokenizer(pytt.DistilBertTokenizer, SerializationMix
         return output
 
 
-class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
+class SerializableGPT2Tokenizer(transformers.GPT2Tokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "encoder",
         "_bpe_ranks",
@@ -296,7 +298,7 @@ class SerializableGPT2Tokenizer(pytt.GPT2Tokenizer, SerializationMixin):
         return output
 
 
-class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
+class SerializableXLMTokenizer(transformers.XLMTokenizer, SerializationMixin):
     _replace_re = re.compile(r"[\s\.\-`'\";]+")
     serialization_fields = list(BASE_CLASS_FIELDS) + ["encoder", "_bpe_ranks"]
 
@@ -366,7 +368,7 @@ class SerializableXLMTokenizer(pytt.XLMTokenizer, SerializationMixin):
         return output
 
 
-class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
+class SerializableXLNetTokenizer(transformers.XLNetTokenizer, SerializationMixin):
     _replace_re = re.compile(r"[\s'\";]+")
     _replacements = [("º", "o"), *zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")]
     serialization_fields = list(BASE_CLASS_FIELDS) + [
@@ -438,7 +440,7 @@ class SerializableXLNetTokenizer(pytt.XLNetTokenizer, SerializationMixin):
         return output
 
 
-class SerializableRobertaTokenizer(pytt.RobertaTokenizer, SerializationMixin):
+class SerializableRobertaTokenizer(transformers.RobertaTokenizer, SerializationMixin):
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "encoder",
         "_bpe_ranks",

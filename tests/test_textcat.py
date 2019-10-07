@@ -1,5 +1,6 @@
 import pytest
-from spacy_pytorch_transformers.pipeline import PyTT_TextCategorizer
+from spacy_pytorch_transformers.pipeline import TransformersTextCategorizer
+from spacy_pytorch_transformers.util import PIPES
 from spacy.gold import GoldParse
 
 
@@ -8,8 +9,8 @@ from spacy.gold import GoldParse
 )
 def textcat(name, nlp, request):
     arch = request.param
-    width = nlp.get_pipe("pytt_tok2vec").model.nO
-    textcat = PyTT_TextCategorizer(nlp.vocab, token_vector_width=width)
+    width = nlp.get_pipe(PIPES.tok2vec).model.nO
+    textcat = TransformersTextCategorizer(nlp.vocab, token_vector_width=width)
     textcat.add_label("Hello")
     config = {"architecture": arch, "pytt_name": name}
     if "gpt2" in name and arch in ("softmax_pooler_output", "softmax_class_vector"):
@@ -26,7 +27,7 @@ def textcat(name, nlp, request):
 
 
 def test_textcat_init(nlp):
-    textcat = PyTT_TextCategorizer(nlp.vocab)
+    textcat = TransformersTextCategorizer(nlp.vocab)
     assert textcat.labels == ()
     textcat.add_label("Hello")
     assert textcat.labels == ("Hello",)
@@ -47,7 +48,7 @@ def test_textcat_update(textcat, nlp):
     cats = {"Hello": 1.0}
     losses = {}
     textcat.update([doc], [GoldParse(doc, cats=cats)], sgd=optimizer, losses=losses)
-    assert "pytt_textcat" in losses
+    assert PIPES.textcat in losses
 
 
 def test_textcat_update_multi_sentence(textcat, nlp):
@@ -57,7 +58,7 @@ def test_textcat_update_multi_sentence(textcat, nlp):
     cats = {"Hello": 1.0}
     losses = {}
     textcat.update([doc], [GoldParse(doc, cats=cats)], sgd=optimizer, losses=losses)
-    assert "pytt_textcat" in losses
+    assert PIPES.textcat in losses
 
 
 def test_textcat_update_batch(textcat, nlp):
@@ -69,4 +70,4 @@ def test_textcat_update_batch(textcat, nlp):
     golds = [GoldParse(doc1, cats={"Hello": 1.0}), GoldParse(doc2, cats={"Hello": 0.0})]
     losses = {}
     textcat.update([doc1, doc2], golds, sgd=optimizer, losses=losses)
-    assert "pytt_textcat" in losses
+    assert PIPES.textcat in losses
