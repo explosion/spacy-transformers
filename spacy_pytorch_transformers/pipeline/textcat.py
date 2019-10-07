@@ -32,7 +32,7 @@ class TransformersTextCategorizer(spacy.pipeline.TextCategorizer):
         """
         arch = cfg.get("architecture", "softmax_class_vector")
         # This is optional -- but if it's set, we can debug config errors.
-        transformers_name = cfg.get(CFG.name, "")
+        transformers_name = cfg.get("pytt_name", "")
         is_gpt2 = "gpt2" in transformers_name
         is_xlnet = "xlnet" in transformers_name
         msg = (

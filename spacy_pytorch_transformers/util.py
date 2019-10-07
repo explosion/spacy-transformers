@@ -54,7 +54,6 @@ class PIPES(object):
 
 
 class CFG(object):
-    name = "pytt_name"
     config = "pytt_config"
     lr = "pytt_lr"
     weight_decay = "pytt_weight_decay"

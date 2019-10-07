@@ -38,7 +38,7 @@ class TransformersTok2Vec(Pipe):
         name (unicode): Name of pre-trained model, e.g. 'bert-base-uncased'.
         RETURNS (TransformersTok2Vec): The token vector encoder.
         """
-        cfg[CFG.name] = name
+        cfg["pytt_name"] = name
         model = cls.Model(from_pretrained=True, **cfg)
         cfg[CFG.config] = dict(model._model.transformers_model.config.to_dict())
         self = cls(vocab, model=model, **cfg)
@@ -52,9 +52,9 @@ class TransformersTok2Vec(Pipe):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The wrapped model.
         """
-        name = cfg.get(CFG.name)
+        name = cfg.get("pytt_name")
         if not name:
-            raise ValueError(f"Need {CFG.name} argument, e.g. 'bert-base-uncased'")
+            raise ValueError(f"Need {"pytt_name"} argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
             wrap = TransformersWrapper.from_pretrained(name)
         else:
