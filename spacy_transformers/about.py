@@ -1,7 +1,2 @@
 __title__ = "spacy-transformers"
-__version__ = "0.4.0"
-__summary__ = "spaCy pipelines for pre-trained BERT and other transformers"
-__uri__ = "https://explosion.ai"
-__author__ = "Explosion"
-__email__ = "contact@explosion.ai"
-__license__ = "MIT"
+__version__ = "0.0.1"
