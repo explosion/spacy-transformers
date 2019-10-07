@@ -49,20 +49,20 @@ We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name                       | Pretrained model          | Language | Author                                                                      |  Size |                                               Release                                                |
-| ---------------------------------- | ------------------------- | -------- | --------------------------------------------------------------------------- | ----: | :--------------------------------------------------------------------------------------------------: |
-| `en_pytt_bertbaseuncased_lg`       | `bert-base-uncased`       | English  | [Google Research](https://github.com/google-research/bert)                  | 406MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_bertbaseuncased_lg-2.1.1)    |
-| `de_pytt_bertbasecased_lg`         | `bert-base-german-cased`  | German   | [deepset](https://deepset.ai/german-bert)                                   | 406MB |     [📦️](https://github.com/explosion/spacy-models/releases/tag/de_pytt_bertbasecased_lg-2.1.1)     |
-| `en_pytt_xlnetbasecased_lg`        | `xlnet-base-cased`        | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 434MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_xlnetbasecased_lg-2.1.1)     |
-| `en_pytt_robertabase_lg`           | `roberta-base`            | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 292MB |      [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_robertabase_lg-2.1.0)      |
-| `en_pytt_distilbertbaseuncased_lg` | `distilbert-base-uncased` | English  | [Hugging Face](https://medium.com/huggingface/distilbert-8cf3380435b5)      | 245MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_pytt_distilbertbaseuncased_lg-2.1.0) |
+| Package name                      | Pretrained model          | Language | Author                                                                      |  Size |                                               Release                                               |
+| --------------------------------- | ------------------------- | -------- | --------------------------------------------------------------------------- | ----: | :-------------------------------------------------------------------------------------------------: |
+| `en_trf_bertbaseuncased_lg`       | `bert-base-uncased`       | English  | [Google Research](https://github.com/google-research/bert)                  | 406MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_bertbaseuncased_lg-2.1.1)    |
+| `de_trf_bertbasecased_lg`         | `bert-base-german-cased`  | German   | [deepset](https://deepset.ai/german-bert)                                   | 406MB |     [📦️](https://github.com/explosion/spacy-models/releases/tag/de_trf_bertbasecased_lg-2.1.1)     |
+| `en_trf_xlnetbasecased_lg`        | `xlnet-base-cased`        | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 434MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_xlnetbasecased_lg-2.1.1)     |
+| `en_trf_robertabase_lg`           | `roberta-base`            | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 292MB |      [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_robertabase_lg-2.1.0)      |
+| `en_trf_distilbertbaseuncased_lg` | `distilbert-base-uncased` | English  | [Hugging Face](https://medium.com/huggingface/distilbert-8cf3380435b5)      | 245MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_distilbertbaseuncased_lg-2.1.0) |
 
 ```bash
-python -m spacy download en_pytt_bertbaseuncased_lg
-python -m spacy download de_pytt_bertbasecased_lg
-python -m spacy download en_pytt_xlnetbasecased_lg
-python -m spacy download en_pytt_robertabase_lg
-python -m spacy download en_pytt_distilbertbaseuncased_lg
+python -m spacy download en_trf_bertbaseuncased_lg
+python -m spacy download de_trf_bertbasecased_lg
+python -m spacy download en_trf_xlnetbasecased_lg
+python -m spacy download en_trf_robertabase_lg
+python -m spacy download en_trf_distilbertbaseuncased_lg
 ```
 
 Once the model is installed, you can load it in spaCy like any other model
@@ -71,7 +71,7 @@ package.
 ```python
 import spacy
 
-nlp = spacy.load("en_pytt_bertbaseuncased_lg")
+nlp = spacy.load("en_trf_bertbaseuncased_lg")
 doc = nlp("Apple shares rose on the news. Apple pie is delicious.")
 print(doc[0].similarity(doc[7]))
 print(doc._.trf_last_hidden_state.shape)
@@ -116,7 +116,7 @@ is_using_gpu = spacy.prefer_gpu()
 if is_using_gpu:
     torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
-nlp = spacy.load("en_pytt_bertbaseuncased_lg")
+nlp = spacy.load("en_trf_bertbaseuncased_lg")
 print(nlp.pipe_names) # ["sentencizer", "trf_wordpiecer", "trf_tok2vec"]
 textcat = nlp.create_pipe("trf_textcat", config={"exclusive_classes": True})
 for label in ("POSITIVE", "NEGATIVE"):
@@ -173,9 +173,9 @@ this:
 
 ```bash
 python -m spacy package /bert-textcat /output
-cd /output/en_pytt_bertbaseuncased_lg-1.0.0
+cd /output/en_trf_bertbaseuncased_lg-1.0.0
 python setup.py sdist
-pip install dist/en_pytt_bertbaseuncased_lg-1.0.0.tar.gz
+pip install dist/en_trf_bertbaseuncased_lg-1.0.0.tar.gz
 ```
 
 ### Extension attributes
