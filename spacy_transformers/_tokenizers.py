@@ -1,4 +1,4 @@
-"""Adjust the initialization and serialization of the PyTorch Transformers
+"""Adjust the initialization and serialization of the Transformers
 tokenizers, so that they work more nicely with spaCy. Specifically, the
 Transformers classes take file paths as arguments to their __init__, which means
 we can't easily use to_bytes() and from_bytes() with them.

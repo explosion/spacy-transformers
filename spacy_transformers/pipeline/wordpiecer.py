@@ -7,7 +7,7 @@ from ..util import get_tokenizer, flatten_list, get_sents, PIPES, ATTRS
 
 
 class TransformersWordPiecer(Pipe):
-    """spaCy pipeline component to assign PyTorch-Transformers word-piece
+    """spaCy pipeline component to assign transformer word-piece
     tokenization to the Doc, which can then be used by the token vector
     encoder. Note that this component doesn't modify spaCy's tokenization. It
     only sets extension attributes and aligns the tokens."""

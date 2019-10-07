@@ -57,7 +57,7 @@ LANG_FACTORY = "trf"
 
 
 def get_config(name):
-    """Map a name to the appropriate pytorch_transformers.*Config class."""
+    """Map a name to the appropriate transformers.*Config class."""
     name = name.lower()
     if "roberta" in name:
         return transformers.RobertaConfig
@@ -76,7 +76,7 @@ def get_config(name):
 
 
 def get_model(name):
-    """Map a name to the appropriate pytorch_transformers.*Model class."""
+    """Map a name to the appropriate transformers.*Model class."""
     name = name.lower()
     if "roberta" in name:
         return transformers.RobertaModel

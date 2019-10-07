@@ -7,7 +7,7 @@ DEBUG_LOSS = False
 
 class TransformersTextCategorizer(spacy.pipeline.TextCategorizer):
     """Subclass of spaCy's built-in TextCategorizer component that supports
-    using the features assigned by the PyTorch-Transformers models via the token
+    using the features assigned by the transformer models via the token
     vector encoder. It requires the TransformerTokenVectorEncoder to run before
     it in the pipeline.
     """
@@ -21,7 +21,7 @@ class TransformersTextCategorizer(spacy.pipeline.TextCategorizer):
 
     @classmethod
     def Model(cls, nr_class=1, exclusive_classes=False, **cfg):
-        """Create a text classification model using a PyTorch-Transformers model
+        """Create a text classification model using a transformer model
         for token vector encoding.
 
         nr_class (int): Number of classes.

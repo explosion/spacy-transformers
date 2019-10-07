@@ -11,10 +11,10 @@ more details and background, check out
 [our blog post](https://explosion.ai/blog/spacy-pytorch-transformers).
 
 [![Azure Pipelines](https://img.shields.io/azure-devops/build/explosion-ai/public/11/master.svg?logo=azure-devops&style=flat-square)](https://dev.azure.com/explosion-ai/public/_build?definitionId=11)
-[![PyPi](https://img.shields.io/pypi/v/spacy-pytorch-transformers.svg?style=flat-square)](https://pypi.python.org/pypi/spacy-pytorch-transformers)
-[![GitHub](https://img.shields.io/github/release/explosion/spacy-pytorch-transformers/all.svg?style=flat-square)](https://github.com/explosion/spacy-pytorch-transformers/releases)
+[![PyPi](https://img.shields.io/pypi/v/spacy-transformers.svg?style=flat-square)](https://pypi.python.org/pypi/spacy-transformers)
+[![GitHub](https://img.shields.io/github/release/explosion/spacy-transformers/all.svg?style=flat-square)](https://github.com/explosion/spacy-transformers/releases)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
-[![Open demo in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/explosion/spacy-pytorch-transformers/blob/master/examples/Spacy_Transformers_Demo.ipynb)
+[![Open demo in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/explosion/spacy-transformers/blob/master/examples/Spacy_Transformers_Demo.ipynb)
 
 ## Features
 
@@ -193,9 +193,9 @@ on the `Doc`, `Span` and `Token` objects:
 | `._.trf_pooler_output`       | `List[ndarray]`   | The `pooler_output` output from the `transformers` model.                                                                                                     |
 | `._.trf_all_hidden_states`   | `List[ndarray]`   | The `all_hidden_states` output from the `transformers` model.                                                                                                 |
 | `._.all_attentions`          | `List[ndarray]`   | The `all_attentions` output from the `transformers` model.                                                                                                    |
-| `._.trf_d_last_hidden_state` | `ndarray`         | The gradient of the `last_hidden_state` output from the PyTorch-`transformers` model.                                                                         |
+| `._.trf_d_last_hidden_state` | `ndarray`         | The gradient of the `last_hidden_state` output from the `transformers` model.                                                                                 |
 | `._.trf_d_pooler_output`     | `List[ndarray]`   | The gradient of the `pooler_output` output from the `transformers` model.                                                                                     |
-| `._.trf_d_all_hidden_states` | `List[ndarray]`   | The gradient of the `all_hidden_states` output from the PyTorch-`transformers` model.                                                                         |
+| `._.trf_d_all_hidden_states` | `List[ndarray]`   | The gradient of the `all_hidden_states` output from the `transformers` model.                                                                                 |
 | `._.trf_d_all_attentions`    | `List[ndarray]`   | The gradient of the `all_attentions` output from the `transformers` model.                                                                                    |
 
 The values can be accessed via the `._` attribute. For example:
@@ -214,7 +214,7 @@ a few components to run in order: a component that assigns sentence boundaries
 `TransformersWordPiecer`, which assigns the wordpiece tokens and the
 `TransformersTok2Vec`, which assigns the token vectors. The `trf_name` argument
 defines the name of the pretrained model to use. The `from_pretrained` methods
-load the pretrained model via `pytorch-transformers`.
+load the pretrained model via `transformers`.
 
 ```python
 from spacy_transformers import TransformersLanguage, TransformersWordPiecer, TransformersTok2Vec

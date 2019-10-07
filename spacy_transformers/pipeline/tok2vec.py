@@ -12,7 +12,7 @@ from ..util import get_config, get_model, get_sents, PIPES, ATTRS
 
 
 class TransformersTok2Vec(Pipe):
-    """spaCy pipeline component to use PyTorch-Transformers models.
+    """spaCy pipeline component to use transformer models.
 
     The component assigns the output of the transformer to the Doc's
     extension attributes. We also calculate an alignment between the word-piece
@@ -31,7 +31,7 @@ class TransformersTok2Vec(Pipe):
     @classmethod
     def from_pretrained(cls, vocab: Vocab, name: str, **cfg):
         """Create a TransformersTok2Vec instance using pre-trained weights
-        from a PyTorch Transformer model, even if it's not installed as a
+        from a transformer model, even if it's not installed as a
         spaCy package.
 
         vocab (spacy.vocab.Vocab): The spaCy vocab to use.
