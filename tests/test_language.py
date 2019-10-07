@@ -10,7 +10,7 @@ from .util import make_tempdir, is_valid_tensor
 
 def test_language_init(name):
     meta = {"lang": "en", "name": "test", "pipeline": []}
-    nlp = TransformersLanguage(meta=meta, pytt_name=name)
+    nlp = TransformersLanguage(meta=meta, trf_name=name)
     assert nlp.lang == "en"
     assert nlp.meta["lang"] == "en"
     assert nlp.meta["lang_factory"] == TransformersLanguage.lang_factory_name
@@ -30,7 +30,7 @@ def test_language_run(nlp):
 def test_language_wordpiece_to_from_bytes(name):
     nlp = TransformersLanguage()
     nlp.add_pipe(nlp.create_pipe("sentencizer"))
-    wordpiecer = TransformersWordPiecer.from_pretrained(nlp.vocab, pytt_name=name)
+    wordpiecer = TransformersWordPiecer.from_pretrained(nlp.vocab, trf_name=name)
     nlp.add_pipe(wordpiecer)
     doc = nlp("hello world")
     assert doc._.get(ATTRS.word_pieces) is not None
@@ -66,8 +66,8 @@ def test_language_to_from_disk(nlp, name):
         nlp.to_disk(tempdir)
         new_nlp = TransformersLanguage()
         new_nlp.add_pipe(new_nlp.create_pipe("sentencizer"))
-        wordpiecer = TransformersWordPiecer(new_nlp.vocab, pytt_name=name)
-        tok2vec = TransformersTok2Vec(new_nlp.vocab, pytt_name=name)
+        wordpiecer = TransformersWordPiecer(new_nlp.vocab, trf_name=name)
+        tok2vec = TransformersTok2Vec(new_nlp.vocab, trf_name=name)
         new_nlp.add_pipe(wordpiecer)
         new_nlp.add_pipe(tok2vec)
         new_nlp.from_disk(tempdir)

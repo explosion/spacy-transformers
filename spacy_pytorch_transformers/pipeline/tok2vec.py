@@ -8,7 +8,7 @@ from spacy.util import minibatch
 from ..wrapper import TransformersWrapper
 from ..model_registry import get_model_function
 from ..activations import Activations, RaggedArray
-from ..util import get_config, get_model, get_sents, PIPES, CFG, ATTRS
+from ..util import get_config, get_model, get_sents, PIPES, ATTRS
 
 
 class TransformersTok2Vec(Pipe):
@@ -38,9 +38,9 @@ class TransformersTok2Vec(Pipe):
         name (unicode): Name of pre-trained model, e.g. 'bert-base-uncased'.
         RETURNS (TransformersTok2Vec): The token vector encoder.
         """
-        cfg["pytt_name"] = name
+        cfg["trf_name"] = name
         model = cls.Model(from_pretrained=True, **cfg)
-        cfg[CFG.config] = dict(model._model.transformers_model.config.to_dict())
+        cfg["trf_config"] = dict(model._model.transformers_model.config.to_dict())
         self = cls(vocab, model=model, **cfg)
         return self
 
@@ -52,13 +52,13 @@ class TransformersTok2Vec(Pipe):
         **cfg: Optional config parameters.
         RETURNS (thinc.neural.Model): The wrapped model.
         """
-        name = cfg.get("pytt_name")
+        name = cfg.get("trf_name")
         if not name:
-            raise ValueError(f"Need pytt_name argument, e.g. 'bert-base-uncased'")
+            raise ValueError(f"Need trf_name argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
             wrap = TransformersWrapper.from_pretrained(name)
         else:
-            config = cfg[CFG.config]
+            config = cfg["trf_config"]
             # Work around floating point limitation in ujson:
             # If we have the setting "layer_norm_eps" as 0,
             # that's because of misprecision in serializing. Fix that.
@@ -66,9 +66,9 @@ class TransformersTok2Vec(Pipe):
             config_cls = get_config(name)
             model_cls = get_model(name)
             # Need to match the name their constructor expects.
-            if "vocab_size" in cfg[CFG.config]:
-                vocab_size = cfg[CFG.config]["vocab_size"]
-                cfg[CFG.config]["vocab_size_or_config_json_file"] = vocab_size
+            if "vocab_size" in cfg["trf_config"]:
+                vocab_size = cfg["trf_config"]["vocab_size"]
+                cfg["trf_config"]["vocab_size_or_config_json_file"] = vocab_size
             wrap = TransformersWrapper(name, config, model_cls(config_cls(**config)))
         make_model = get_model_function(cfg.get("architecture", "tok2vec_per_sentence"))
         model = make_model(wrap, cfg)

@@ -56,7 +56,7 @@ class TransformersLanguage(Language):
     def __init__(
         self, vocab=True, make_doc=True, max_length=10 ** 6, meta={}, **kwargs
     ):
-        """Initialize the language class. Expects either a pytt_name setting in
+        """Initialize the language class. Expects either a trf_name setting in
         the meta or as a keyword argument, specifying the pre-trained model
         name. This is used to set up the model-specific tokenizer.
         """

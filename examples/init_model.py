@@ -14,7 +14,7 @@ def main(path, name="bert-base-uncased", lang="en"):
     msg = Printer()
     msg.info(f"Creating model for '{name}' ({lang})")
     with msg.loading(f"Setting up the pipeline..."):
-        nlp = TransformersLanguage(pytt_name=name, meta={"lang": lang})
+        nlp = TransformersLanguage(trf_name=name, meta={"lang": lang})
         nlp.add_pipe(nlp.create_pipe("sentencizer"))
         nlp.add_pipe(TransformersWordPiecer.from_pretrained(nlp.vocab, name))
         nlp.add_pipe(TransformersTok2Vec.from_pretrained(nlp.vocab, name))

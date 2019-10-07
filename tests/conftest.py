@@ -12,8 +12,8 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def nlp(name):
-    p_nlp = TransformersLanguage(pytt_name=name)
+    p_nlp = TransformersLanguage(trf_name=name)
     p_nlp.add_pipe(p_nlp.create_pipe("sentencizer"))
-    p_nlp.add_pipe(TransformersWordPiecer.from_pretrained(p_nlp.vocab, pytt_name=name))
+    p_nlp.add_pipe(TransformersWordPiecer.from_pretrained(p_nlp.vocab, trf_name=name))
     p_nlp.add_pipe(TransformersTok2Vec.from_pretrained(p_nlp.vocab, name=name))
     return p_nlp

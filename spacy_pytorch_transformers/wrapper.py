@@ -10,7 +10,7 @@ import numpy
 import contextlib
 from thinc.compat import BytesIO
 
-from .util import get_model, Dropout, CFG
+from .util import get_model, Dropout
 from .activations import RaggedArray, Activations
 
 
@@ -128,7 +128,7 @@ class TransformersWrapper(PyTorchWrapper):
                         )
                     optimizer = self._optimizer
                     for group in optimizer.param_groups:
-                        group["lr"] = getattr(sgd, CFG.lr, sgd.alpha)
+                        group["lr"] = getattr(sgd, "trf_lr", sgd.alpha)
                     optimizer.step()
                     optimizer.zero_grad()
                     self._update_pytorch_averages(sgd)
@@ -213,10 +213,10 @@ class TransformersWrapper(PyTorchWrapper):
     def _create_optimizer(self, sgd):
         optimizer = AdamW(
             self._model.parameters(),
-            lr=getattr(sgd, CFG.lr, sgd.alpha),
+            lr=getattr(sgd, "trf_lr", sgd.alpha),
             eps=sgd.eps,
             betas=(sgd.b1, sgd.b2),
-            weight_decay=getattr(sgd, CFG.weight_decay, 0.0),
+            weight_decay=getattr(sgd, "trf_weight_decay", 0.0),
         )
         optimizer.zero_grad()
         return optimizer

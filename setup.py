@@ -49,12 +49,12 @@ def setup_package():
         },
         entry_points={
             "spacy_factories": [
-                "pytt_wordpiecer = spacy_pytorch_transformers:TransformersWordPiecer.from_nlp",
-                "pytt_tok2vec = spacy_pytorch_transformers:TransformersTok2Vec.from_nlp",
-                "pytt_textcat = spacy_pytorch_transformers:TransformersTextCategorizer.from_nlp",
+                "trf_wordpiecer = spacy_pytorch_transformers:TransformersWordPiecer.from_nlp",
+                "trf_tok2vec = spacy_pytorch_transformers:TransformersTok2Vec.from_nlp",
+                "trf_textcat = spacy_pytorch_transformers:TransformersTextCategorizer.from_nlp",
             ],
             "spacy_languages": [
-                "pytt = spacy_pytorch_transformers:TransformersLanguage"
+                "trf = spacy_pytorch_transformers:TransformersLanguage"
             ],
         },
         classifiers=[

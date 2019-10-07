@@ -29,38 +29,31 @@ SPECIAL_TOKENS: Sequence[str] = (
 
 
 class ATTRS(object):
-    alignment = "pytt_alignment"
-    word_pieces = "pytt_word_pieces"
-    word_pieces_ = "pytt_word_pieces_"
-    separator = "pytt_separator"
-    segments = "pytt_segments"
-    start = "pytt_start"
-    end = "pytt_end"
-    last_hidden_state = "pytt_last_hidden_state"
-    pooler_output = "pytt_pooler_output"
-    all_hidden_states = "pytt_all_hidden_states"
-    all_attentions = "pytt_all_attentions"
-    d_last_hidden_state = "pytt_d_last_hidden_state"
-    d_pooler_output = "pytt_d_pooler_output"
-    d_all_hidden_states = "pytt_d_all_hidden_states"
-    d_all_attentions = "pytt_d_all_attentions"
+    alignment = "trf_alignment"
+    word_pieces = "trf_word_pieces"
+    word_pieces_ = "trf_word_pieces_"
+    separator = "trf_separator"
+    segments = "trf_segments"
+    start = "trf_start"
+    end = "trf_end"
+    last_hidden_state = "trf_last_hidden_state"
+    pooler_output = "trf_pooler_output"
+    all_hidden_states = "trf_all_hidden_states"
+    all_attentions = "trf_all_attentions"
+    d_last_hidden_state = "trf_d_last_hidden_state"
+    d_pooler_output = "trf_d_pooler_output"
+    d_all_hidden_states = "trf_d_all_hidden_states"
+    d_all_attentions = "trf_d_all_attentions"
 
 
 class PIPES(object):
-    wordpiecer = "pytt_wordpiecer"
-    tok2vec = "pytt_tok2vec"
-    textcat = "pytt_textcat"
-    ner = "pytt_ner"
+    wordpiecer = "trf_wordpiecer"
+    tok2vec = "trf_tok2vec"
+    textcat = "trf_textcat"
+    ner = "trf_ner"
 
 
-class CFG(object):
-    config = "pytt_config"
-    lr = "pytt_lr"
-    weight_decay = "pytt_weight_decay"
-    use_swa = "pytt_use_swa"
-
-
-LANG_FACTORY = "pytt"
+LANG_FACTORY = "trf"
 
 
 def get_config(name):

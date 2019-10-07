@@ -41,7 +41,7 @@ def main(
     cfg = {"retry_alignment": retry, "force_alignment": force}
     nlp = get_lang_class(lang)()
     nlp.add_pipe(nlp.create_pipe("sentencizer"))
-    wp = TransformersWordPiecer.from_pretrained(nlp.vocab, pytt_name=name, **cfg)
+    wp = TransformersWordPiecer.from_pretrained(nlp.vocab, trf_name=name, **cfg)
     msg.good(f"Loaded WordPiecer for model '{name}'")
     with msg.loading("Loading IMDB data..."):
         data, _ = thinc.extra.datasets.imdb(limit=n_texts)

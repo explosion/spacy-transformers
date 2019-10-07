@@ -9,7 +9,7 @@ import numpy
 from .wrapper import TransformersWrapper
 from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, flatten_list, is_class_token
-from .util import get_segment_ids, is_special_token, CFG, ATTRS
+from .util import get_segment_ids, is_special_token, ATTRS
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -42,7 +42,7 @@ def get_model_function(name: str):
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(model_name, cfg):
     max_words = cfg.get("words_per_batch", 1000)
-    name = cfg["pytt_name"]
+    name = cfg["trf_name"]
 
     model = foreach_sentence(
         chain(get_word_pieces(name), with_length_batching(model_name, max_words))

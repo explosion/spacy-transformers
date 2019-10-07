@@ -12,7 +12,7 @@ def vocab():
 
 @pytest.fixture
 def wordpiecer(name):
-    return TransformersWordPiecer.from_pretrained(vocab, pytt_name=name)
+    return TransformersWordPiecer.from_pretrained(vocab, trf_name=name)
 
 
 def test_alignment_extension_attr(vocab):

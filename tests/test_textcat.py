@@ -12,15 +12,15 @@ def textcat(name, nlp, request):
     width = nlp.get_pipe(PIPES.tok2vec).model.nO
     textcat = TransformersTextCategorizer(nlp.vocab, token_vector_width=width)
     textcat.add_label("Hello")
-    config = {"architecture": arch, "pytt_name": name}
+    config = {"architecture": arch, "trf_name": name}
     if "gpt2" in name and arch in ("softmax_pooler_output", "softmax_class_vector"):
         with pytest.raises(ValueError):
             textcat.begin_training(**config)
-        textcat.begin_training(pytt_name=name, architecture="softmax_last_hidden")
+        textcat.begin_training(trf_name=name, architecture="softmax_last_hidden")
     elif "xlnet" in name and arch == "softmax_pooler_output":
         with pytest.raises(ValueError):
             textcat.begin_training(**config)
-        textcat.begin_training(pytt_name=name, architecture="softmax_last_hidden")
+        textcat.begin_training(trf_name=name, architecture="softmax_last_hidden")
     else:
         textcat.begin_training(**config)
     return textcat

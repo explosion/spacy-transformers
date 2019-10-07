@@ -20,13 +20,13 @@ class TransformersWordPiecer(Pipe):
         return cls(nlp.vocab, **cfg)
 
     @classmethod
-    def from_pretrained(cls, vocab, pytt_name, **cfg):
-        model = get_tokenizer(pytt_name).from_pretrained(pytt_name)
-        return cls(vocab, model=model, pytt_name=pytt_name, **cfg)
+    def from_pretrained(cls, vocab, trf_name, **cfg):
+        model = get_tokenizer(trf_name).from_pretrained(trf_name)
+        return cls(vocab, model=model, trf_name=trf_name, **cfg)
 
     @classmethod
-    def Model(cls, pytt_name, **kwargs):
-        return get_tokenizer(pytt_name).blank()
+    def Model(cls, trf_name, **kwargs):
+        return get_tokenizer(trf_name).blank()
 
     def __init__(self, vocab, model=True, **cfg):
         """Initialize the component.

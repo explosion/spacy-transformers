@@ -1,6 +1,6 @@
 import spacy.pipeline
 from ..model_registry import get_model_function
-from ..util import PIPES, CFG
+from ..util import PIPES
 
 DEBUG_LOSS = False
 
@@ -32,7 +32,7 @@ class TransformersTextCategorizer(spacy.pipeline.TextCategorizer):
         """
         arch = cfg.get("architecture", "softmax_class_vector")
         # This is optional -- but if it's set, we can debug config errors.
-        transformers_name = cfg.get("pytt_name", "")
+        transformers_name = cfg.get("trf_name", "")
         is_gpt2 = "gpt2" in transformers_name
         is_xlnet = "xlnet" in transformers_name
         msg = (

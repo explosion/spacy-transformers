@@ -7,7 +7,7 @@ from spacy.tokens import Doc
 
 @pytest.fixture(scope="session")
 def wp(name):
-    return TransformersWordPiecer.from_pretrained(Vocab(), pytt_name=name)
+    return TransformersWordPiecer.from_pretrained(Vocab(), trf_name=name)
 
 
 def test_wordpiecer(wp):

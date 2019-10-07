@@ -1,6 +1,6 @@
 import random
 from spacy.util import minibatch
-from .util import cyclic_triangular_rate, CFG
+from .util import cyclic_triangular_rate
 
 
 def train_while_improving(
@@ -111,8 +111,8 @@ def train_while_improving(
     learn_rates = cyclic_triangular_rate(
         learning_rate / lr_range, learning_rate * lr_range, steps_per_epoch
     )
-    setattr(optimizer, CFG.lr, next(learn_rates))
-    setattr(optimizer, CFG.weight_decay, HP.weight_decay)
+    optimizer.trf_lr = next(learn_rates)
+    optimizer.trf_weight_decay = HP.weight_decay
     # This sets the learning rate for the Thinc layers, i.e. just the final
     # softmax. By keeping this LR high, we avoid a problem where the model
     # spends too long flat, which harms the transfer learning.
@@ -123,7 +123,7 @@ def train_while_improving(
     while True:
         random.shuffle(train_data)
         for batch in minibatch(train_data, size=(batch_size // steps_per_batch)):
-            setattr(optimizer, CFG.lr, next(learn_rates))
+            optimizer.trf_lr = next(learn_rates)
             docs, golds = zip(*batch)
             losses = {}
             nlp.update(
