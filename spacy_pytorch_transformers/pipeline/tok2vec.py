@@ -54,7 +54,7 @@ class TransformersTok2Vec(Pipe):
         """
         name = cfg.get("pytt_name")
         if not name:
-            raise ValueError(f"Need {"pytt_name"} argument, e.g. 'bert-base-uncased'")
+            raise ValueError(f"Need pytt_name argument, e.g. 'bert-base-uncased'")
         if cfg.get("from_pretrained"):
             wrap = TransformersWrapper.from_pretrained(name)
         else:
