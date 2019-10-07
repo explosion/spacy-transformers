@@ -87,9 +87,8 @@ def test_tok2vec_to_from_disk(tok2vec, docs):
     assert_equal(doc.tensor, new_doc.tensor)
 
 
-# Fails on 3.6 due to type annotations :(. See
 # https://github.com/cloudpipe/cloudpickle/pull/299
-@pytest.mark.xfail
+@pytest.mark.skip(reason="Fails on 3.7 due to type annotations")
 def test_tok2vec_pickle_dumps_loads(tok2vec, docs):
     doc = tok2vec(docs[0])
     assert is_valid_tensor(doc.tensor)
