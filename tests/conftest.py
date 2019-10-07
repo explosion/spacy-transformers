@@ -1,6 +1,6 @@
 import pytest
-from spacy_pytorch_transformers import TransformersLanguage, TransformersWordPiecer
-from spacy_pytorch_transformers import TransformersTok2Vec
+from spacy_transformers import TransformersLanguage, TransformersWordPiecer
+from spacy_transformers import TransformersTok2Vec
 
 MODEL_NAMES = ["bert-base-uncased", "gpt2", "xlnet-base-cased"]
 

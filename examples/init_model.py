@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import plac
 from wasabi import Printer
-from spacy_pytorch_transformers import TransformersLanguage, TransformersWordPiecer
-from spacy_pytorch_transformers import TransformersTok2Vec
+from spacy_transformers import TransformersLanguage, TransformersWordPiecer
+from spacy_transformers import TransformersTok2Vec
 
 
 @plac.annotations(

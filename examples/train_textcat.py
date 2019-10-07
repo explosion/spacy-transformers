@@ -12,7 +12,7 @@ from spacy.util import minibatch
 import tqdm
 import unicodedata
 import wasabi
-from spacy_pytorch_transformers.util import cyclic_triangular_rate
+from spacy_transformers.util import cyclic_triangular_rate
 
 
 @plac.annotations(

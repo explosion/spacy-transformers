@@ -1,8 +1,8 @@
 import numpy
 import pytest
 from thinc.neural.optimizers import Adam
-from spacy_pytorch_transformers.activations import Activations, RaggedArray
-from spacy_pytorch_transformers.util import get_tokenizer, PIPES
+from spacy_transformers.activations import Activations, RaggedArray
+from spacy_transformers.util import get_tokenizer, PIPES
 
 
 @pytest.fixture

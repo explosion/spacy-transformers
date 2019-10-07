@@ -1,6 +1,6 @@
 import pytest
-from spacy_pytorch_transformers.pipeline import TransformersTextCategorizer
-from spacy_pytorch_transformers.util import PIPES
+from spacy_transformers.pipeline import TransformersTextCategorizer
+from spacy_transformers.util import PIPES
 from spacy.gold import GoldParse
 
 

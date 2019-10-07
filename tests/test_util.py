@@ -1,8 +1,8 @@
 import pytest
 import numpy
 from numpy.testing import assert_equal
-from spacy_pytorch_transformers.pipeline.wordpiecer import align_word_pieces
-from spacy_pytorch_transformers.util import pad_batch, batch_by_length, lengths2mask
+from spacy_transformers.pipeline.wordpiecer import align_word_pieces
+from spacy_transformers.util import pad_batch, batch_by_length, lengths2mask
 
 
 @pytest.mark.parametrize(

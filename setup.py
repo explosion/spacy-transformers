@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 
 def setup_package():
-    package_name = "spacy_pytorch_transformers"
+    package_name = "spacy_transformers"
     root = os.path.abspath(os.path.dirname(__file__))
 
     # Read in package meta from about.py
@@ -19,7 +19,7 @@ def setup_package():
         readme = f.read()
 
     setup(
-        name="spacy-pytorch-transformers",
+        name="spacy-transformers",
         description=about["__summary__"],
         long_description=readme,
         long_description_content_type="text/markdown",
@@ -49,12 +49,12 @@ def setup_package():
         },
         entry_points={
             "spacy_factories": [
-                "trf_wordpiecer = spacy_pytorch_transformers:TransformersWordPiecer.from_nlp",
-                "trf_tok2vec = spacy_pytorch_transformers:TransformersTok2Vec.from_nlp",
-                "trf_textcat = spacy_pytorch_transformers:TransformersTextCategorizer.from_nlp",
+                "trf_wordpiecer = spacy_transformers:TransformersWordPiecer.from_nlp",
+                "trf_tok2vec = spacy_transformers:TransformersTok2Vec.from_nlp",
+                "trf_textcat = spacy_transformers:TransformersTextCategorizer.from_nlp",
             ],
             "spacy_languages": [
-                "trf = spacy_pytorch_transformers:TransformersLanguage"
+                "trf = spacy_transformers:TransformersLanguage"
             ],
         },
         classifiers=[

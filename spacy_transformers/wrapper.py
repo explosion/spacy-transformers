@@ -21,7 +21,7 @@ CONFIG = {"output_hidden_states": True, "output_attentions": True}
 class TransformersWrapper(PyTorchWrapper):
     """Wrap a Transformers model for use in Thinc.
 
-    The model will take as input a spacy_pytorch_transformers.util.RaggedArray
+    The model will take as input a spacy_transformers.util.RaggedArray
     object that will specify the input IDs and optionally the segment IDs. The
     RaggedArray is basically a tuple (ids, lengths), where ids is concatenated
     for a whole batch (this format allows the data to be contiguous even if

@@ -1,8 +1,8 @@
 import pytest
 from numpy.testing import assert_equal
-from spacy_pytorch_transformers import TransformersLanguage, TransformersWordPiecer
-from spacy_pytorch_transformers import TransformersTok2Vec, about
-from spacy_pytorch_transformers.util import ATTRS
+from spacy_transformers import TransformersLanguage, TransformersWordPiecer
+from spacy_transformers import TransformersTok2Vec, about
+from spacy_transformers.util import ATTRS
 from spacy.attrs import LANG
 
 from .util import make_tempdir, is_valid_tensor

@@ -1,6 +1,6 @@
 import pytest
-from spacy_pytorch_transformers import TransformersWordPiecer
-from spacy_pytorch_transformers.util import ATTRS
+from spacy_transformers import TransformersWordPiecer
+from spacy_transformers.util import ATTRS
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 

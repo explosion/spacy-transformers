@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import plac
-from spacy_pytorch_transformers import TransformersWordPiecer
+from spacy_transformers import TransformersWordPiecer
 from spacy.util import get_lang_class
 import thinc.extra.datasets
 from wasabi import Printer, color
