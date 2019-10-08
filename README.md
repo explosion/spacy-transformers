@@ -51,11 +51,11 @@ the [model releases](https://github.com/explosion/spacy-models/releases).
 
 | Package name                      | Pretrained model          | Language | Author                                                                      |  Size |                                               Release                                               |
 | --------------------------------- | ------------------------- | -------- | --------------------------------------------------------------------------- | ----: | :-------------------------------------------------------------------------------------------------: |
-| `en_trf_bertbaseuncased_lg`       | `bert-base-uncased`       | English  | [Google Research](https://github.com/google-research/bert)                  | 406MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_bertbaseuncased_lg-2.1.1)    |
-| `de_trf_bertbasecased_lg`         | `bert-base-german-cased`  | German   | [deepset](https://deepset.ai/german-bert)                                   | 406MB |     [📦️](https://github.com/explosion/spacy-models/releases/tag/de_trf_bertbasecased_lg-2.1.1)     |
-| `en_trf_xlnetbasecased_lg`        | `xlnet-base-cased`        | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 434MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_xlnetbasecased_lg-2.1.1)     |
-| `en_trf_robertabase_lg`           | `roberta-base`            | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 292MB |      [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_robertabase_lg-2.1.0)      |
-| `en_trf_distilbertbaseuncased_lg` | `distilbert-base-uncased` | English  | [Hugging Face](https://medium.com/huggingface/distilbert-8cf3380435b5)      | 245MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_distilbertbaseuncased_lg-2.1.0) |
+| `en_trf_bertbaseuncased_lg`       | `bert-base-uncased`       | English  | [Google Research](https://github.com/google-research/bert)                  | 406MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_bertbaseuncased_lg-2.2.0)    |
+| `de_trf_bertbasecased_lg`         | `bert-base-german-cased`  | German   | [deepset](https://deepset.ai/german-bert)                                   | 406MB |     [📦️](https://github.com/explosion/spacy-models/releases/tag/de_trf_bertbasecased_lg-2.2.0)     |
+| `en_trf_xlnetbasecased_lg`        | `xlnet-base-cased`        | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 434MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_xlnetbasecased_lg-2.2.0)     |
+| `en_trf_robertabase_lg`           | `roberta-base`            | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 292MB |      [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_robertabase_lg-2.2.0)      |
+| `en_trf_distilbertbaseuncased_lg` | `distilbert-base-uncased` | English  | [Hugging Face](https://medium.com/huggingface/distilbert-8cf3380435b5)      | 245MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_distilbertbaseuncased_lg-2.2.0) |
 
 ```bash
 python -m spacy download en_trf_bertbaseuncased_lg
@@ -80,7 +80,7 @@ print(doc._.trf_last_hidden_state.shape)
 > 💡 If you're seeing an error like `No module named 'spacy.lang.trf'`,
 > double-check that `spacy-transformers` is installed. It needs to be available
 > so it can register its language entry points. Also make sure that you're
-> running spaCy v2.1.7 or higher.
+> running spaCy v2.2.0 or higher.
 
 ## 📖 Usage
 
