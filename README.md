@@ -8,7 +8,7 @@ This package (previously `spacy-pytorch-transformers`) provides
 package, so you can use them in spaCy. The result is convenient access to
 state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc. For
 more details and background, check out
-[our blog post](https://explosion.ai/blog/spacy-pytorch-transformers).
+[our blog post](https://explosion.ai/blog/spacy-transformers).
 
 [![Azure Pipelines](https://img.shields.io/azure-devops/build/explosion-ai/public/11/master.svg?logo=azure-pipelines&style=flat-square)](https://dev.azure.com/explosion-ai/public/_build?definitionId=11)
 [![PyPi](https://img.shields.io/pypi/v/spacy-transformers.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.python.org/pypi/spacy-transformers)
