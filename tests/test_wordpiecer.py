@@ -1,13 +1,13 @@
 import pytest
-from spacy_pytorch_transformers import PyTT_WordPiecer
-from spacy_pytorch_transformers.util import is_special_token, get_pytt_tokenizer
+from spacy_transformers import TransformersWordPiecer
+from spacy_transformers.util import is_special_token, get_tokenizer, ATTRS
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 
 
 @pytest.fixture(scope="session")
 def wp(name):
-    return PyTT_WordPiecer.from_pretrained(Vocab(), pytt_name=name)
+    return TransformersWordPiecer.from_pretrained(Vocab(), trf_name=name)
 
 
 def test_wordpiecer(wp):
@@ -16,7 +16,7 @@ def test_wordpiecer(wp):
     doc[0].is_sent_start = True
     doc[1].is_sent_start = False
     doc = wp(doc)
-    cleaned_words = [wp.model.clean_wp_token(t) for t in doc._.pytt_word_pieces_]
+    cleaned_words = [wp.model.clean_wp_token(t) for t in doc._.get(ATTRS.word_pieces_)]
     cleaned_words = [w for w in cleaned_words if not is_special_token(w)]
     assert "".join(cleaned_words) == "".join(words)
 
@@ -48,13 +48,13 @@ def test_xlnet_weird_align(name, wp):
     doc[1].is_sent_start = False
     assert doc.text == text
     doc = wp(doc)
-    assert doc._.pytt_word_pieces_[-2] == "</s>"
-    assert doc._.pytt_word_pieces_[-1] == "<cls>"
+    assert doc._.get(ATTRS.word_pieces_)[-2] == "</s>"
+    assert doc._.get(ATTRS.word_pieces_)[-1] == "<cls>"
 
 
 def test_tokenizers_to_from_bytes(name):
     text = "hello world"
-    tokenizer_cls = get_pytt_tokenizer(name)
+    tokenizer_cls = get_tokenizer(name)
     tokenizer = tokenizer_cls.from_pretrained(name)
     doc = tokenizer.tokenize(text)
     assert isinstance(doc, list) and len(doc)

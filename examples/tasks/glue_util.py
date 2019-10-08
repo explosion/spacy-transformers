@@ -2,7 +2,7 @@
 """
 Utilities to work with the GLUE shared task data.
 
-Adapted from Huggingface's pytorch-transformers.
+Adapted from Huggingface's transformers.
 """
 import csv
 from dataclasses import dataclass

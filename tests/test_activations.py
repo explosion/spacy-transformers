@@ -1,6 +1,6 @@
 import pytest
 import numpy
-from spacy_pytorch_transformers.activations import Activations, RaggedArray
+from spacy_transformers.activations import Activations, RaggedArray
 
 
 def test_act_blank():

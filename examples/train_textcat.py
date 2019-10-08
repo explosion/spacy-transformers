@@ -12,7 +12,7 @@ from spacy.util import minibatch
 import tqdm
 import unicodedata
 import wasabi
-from spacy_pytorch_transformers.util import cyclic_triangular_rate
+from spacy_transformers.util import cyclic_triangular_rate
 
 
 @plac.annotations(
@@ -52,7 +52,8 @@ def main(
     print(nlp.pipe_names)
     print(f"Loaded model '{model}'")
     textcat = nlp.create_pipe(
-        "pytt_textcat", config={"architecture": "softmax_last_hidden", "words_per_batch": max_wpb}
+        "trf_textcat",
+        config={"architecture": "softmax_last_hidden", "words_per_batch": max_wpb},
     )
     if input_dir is not None:
         train_texts, train_cats = read_inputs(input_dir / "training.jsonl")
@@ -102,7 +103,7 @@ def main(
     # Initialize the TextCategorizer, and create an optimizer.
     optimizer = nlp.resume_training()
     optimizer.alpha = 0.001
-    optimizer.pytt_weight_decay = 0.005
+    optimizer.trf_weight_decay = 0.005
     optimizer.L2 = 0.0
     learn_rates = cyclic_triangular_rate(
         learn_rate / 3, learn_rate * 3, 2 * len(train_data) // batch_size
@@ -122,7 +123,7 @@ def main(
         random.shuffle(train_data)
         batches = minibatch(train_data, size=batch_size)
         for batch in batches:
-            optimizer.pytt_lr = next(learn_rates)
+            optimizer.trf_lr = next(learn_rates)
             texts, annotations = zip(*batch)
             nlp.update(texts, annotations, sgd=optimizer, drop=0.1, losses=losses)
             pbar.update(1)
@@ -133,7 +134,7 @@ def main(
                 results.append((scores["textcat_f"], step, epoch))
                 print(
                     "{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}".format(
-                        losses["pytt_textcat"],
+                        losses["trf_textcat"],
                         scores["textcat_p"],
                         scores["textcat_r"],
                         scores["textcat_f"],

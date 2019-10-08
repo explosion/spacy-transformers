@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import plac
 from wasabi import Printer
-from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
-from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
+from spacy_transformers import TransformersLanguage, TransformersWordPiecer
+from spacy_transformers import TransformersTok2Vec
 
 
 @plac.annotations(
@@ -14,10 +14,10 @@ def main(path, name="bert-base-uncased", lang="en"):
     msg = Printer()
     msg.info(f"Creating model for '{name}' ({lang})")
     with msg.loading(f"Setting up the pipeline..."):
-        nlp = PyTT_Language(pytt_name=name, meta={"lang": lang})
+        nlp = TransformersLanguage(trf_name=name, meta={"lang": lang})
         nlp.add_pipe(nlp.create_pipe("sentencizer"))
-        nlp.add_pipe(PyTT_WordPiecer.from_pretrained(nlp.vocab, name))
-        nlp.add_pipe(PyTT_TokenVectorEncoder.from_pretrained(nlp.vocab, name))
+        nlp.add_pipe(TransformersWordPiecer.from_pretrained(nlp.vocab, name))
+        nlp.add_pipe(TransformersTok2Vec.from_pretrained(nlp.vocab, name))
     msg.good("Initialized the model pipeline")
     nlp.to_disk(path)
     msg.good(f"Saved '{name}' ({lang})")

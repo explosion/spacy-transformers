@@ -1,6 +1,6 @@
 import pytest
-from spacy_pytorch_transformers import PyTT_Language, PyTT_WordPiecer
-from spacy_pytorch_transformers import PyTT_TokenVectorEncoder
+from spacy_transformers import TransformersLanguage, TransformersWordPiecer
+from spacy_transformers import TransformersTok2Vec
 
 MODEL_NAMES = ["bert-base-uncased", "gpt2", "xlnet-base-cased"]
 
@@ -12,8 +12,8 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def nlp(name):
-    p_nlp = PyTT_Language(pytt_name=name)
+    p_nlp = TransformersLanguage(trf_name=name)
     p_nlp.add_pipe(p_nlp.create_pipe("sentencizer"))
-    p_nlp.add_pipe(PyTT_WordPiecer.from_pretrained(p_nlp.vocab, pytt_name=name))
-    p_nlp.add_pipe(PyTT_TokenVectorEncoder.from_pretrained(p_nlp.vocab, name=name))
+    p_nlp.add_pipe(TransformersWordPiecer.from_pretrained(p_nlp.vocab, trf_name=name))
+    p_nlp.add_pipe(TransformersTok2Vec.from_pretrained(p_nlp.vocab, name=name))
     return p_nlp

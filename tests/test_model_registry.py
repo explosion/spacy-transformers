@@ -1,8 +1,8 @@
 import pytest
 import numpy
 from thinc.api import layerize
-from spacy_pytorch_transformers.model_registry import with_length_batching
-from spacy_pytorch_transformers.activations import Activations, RaggedArray
+from spacy_transformers.model_registry import with_length_batching
+from spacy_transformers.activations import Activations, RaggedArray
 
 
 def make_activations(inputs, width):

@@ -12,8 +12,8 @@ from collections import Counter
 from pathlib import Path
 from spacy.util import minibatch
 
-from spacy_pytorch_transformers.util import cyclic_triangular_rate
-from spacy_pytorch_transformers.hyper_params import get_hyper_params
+from spacy_transformers.util import cyclic_triangular_rate, PIPES, ATTRS
+from spacy_transformers.hyper_params import get_hyper_params
 
 from glue_util import read_train_data, read_dev_data
 from glue_util import describe_task
@@ -22,7 +22,7 @@ from metrics import compute_metrics
 
 def create_model(model_name, *, task_type, task_name, labels):
     nlp = spacy.load(model_name)
-    textcat = nlp.create_pipe("pytt_textcat", config={"architecture": HP.textcat_arch})
+    textcat = nlp.create_pipe(PIPES.textcat, config={"architecture": HP.textcat_arch})
     for label in labels:
         textcat.add_label(label)
     nlp.add_pipe(textcat)
@@ -40,8 +40,8 @@ def train_epoch(nlp, optimizer, train_data):
     global HP
     random.shuffle(train_data)
     batches = minibatch(train_data, size=HP.batch_size)
-    tok2vec = nlp.get_pipe("pytt_tok2vec")
-    textcat = nlp.get_pipe("pytt_textcat")
+    tok2vec = nlp.get_pipe(PIPES.tok2vec)
+    textcat = nlp.get_pipe(PIPES.textcat)
     for batch in batches:
         docs, golds = zip(*batch)
         tokvecs, backprop_tok2vec = tok2vec.begin_update(docs, drop=HP.dropout)
@@ -55,8 +55,8 @@ def train_epoch(nlp, optimizer, train_data):
 
 
 def evaluate(nlp, task, docs_golds):
-    tok2vec = nlp.get_pipe("pytt_tok2vec")
-    textcat = nlp.get_pipe("pytt_textcat")
+    tok2vec = nlp.get_pipe(PIPES.tok2vec)
+    textcat = nlp.get_pipe(PIPES.textcat)
     right = 0
     total = 0
     guesses = []
@@ -99,8 +99,8 @@ def process_data(nlp, task, examples):
     """Set-up Doc and GoldParse objects from the examples. This makes it easier
     to set up text-pair tasks, and also easy to handle datasets with non-real
     tokenization."""
-    wordpiecer = nlp.get_pipe("pytt_wordpiecer")
-    textcat = nlp.get_pipe("pytt_textcat")
+    wordpiecer = nlp.get_pipe(PIPES.wordpiecer)
+    textcat = nlp.get_pipe(PIPES.textcat)
     docs = []
     golds = []
     for eg in examples:
@@ -108,7 +108,7 @@ def process_data(nlp, task, examples):
             assert "\n" not in eg.text_a
             assert "\n" not in eg.text_b
             doc = nlp.make_doc(eg.text_a + "\n" + eg.text_b)
-            doc._.pytt_separator = "\n"
+            doc._.set(ATTRS.separator, "\n")
         else:
             doc = nlp.make_doc(eg.text_a)
         doc = wordpiecer(doc)
@@ -122,14 +122,14 @@ def process_data(nlp, task, examples):
 
 def free_tensors(doc):
     doc.tensor = None
-    doc._.pytt_last_hidden_state = None
-    doc._.pytt_pooler_output = None
-    doc._.pytt_all_hidden_states = []
-    doc._.pytt_all_attentions = []
-    doc._.pytt_d_last_hidden_state = None
-    doc._.pytt_d_pooler_output = None
-    doc._.pytt_d_all_hidden_states = []
-    doc._.pytt_d_all_attentions = []
+    doc._.set(ATTRS.last_hidden_state, None)
+    doc._.set(ATTRS.pooler_output, None)
+    doc._.set(ATTRS.all_hidden_states, [])
+    doc._.set(ATTRS.all_attentions, [])
+    doc._.set(ATTRS.d_last_hidden_state, None)
+    doc._.set(ATTRS.d_pooler_output, None)
+    doc._.set(ATTRS.d_all_hidden_states, [])
+    doc._.set(ATTRS.d_all_attentions, [])
 
 
 def main(
@@ -173,9 +173,9 @@ def main(
         HP.learning_rate * HP.lr_range,
         nr_batch * HP.lr_period,
     )
-    optimizer.pytt_lr = next(learn_rates)
-    optimizer.pytt_weight_decay = HP.weight_decay
-    optimizer.pytt_use_swa = HP.use_swa
+    optimizer.trf_lr = next(learn_rates)
+    optimizer.trf_weight_decay = HP.weight_decay
+    optimizer.trf_use_swa = HP.use_swa
     # This sets the learning rate for the Thinc layers, i.e. just the final
     # softmax. By keeping this LR high, we avoid a problem where the model
     # spends too long flat, which harms the transfer learning.
@@ -193,13 +193,13 @@ def main(
             pbar.update(1)
             losses.update(loss)
 
-            optimizer.pytt_lr = next(learn_rates)
+            optimizer.trf_lr = next(learn_rates)
             if step and (step % HP.eval_every) == 0:
                 with nlp.use_params(optimizer.averages):
                     main_score, accuracies = evaluate(nlp, task, dev_data)
                 results.append((main_score, step, epoch))
                 msg.row(
-                    [str(step), "%.2f" % losses["pytt_textcat"], main_score],
+                    [str(step), "%.2f" % losses[PIPES.textcat], main_score],
                     widths=table_widths,
                 )
                 pbar.close()
