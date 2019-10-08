@@ -2,8 +2,8 @@
 
 # spacy-transformers
 
-This package provides [spaCy](https://github.com/explosion/spaCy) model
-pipelines that wrap
+This package (previously `spacy-pytorch-transformers`) provides
+[spaCy](https://github.com/explosion/spaCy) model pipelines that wrap
 [Hugging Face's `transformers`](https://github.com/huggingface/transformers)
 package, so you can use them in spaCy. The result is convenient access to
 state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc. For
@@ -34,7 +34,7 @@ Installing the package from pip will automatically install all dependencies,
 including PyTorch and spaCy. Make sure you install this package **before** you
 install the models. Also note that this package requires **Python 3.6+** and the
 latest version of spaCy,
-[v2.1.7](https://github.com/explosion/spaCy/releases/tag/v2.1.7) or above.
+[v2.2.0](https://github.com/explosion/spaCy/releases/tag/v2.2.0) or above.
 
 ```bash
 pip install spacy-transformers
@@ -83,6 +83,11 @@ print(doc._.trf_last_hidden_state.shape)
 > running spaCy v2.1.7 or higher.
 
 ## 📖 Usage
+
+> ⚠️ **Important note:** This package was previously called
+> `spacy-pytorch-transformers` and used attributes and pipeline components
+> prefixed with `pytt`. It's now called `spacy-transformers` and uses the prefix
+> `trf`.
 
 ### Transfer learning
 
