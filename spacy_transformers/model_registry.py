@@ -4,6 +4,7 @@ from thinc.t2v import Pooling, mean_pool
 from thinc.v2v import Softmax, Affine, Model
 from thinc.neural.util import get_array_module
 from spacy.tokens import Span, Doc
+from spacy._ml import PrecomputableAffine, flatten
 import numpy
 
 from .wrapper import TransformersWrapper
@@ -113,6 +114,56 @@ def softmax_pooler_output(nr_class, *, exclusive_classes=True, **cfg):
         with_getitem(0, Softmax(nr_class, cfg["token_vector_width"])),
         Pooling(mean_pool),
     )
+
+@register_model("tensor_affine_tok2vec")
+def tensor_affine_tok2vec(output_size, tensor_size, **cfg):
+    return chain(
+        get_tensors,
+        flatten,
+        Affine(output_size, tensor_size)
+    )
+
+
+@register_model("precomputable_maxout")
+def precompute_hiddens(nO, nI, nF, nP, **cfg):
+    return PrecomputableAffine(hidden_width, nF=nr_feature,
+        nI=token_vector_width, nP=parser_maxout_pieces)
+ 
+
+@register_model("affine_output")
+def affine_output(nO, nI, drop_factor, **cfg):
+    return Affine(nO, nI, drop_factor=drop_factor)
+ 
+
+@layerize
+def get_tensors(docs, drop=0.0):
+    """Output a List[array], where the array is the tensor of each document."""
+    tensors = [doc.tensor for doc in docs]
+
+    def backprop_tensors(d_tensors, sgd=None):
+        for doc, d_t in zip(docs, d_tensor):
+            # Count how often each word-piece token is represented. This allows
+            # a weighted sum, so that we can make sure doc.tensor.sum()
+            # equals wp_tensor.sum(). Do this with sensitivity to boundary tokens
+            wp_rows, align_sizes = _get_boundary_sensitive_alignment(doc)
+            d_lh = _get_or_set_d_last_hidden_state(doc)
+            for i, word_piece_slice in enumerate(wp_rows):
+                for j in word_piece_slice:
+                    d_lh[j] += d_tensor[i]
+            xp = get_array_module(d_lh)
+            d_lh /= xp.array(align_sizes, dtype="f").reshape(-1, 1)
+            return None
+
+    return tensors, backprop_tensors
+
+
+def _get_or_set_d_last_hidden_state(doc):
+    xp = get_array_model(doc._.get(ATTRS.last_hidden_state)
+    if doc._.get(ATTRS.d_last_hidden_state).size == 0:
+        shape = doc._.get(ATTRS.last_hidden_state).shape
+        dtype = doc._.get(ATTRS.last_hidden_state).dtype
+        doc._.set(ATTRS.d_last_hidden_state, xp.zeros(shape, dtype=dtype))
+    return doc._.get(ATTRS.d_last_hidden_state)
 
 
 @layerize
