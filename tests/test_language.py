@@ -1,7 +1,7 @@
 import pytest
 from numpy.testing import assert_equal
 from spacy_transformers import TransformersLanguage, TransformersWordPiecer
-from spacy_transformers import TransformersTok2Vec, about
+from spacy_transformers import TransformersTok2Vec, pkg_meta
 from spacy_transformers.util import ATTRS
 from spacy.attrs import LANG
 
@@ -18,7 +18,7 @@ def test_language_init(name):
     # Make sure we really have the EnglishDefaults here
     assert nlp.Defaults.lex_attr_getters[LANG](None) == "en"
     # Test requirements
-    package = f"{about.__title__}>={about.__version__}"
+    package = f"{pkg_meta['title']}>={pkg_meta['version']}"
     assert package in nlp.meta["requirements"]
 
 

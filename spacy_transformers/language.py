@@ -2,9 +2,7 @@ from spacy.language import Language
 from spacy.tokens import Doc, Span, Token
 from spacy.util import get_lang_class
 from spacy.gold import GoldParse
-
-from .util import is_special_token, ATTRS, PIPES, LANG_FACTORY
-from . import about
+from .util import is_special_token, pkg_meta, ATTRS, PIPES, LANG_FACTORY
 
 
 class TransformersLanguage(Language):
@@ -64,7 +62,7 @@ class TransformersLanguage(Language):
         meta["lang_factory"] = self.lang_factory_name
         # Add this package to requirements to it will be included in the
         # install_requires of any model using this language class
-        package = f"{about.__title__}>={about.__version__}"
+        package = f"{pkg_meta['title']}>={pkg_meta['version']}"
         meta.setdefault("requirements", []).append(package)
         self.lang = meta.get("lang", "xx")
         self.Defaults = get_defaults(self.lang)
