@@ -540,7 +540,7 @@ similarity hooks.
 | `docs`    | iterable | A batch of `Doc` objects. |
 | `outputs` | iterable | A batch of outputs.       |
 
-### <kbd>class</kbd> `trf_textcategorizer`
+### <kbd>class</kbd> `TransformersTextCategorizer`
 
 Subclass of spaCy's built-in
 [`TextCategorizer`](https://spacy.io/api/textcategorizer) component that
@@ -556,17 +556,17 @@ so it can also be created using
 textcat = nlp.create_pipe("trf_textcat")
 ```
 
-#### <kbd>classmethod</kbd> `trf_textcategorizer.from_nlp`
+#### <kbd>classmethod</kbd> `TransformersTextCategorizer.from_nlp`
 
 Factory to add to `Language.factories` via entry point.
 
-| Name        | Type                      | Description                                     |
-| ----------- | ------------------------- | ----------------------------------------------- |
-| `nlp`       | `spacy.language.Language` | The `nlp` object the component is created with. |
-| `**cfg`     | -                         | Optional config parameters.                     |
-| **RETURNS** | `trf_textcategorizer`     | The text categorizer.                           |
+| Name        | Type                          | Description                                     |
+| ----------- | ----------------------------- | ----------------------------------------------- |
+| `nlp`       | `spacy.language.Language`     | The `nlp` object the component is created with. |
+| `**cfg`     | -                             | Optional config parameters.                     |
+| **RETURNS** | `TransformersTextCategorizer` | The text categorizer.                           |
 
-#### <kbd>classmethod</kbd> `trf_textcategorizer.Model`
+#### <kbd>classmethod</kbd> `TransformersTextCategorizer.Model`
 
 Create a text classification model using a `transformers` model for token vector
 encoding.
@@ -608,9 +608,9 @@ define `"trf_tok2vec"` in their pipelines, and spaCy will know how to create
 those components when you deserialize the model. The following entry points are
 set:
 
-| Name             | Target                   | Type              | Description                      |
-| ---------------- | ------------------------ | ----------------- | -------------------------------- |
-| `trf_wordpiecer` | `TransformersWordPiecer` | `spacy_factories` | Factory to create the component. |
-| `trf_tok2vec`    | `TransformersTok2Vec`    | `spacy_factories` | Factory to create the component. |
-| `trf_textcat`    | `trf_textcategorizer`    | `spacy_factories` | Factory to create the component. |
-| `trf`            | `TransformersLanguage`   | `spacy_languages` | Custom `Language` subclass.      |
+| Name             | Target                        | Type              | Description                      |
+| ---------------- | ----------------------------- | ----------------- | -------------------------------- |
+| `trf_wordpiecer` | `TransformersWordPiecer`      | `spacy_factories` | Factory to create the component. |
+| `trf_tok2vec`    | `TransformersTok2Vec`         | `spacy_factories` | Factory to create the component. |
+| `trf_textcat`    | `TransformersTextCategorizer` | `spacy_factories` | Factory to create the component. |
+| `trf`            | `TransformersLanguage`        | `spacy_languages` | Custom `Language` subclass.      |
