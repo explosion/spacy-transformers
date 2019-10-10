@@ -1,24 +1,23 @@
 import pytest
-from spacy_transformers.pipeline import TransformersTextCategorizer
+from spacy_transformers.pipeline import TransformersEntityRecognizer
 from spacy_transformers.util import PIPES
 from spacy.gold import GoldParse
 
-
-def textcat(name, nlp, request):
-    arch = request.param
+@pytest.fixture
+def ner(name, nlp):
     tensor_size = nlp.get_pipe(PIPES.tok2vec).model.nO
     ner = TransformersEntityRecognizer(nlp.vocab)
     ner.add_label("PERSON")
     config = {"trf_name": name, "tensor_size": tensor_size}
-    ner.begin_training(**config)
+    ner.begin_training(lambda: [], **config)
     return ner
 
 
 def test_ner_init(nlp):
     ner = TransformersEntityRecognizer(nlp.vocab)
-    assert textcat.labels == ()
-    textcat.add_label("PERSON")
-    assert textcat.labels == ("PERSON",)
+    assert ner.labels == ()
+    ner.add_label("PERSON")
+    assert ner.labels == ("PERSON",)
 
 
 def test_ner_call(ner, nlp):
