@@ -153,7 +153,7 @@ def get_tensors(docs, drop=0.0):
                     d_lh[j] += d_t[i]
             xp = get_array_module(d_lh)
             d_lh /= xp.array(align_sizes, dtype="f").reshape(-1, 1)
-            return None
+        return None
 
     return tensors, backprop_tensors
 
