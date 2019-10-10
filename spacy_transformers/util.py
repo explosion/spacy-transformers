@@ -411,4 +411,24 @@ def cyclic_triangular_rate(min_lr, max_lr, period):
         it += 1
 
 
+def get_boundary_sensitive_alignment(doc):
+    align_sizes = [0 for _ in range(len(doc._.get(ATTRS.word_pieces)))]
+    wp_rows = []
+    for word_piece_slice in doc._.get(ATTRS.alignment):
+        wp_rows.append(list(word_piece_slice))
+        for i in word_piece_slice:
+            align_sizes[i] += 1
+    # To make this weighting work, we "align" the boundary tokens against
+    # every token in their sentence. The boundary tokens are otherwise
+    # unaligned, which is how we identify them.
+    for sent in get_sents(doc):
+        offset = sent._.get(ATTRS.start)
+        for i in range(len(sent._.get(ATTRS.word_pieces))):
+            if align_sizes[offset + i] == 0:
+                align_sizes[offset + i] = len(sent)
+                for tok in sent:
+                    wp_rows[tok.i].append(offset + i)
+    return wp_rows, align_sizes
+
+
 from .activations import Activations  # noqa

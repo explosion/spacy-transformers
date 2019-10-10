@@ -11,6 +11,7 @@ from .wrapper import TransformersWrapper
 from .util import Array, Dropout, Optimizer
 from .util import batch_by_length, flatten_list, is_class_token
 from .util import get_segment_ids, is_special_token, ATTRS
+from .util import get_boundary_sensitive_alignment
 from .activations import Activations as Acts
 from .activations import RaggedArray
 
@@ -125,14 +126,14 @@ def tensor_affine_tok2vec(output_size, tensor_size, **cfg):
 
 
 @register_model("precomputable_maxout")
-def precompute_hiddens(nO, nI, nF, nP, **cfg):
-    return PrecomputableAffine(hidden_width, nF=nr_feature,
-        nI=token_vector_width, nP=parser_maxout_pieces)
+def precompute_hiddens(hidden_width, token_vector_width, nr_feat, maxout_pieces, **cfg):
+    return PrecomputableAffine(hidden_width, nF=nr_feat,
+        nI=token_vector_width, nP=maxout_pieces)
  
 
 @register_model("affine_output")
-def affine_output(nO, nI, drop_factor, **cfg):
-    return Affine(nO, nI, drop_factor=drop_factor)
+def affine_output(output_size, input_size, drop_factor, **cfg):
+    return Affine(output_size, input_size, drop_factor=drop_factor)
  
 
 @layerize
@@ -141,15 +142,15 @@ def get_tensors(docs, drop=0.0):
     tensors = [doc.tensor for doc in docs]
 
     def backprop_tensors(d_tensors, sgd=None):
-        for doc, d_t in zip(docs, d_tensor):
+        for doc, d_t in zip(docs, d_tensors):
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum(). Do this with sensitivity to boundary tokens
-            wp_rows, align_sizes = _get_boundary_sensitive_alignment(doc)
+            wp_rows, align_sizes = get_boundary_sensitive_alignment(doc)
             d_lh = _get_or_set_d_last_hidden_state(doc)
             for i, word_piece_slice in enumerate(wp_rows):
                 for j in word_piece_slice:
-                    d_lh[j] += d_tensor[i]
+                    d_lh[j] += d_t[i]
             xp = get_array_module(d_lh)
             d_lh /= xp.array(align_sizes, dtype="f").reshape(-1, 1)
             return None
@@ -158,7 +159,7 @@ def get_tensors(docs, drop=0.0):
 
 
 def _get_or_set_d_last_hidden_state(doc):
-    xp = get_array_model(doc._.get(ATTRS.last_hidden_state)
+    xp = get_array_module(doc._.get(ATTRS.last_hidden_state))
     if doc._.get(ATTRS.d_last_hidden_state).size == 0:
         shape = doc._.get(ATTRS.last_hidden_state).shape
         dtype = doc._.get(ATTRS.last_hidden_state).dtype

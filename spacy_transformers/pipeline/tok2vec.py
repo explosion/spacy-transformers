@@ -9,6 +9,7 @@ from ..wrapper import TransformersWrapper
 from ..model_registry import get_model_function
 from ..activations import Activations, RaggedArray
 from ..util import get_config, get_model, get_sents, PIPES, ATTRS
+from ..util import get_boundary_sensitive_alignment
 
 
 class TransformersTok2Vec(Pipe):
@@ -190,7 +191,7 @@ class TransformersTok2Vec(Pipe):
             # Count how often each word-piece token is represented. This allows
             # a weighted sum, so that we can make sure doc.tensor.sum()
             # equals wp_tensor.sum(). Do this with sensitivity to boundary tokens
-            wp_rows, align_sizes = _get_boundary_sensitive_alignment(doc)
+            wp_rows, align_sizes = get_boundary_sensitive_alignment(doc)
             wp_weighted = wp_tensor / xp.array(align_sizes, dtype="f").reshape((-1, 1))
             # TODO: Obviously incrementing the rows individually is bad. How
             # to do in one shot without blowing up the memory?
@@ -202,26 +203,6 @@ class TransformersTok2Vec(Pipe):
             doc.user_hooks["similarity"] = get_similarity_via_tensor
             doc.user_span_hooks["similarity"] = get_similarity_via_tensor
             doc.user_token_hooks["similarity"] = get_similarity_via_tensor
-
-
-def _get_boundary_sensitive_alignment(doc):
-    align_sizes = [0 for _ in range(len(doc._.get(ATTRS.word_pieces)))]
-    wp_rows = []
-    for word_piece_slice in doc._.get(ATTRS.alignment):
-        wp_rows.append(list(word_piece_slice))
-        for i in word_piece_slice:
-            align_sizes[i] += 1
-    # To make this weighting work, we "align" the boundary tokens against
-    # every token in their sentence. The boundary tokens are otherwise
-    # unaligned, which is how we identify them.
-    for sent in get_sents(doc):
-        offset = sent._.get(ATTRS.start)
-        for i in range(len(sent._.get(ATTRS.word_pieces))):
-            if align_sizes[offset + i] == 0:
-                align_sizes[offset + i] = len(sent)
-                for tok in sent:
-                    wp_rows[tok.i].append(offset + i)
-    return wp_rows, align_sizes
 
 
 def get_doc_vector_via_tensor(doc):
