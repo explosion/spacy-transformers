@@ -142,7 +142,8 @@ class TransformersLanguage(Language):
             if "token_vector_width" not in component_cfg:
                 cfg["token_vector_width"] = token_vector_width
             component.cfg.update(cfg)
-            component.begin_training(pipeline=self.pipeline, sgd=False, **cfg)
+            component.begin_training(get_gold_tuples=lambda: [],
+                pipeline=self.pipeline, sgd=False, **cfg)
             assert component.model is not True
         optimizer = super().resume_training(sgd=sgd, **kwargs)
         optimizer.L2 = 0.0
