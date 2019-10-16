@@ -86,6 +86,9 @@ class TransformersLanguage(Language):
                 doc = self.make_doc(doc)
                 doc = sentencizer(doc)
                 doc = wp(doc)
+            elif isinstance(doc, Doc):
+                doc = sentencizer(doc)
+                doc = wp(doc)
             if not isinstance(gold, GoldParse):
                 gold = GoldParse(doc, **gold)
             new_docs.append(doc)
