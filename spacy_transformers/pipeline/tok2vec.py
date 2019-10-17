@@ -195,8 +195,11 @@ class TransformersTok2Vec(Pipe):
             wp_weighted = wp_tensor / xp.array(align_sizes, dtype="f").reshape((-1, 1))
             # TODO: Obviously incrementing the rows individually is bad. How
             # to do in one shot without blowing up the memory?
+            # It made sense to do wp_weighted[word_piece_slice], but this didn't
+            # work? Reverted, hopefully we can figure out the problem.
             for i, word_piece_slice in enumerate(wp_rows):
-                doc.tensor[i] = wp_weighted[word_piece_slice].sum(0)
+                for idx in word_piece_slice:
+                    doc.tensor[i] += wp_weighted[idx]
             doc.user_hooks["vector"] = get_doc_vector_via_tensor
             doc.user_span_hooks["vector"] = get_span_vector_via_tensor
             doc.user_token_hooks["vector"] = get_token_vector_via_tensor
