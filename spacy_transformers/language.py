@@ -102,10 +102,16 @@ class TransformersLanguage(Language):
         for doc in docs:
             assert doc._.get(ATTRS.last_hidden_state) is not None
         with self.disable_pipes(PIPES.tok2vec):
+            # This feels like a pretty unsatisfying hack, but the
+            # sentence boundaries mess up the NER and parser
+            # training, because they might be incorrect.
+            for doc in docs:
+                for token in doc:
+                    token.is_sent_start = None
             super().update(
                 docs,
                 golds,
-                drop=0.1,
+                drop=drop,
                 sgd=sgd,
                 losses=losses,
                 component_cfg=component_cfg,
