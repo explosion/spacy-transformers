@@ -23,13 +23,14 @@ class TransformersEntityRecognizer(spacy.pipeline.EntityRecognizer):
 
     @classmethod
     def Model(cls, nr_class, **cfg):
-        hidden_width = cfg.get("hidden_width", 64)
-        token_vector_width = cfg.get("token_vector_width", 96)
+        hidden_width = cfg.get("hidden_width", nr_class)
+        token_vector_width = cfg.get("token_vector_width", nr_class)
         nr_feature = cls.nr_feature
-        maxout_pieces = cfg.get("maxout_pieces", 3)
+        maxout_pieces = cfg.get("maxout_pieces", 4)
         tensor_size = cfg.get("tensor_size", 768)
 
         configs = {
+            "nr_class": nr_class,
             "tok2vec": {
                 "arch": "tensor_affine_tok2vec",
                 "config": {
