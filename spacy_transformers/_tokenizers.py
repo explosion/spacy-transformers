@@ -370,6 +370,7 @@ class SerializableXLMTokenizer(transformers.XLMTokenizer, SerializationMixin):
 class SerializableXLNetTokenizer(transformers.XLNetTokenizer, SerializationMixin):
     _replace_re = re.compile(r"[\s'\";]+")
     _replacements = [("º", "o"), *zip("⁰¹²³⁴⁵⁶⁷⁸⁹", "0123456789")]
+    CONTROL_CHARACTER = "\u2581"
     serialization_fields = list(BASE_CLASS_FIELDS) + [
         "do_lower_case",
         "remove_space",
@@ -400,7 +401,7 @@ class SerializableXLNetTokenizer(transformers.XLNetTokenizer, SerializationMixin
         text = clean_accents(text)
         for a, b in self._replacements:
             text = text.replace(a, b)
-        text = clean_extended_unicode(text)
+        text = text.replace(self.CONTROL_CHARACTER, "")
         text = self._replace_re.sub("", text)
         return text.strip()
 
@@ -409,7 +410,7 @@ class SerializableXLNetTokenizer(transformers.XLNetTokenizer, SerializationMixin
         text = clean_accents(text)
         for a, b in self._replacements:
             text = text.replace(a, b)
-        text = clean_extended_unicode(text)
+        text = text.replace(self.CONTROL_CHARACTER, "")
         text = self._replace_re.sub("", text)
         return text.strip()
 
