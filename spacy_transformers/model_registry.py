@@ -158,7 +158,7 @@ def get_tensors(docs, drop=0.0):
 
 
 def _get_or_set_d_last_hidden_state(doc):
-    xp = get_array_model(doc._.get(ATTRS.last_hidden_state)
+    xp = get_array_model(doc._.get(ATTRS.last_hidden_state))
     if doc._.get(ATTRS.d_last_hidden_state).size == 0:
         shape = doc._.get(ATTRS.last_hidden_state).shape
         dtype = doc._.get(ATTRS.last_hidden_state).dtype
