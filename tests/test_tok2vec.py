@@ -32,7 +32,7 @@ def test_set_annotations(name, tok2vec, docs):
     tok2vec.set_annotations(docs, scores)
     for doc in docs:
         assert doc._.get(ATTRS.last_hidden_state) is not None
-        if "bert" in name:
+        if name.startswith("bert"):
             assert doc._.get(ATTRS.pooler_output) is not None
         assert doc._.get(ATTRS.d_last_hidden_state) is not None
         assert doc._.get(ATTRS.d_last_hidden_state).ndim == 2
