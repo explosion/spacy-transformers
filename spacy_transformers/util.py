@@ -68,17 +68,17 @@ LANG_FACTORY = "trf"
 def get_config(name):
     """Map a name to the appropriate transformers.*Config class."""
     name = name.lower()
-    if "roberta" in name:
+    if name.startswith("roberta"):
         return transformers.RobertaConfig
-    elif "distilbert" in name:
+    elif name.startswith("distilbert"):
         return transformers.DistilBertConfig
-    elif "bert" in name:
+    elif name.startswith("bert"):
         return transformers.BertConfig
-    elif "xlnet" in name:
+    elif name.startswith("xlnet"):
         return transformers.XLNetConfig
-    elif "gpt2" in name:
+    elif name.startswith("gpt2"):
         return transformers.GPT2Config
-    elif "xlm" in name:
+    elif name.startswith("xlm"):
         return transformers.XLMConfig
     else:
         raise ValueError(f"Unsupported transformers config name: '{name}'")
@@ -87,17 +87,17 @@ def get_config(name):
 def get_model(name):
     """Map a name to the appropriate transformers.*Model class."""
     name = name.lower()
-    if "roberta" in name:
+    if name.startswith("roberta"):
         return transformers.RobertaModel
-    elif "distilbert" in name:
+    elif name.startswith("distilbert"):
         return transformers.DistilBertModel
-    elif "bert" in name:
+    elif name.startswith("bert"):
         return transformers.BertModel
-    elif "xlnet" in name:
+    elif name.startswith("xlnet"):
         return transformers.XLNetModel
-    elif "gpt2" in name:
+    elif name.startswith("gpt2"):
         return transformers.GPT2Model
-    elif "xlm" in name:
+    elif name.startswith("xlm"):
         return transformers.XLMModel
     else:
         raise ValueError(f"Unsupported transformers config name: '{name}'")
@@ -106,17 +106,17 @@ def get_model(name):
 def get_tokenizer(name):
     """Get a transformers.*Tokenizer class from a name."""
     name = name.lower()
-    if "roberta" in name:
+    if name.startswith("roberta"):
         return _tokenizers.SerializableRobertaTokenizer
-    elif "distilbert" in name:
+    elif name.startswith("distilbert"):
         return _tokenizers.SerializableDistilBertTokenizer
-    elif "bert" in name:
+    elif name.startswith("bert"):
         return _tokenizers.SerializableBertTokenizer
-    elif "xlnet" in name:
+    elif name.startswith("xlnet"):
         return _tokenizers.SerializableXLNetTokenizer
-    elif "gpt2" in name:
+    elif name.startswith("gpt2"):
         return _tokenizers.SerializableGPT2Tokenizer
-    elif "xlm" in name:
+    elif name.startswith("xlm"):
         return _tokenizers.SerializableXLMTokenizer
     else:
         raise ValueError(f"Unsupported transformers config name: '{name}'")
@@ -271,15 +271,15 @@ def get_segment_ids(name: str, *lengths) -> List[int]:
     else:
         msg = f"Expected 1 or 2 segments. Got {len(lengths)}"
         raise ValueError(msg)
-    if "bert" in name:
+    if name.startswith("bert"):
         return get_bert_segment_ids(length1, length2)
-    elif "xlnet" in name:
+    elif name.startswith("xlnet"):
         return get_xlnet_segment_ids(length1, length2)
-    elif "xlm" in name:
+    elif name.startswith("xlm"):
         return get_xlm_segment_ids(length1, length2)
-    elif "gpt2" in name:
+    elif name.startswith("gpt2"):
         return get_gpt2_segment_ids(length1, length2)
-    elif "roberta" in name:
+    elif name.startswith("roberta"):
         return get_roberta_segment_ids(length1, length2)
 
     else:

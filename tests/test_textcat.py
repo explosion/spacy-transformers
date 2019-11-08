@@ -13,11 +13,14 @@ def textcat(name, nlp, request):
     textcat = TransformersTextCategorizer(nlp.vocab, token_vector_width=width)
     textcat.add_label("Hello")
     config = {"architecture": arch, "trf_name": name}
-    if "gpt2" in name and arch in ("softmax_pooler_output", "softmax_class_vector"):
+    if name.startswith("gpt2") and arch in (
+        "softmax_pooler_output",
+        "softmax_class_vector",
+    ):
         with pytest.raises(ValueError):
             textcat.begin_training(**config)
         textcat.begin_training(trf_name=name, architecture="softmax_last_hidden")
-    elif "xlnet" in name and arch == "softmax_pooler_output":
+    elif name.startswith("xlnet") and arch == "softmax_pooler_output":
         with pytest.raises(ValueError):
             textcat.begin_training(**config)
         textcat.begin_training(trf_name=name, architecture="softmax_last_hidden")
