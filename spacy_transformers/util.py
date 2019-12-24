@@ -273,6 +273,8 @@ def get_segment_ids(name: str, *lengths) -> List[int]:
         raise ValueError(msg)
     if name.startswith("bert"):
         return get_bert_segment_ids(length1, length2)
+    elif name.startswith("distilbert"):
+        return get_bert_segment_ids(length1, length2)
     elif name.startswith("xlnet"):
         return get_xlnet_segment_ids(length1, length2)
     elif name.startswith("xlm"):
