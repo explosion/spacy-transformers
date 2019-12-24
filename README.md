@@ -45,6 +45,10 @@ For GPU installation, find your CUDA version using `nvcc --version` and add the
 `spacy-transformers[cuda92]` for CUDA9.2 or `spacy-transformers[cuda100]` for
 CUDA10.0.
 
+If you are having trouble installing PyTorch, follow the 
+[instructions](https://pytorch.org/get-started/locally/) on the official website 
+for your specific operation system and requirements.
+
 We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
