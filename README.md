@@ -240,7 +240,7 @@ examples.
 `transformers` models can also be loaded from a file path instead of just a
 name. For instance, let's say you want to use Allen AI's
 [`scibert`](https://github.com/allenai/scibert). First, download the PyTorch
-model files, unpack them them, unpack the `weights.tar`, rename the
+model files, unpack them, unpack the `weights.tar`, rename the
 `bert_config.json` to `config.json` and put everything into one directory. Your
 directory should now have a `pytorch_model.bin`, `vocab.txt` and `config.json`.
 Also make sure that your path **includes the name of the model**. You can then
@@ -296,7 +296,7 @@ Transformer models have cubic runtime and memory complexity with respect to
 sequence length. This means that longer texts need to be divided into sentences
 in order to achieve reasonable efficiency.
 
-`spacy-transformers` handles this internally, and requires that sort of
+`spacy-transformers` handles this internally, and requires that a
 sentence-boundary detection component has been added to the pipeline. We
 recommend:
 
