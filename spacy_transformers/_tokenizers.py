@@ -33,6 +33,8 @@ BASE_CLASS_FIELDS = [
     "max_len",
     "added_tokens_encoder",
     "added_tokens_decoder",
+    "unique_added_tokens_encoder",
+    "init_kwargs"
 ]
 
 
