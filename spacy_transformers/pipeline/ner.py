@@ -13,6 +13,7 @@ class TransformersEntityRecognizer(spacy.pipeline.EntityRecognizer):
     """
 
     name = PIPES.ner
+    factory = PIPES.ner
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):

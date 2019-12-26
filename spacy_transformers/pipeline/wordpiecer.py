@@ -13,6 +13,7 @@ class TransformersWordPiecer(Pipe):
     only sets extension attributes and aligns the tokens."""
 
     name = PIPES.wordpiecer
+    factory = PIPES.wordpiecer
 
     @classmethod
     def from_nlp(cls, nlp, **cfg):
