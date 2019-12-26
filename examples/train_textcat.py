@@ -117,7 +117,7 @@ def main(
     step = 0
     eval_every = 100
     patience = 3
-    while epoch < n_iter:
+    while True:
         # Train and evaluate
         losses = Counter()
         random.shuffle(train_data)
@@ -209,7 +209,7 @@ def preprocess_text(text):
     )
 
 
-def load_data(*, limit=0, dev_size=2):
+def load_data(*, limit=0, dev_size=2000):
     """Load data from the IMDB dataset, splitting off a held-out set."""
     if limit != 0:
         limit += dev_size
