@@ -40,8 +40,8 @@ def test_wordpiecer(wp):
             "xlnet-base-cased",
             [[0], [1], [2], [3], [4], [5, 6]],
         ),
-        (["å\taa", "が\nπ"], "xlnet-base-cased", [[0, 1, 2], [4, 6]]),
-        (["å\taa", "が\nπ"], "bert-base-uncased", [[1, 2], [3, 4]]),
+        (["å\taa", ".", "が\nπ"], "xlnet-base-cased", [[0, 1, 2], [4, 6]]),
+        (["å\taa", ".", "が\nπ"], "bert-base-uncased", [[1, 2], [3, 4]]),
     ],
 )
 def test_align(wp, sentencizer, name, words, target_name, expected_align):
