@@ -130,6 +130,25 @@ class TransformersWordPiecer(Pipe):
             doc._.set(ATTRS.word_pieces_, wordpieces)
             doc._.set(ATTRS.word_pieces, self.model.convert_tokens_to_ids(wordpieces))
             doc._.set(ATTRS.alignment, alignment)
+            nr_word = len(doc._.get(ATTRS.word_pieces))
+            words_per_sent = sum(
+                len(sent._.get(ATTRS.word_pieces)) for sent in get_sents(doc)
+            )
+            if nr_word != words_per_sent:
+                print([repr(w.text) for w in doc])
+                for sent in get_sents(doc):
+                    print(sent._.get(ATTRS.word_pieces_))
+                    for w in sent:
+                        print(w.text, w._.get(ATTRS.alignment))
+                print(doc._.get(ATTRS.word_pieces_))
+                raise ValueError(
+                    f"Error calculating word pieces for sentences. Total number "
+                    f"of wordpieces in the doc was {nr_word}, but adding up the "
+                    f"wordpieces for its sentences we get {words_per_sent}. This "
+                    f"means there's a bug in the extension attributes or "
+                    f"the tokenizer.add_special_tokens() logic, often when "
+                    f"a spaCy sentence aligns against 0 wordpieces."
+                )
         self.model.max_len = max_len
 
     def use_params(self, params):
