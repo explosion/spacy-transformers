@@ -109,6 +109,7 @@ class TransformersWordPiecer(Pipe):
     def _align(self, segment, wp_tokens, *, offset=0):
         spacy_tokens = [w.text for w in segment]
         a2b, _ = get_alignments(spacy_tokens, wp_tokens)
+        a2b = [[i + offset for i in a] for a in a2b]
         return wp_tokens, a2b
 
     def set_annotations(self, docs, outputs, tensors=None):
