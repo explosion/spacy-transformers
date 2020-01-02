@@ -3,11 +3,17 @@ from spacy_transformers import TransformersWordPiecer
 from spacy_transformers.util import is_special_token, get_tokenizer, ATTRS
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
+from spacy.pipeline import Sentencizer
 
 
 @pytest.fixture(scope="session")
 def wp(name):
     return TransformersWordPiecer.from_pretrained(Vocab(), trf_name=name)
+
+
+@pytest.fixture(scope="session")
+def sentencizer():
+    return Sentencizer()
 
 
 def test_wordpiecer(wp):
@@ -38,10 +44,11 @@ def test_wordpiecer(wp):
         (["å\taa", "が\nπ"], "bert-base-uncased", [[1, 2], [3, 4]]),
     ],
 )
-def test_align(wp, name, words, target_name, expected_align):
+def test_align(wp, sentencizer, name, words, target_name, expected_align):
     if name != target_name:
         pytest.skip()
     doc = Doc(wp.vocab, words=words)
+    doc = sentencizer(doc)
     doc = wp(doc)
     assert doc._.get(ATTRS.alignment) == expected_align
 
