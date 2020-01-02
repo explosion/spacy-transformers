@@ -21,9 +21,34 @@ def test_wordpiecer(wp):
     assert "".join(cleaned_words) == "".join(words)
 
 
+@pytest.mark.parametrize(
+    "words,target_name,expected_align",
+    [
+        (
+            ["hello", "world", "this", "is", "a", "teest"],
+            "bert-base-uncased",
+            [[1], [2], [3], [4], [5], [6, 7]],
+        ),
+        (
+            ["hello", "world", "this", "is", "a", "teest"],
+            "xlnet-base-cased",
+            [[0], [1], [2], [3], [4], [5, 6]],
+        ),
+        (["å\taa", "が\nπ"], "xlnet-base-cased", [[0, 1, 2], [4, 6]]),
+        (["å\taa", "が\nπ"], "bert-base-uncased", [[1, 2], [3, 4]]),
+    ],
+)
+def test_align(wp, name, words, target_name, expected_align):
+    if name != target_name:
+        pytest.skip()
+    doc = Doc(wp.vocab, words=words)
+    doc = wp(doc)
+    assert doc._.get(ATTRS.alignment) == expected_align
+
+
 def test_xlnet_weird_align(name, wp):
     if "xlnet" not in name.lower():
-        return True
+        pytest.skip()
     text = "Well, i rented this movie and found out it realllllllly sucks."
     spacy_tokens = [
         "Well",

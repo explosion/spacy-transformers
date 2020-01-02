@@ -1,5 +1,6 @@
 from spacy.pipeline import Pipe
 from spacy.util import minibatch
+from tokenizations import get_alignments
 import re
 import numpy
 
@@ -106,26 +107,9 @@ class TransformersWordPiecer(Pipe):
         return output
 
     def _align(self, segment, wp_tokens, *, offset=0):
-        retry, force = self.alignment_strategy
-        spacy_tokens = [self.model.clean_token(w.text) for w in segment]
-        new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
-        assert len(wp_tokens) == len(new_wp_tokens)
-        align = align_word_pieces(spacy_tokens, new_wp_tokens, retry=retry)
-        if align is None and not force:
-            spacy_string = "".join(spacy_tokens).lower()
-            wp_string = "".join(new_wp_tokens).lower()
-            print("spaCy:", spacy_string)
-            print("WP:", wp_string)
-            raise AssertionError((spacy_string, wp_string))
-        elif align is None and force:
-            # As a final fallback, we resort to word-piece tokenizing
-            # the spaCy tokens individually, to make the alignment
-            # trivial.
-            wp_tokens, align = _tokenize_individual_tokens(self.model, segment)
-        for indices in align:
-            for i in range(len(indices)):
-                indices[i] += offset
-        return wp_tokens, align
+        spacy_tokens = [w.text for w in segment]
+        a2b, _ = get_alignments(spacy_tokens, wp_tokens)
+        return wp_tokens, a2b
 
     def set_annotations(self, docs, outputs, tensors=None):
         """Assign the extracted tokens and IDs to the Doc objects.
