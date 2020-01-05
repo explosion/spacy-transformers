@@ -108,15 +108,15 @@ class TransformersWordPiecer(Pipe):
 
     def _align(self, segment, wp_tokens, *, offset=0):
         spacy_tokens = [w.text for w in segment]
-        a2b, _ = get_alignments(spacy_tokens, wp_tokens)
+        a2b, b2a = get_alignments(spacy_tokens, wp_tokens)
 
-        # Head of wp_tokens is sometimes controll character (e.g. "_" for xlnet tokenizer),
-        # so insert 0 to head when it is missed.
-        for a in a2b:
-            if a:
-                if a[0] != 0:
-                    a.insert(0, 0)
-                break
+        # a2b must contain the boundary of `segment` (head and last token index)
+        # so insert them when they are missed.
+        if a2b and b2a:
+            if len(b2a[0]) == 0:
+                a2b[0].insert(0, 0)
+            if len(b2a[-1]) == 0:
+                a2b[-1].append(len(b2a) - 1)
         a2b = [[i + offset for i in a] for a in a2b]
         return wp_tokens, a2b
 
