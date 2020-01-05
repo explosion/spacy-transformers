@@ -43,6 +43,7 @@ def test_wordpiecer(wp):
         (["å\taa", ".", "が\nπ"], "bert-base-uncased", [[1, 2], [3], [6, 7]]),
         (["å\taa", ".", "が\nπ"], "xlnet-base-cased", [[0, 1, 2], [4], [7, 8, 10]]),
         (["\u3099"], "bert-base-uncased", [[]]),
+        (["I.\n\n\n\n\n"], "bert-base-uncased", [[1, 2]]),
     ],
 )
 def test_align(wp, sentencizer, name, words, target_name, expected_align):
