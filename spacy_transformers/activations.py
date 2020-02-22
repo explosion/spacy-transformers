@@ -73,6 +73,8 @@ class RaggedArray:
         # and avoid the loop
         shape = (len(self.lengths), to) + self.data.shape[1:]
         values = self.xp.zeros(shape, dtype=self.dtype)
+        if value != 0:
+            values.fill(value)
         if self.data.size == 0:
             return values
         mask = lengths2mask(self.lengths)
