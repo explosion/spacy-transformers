@@ -73,7 +73,8 @@ class TransformersWrapper(PyTorchWrapper):
 
     @property
     def max_length(self):
-        return self.cfg.get("max_position_embeddings", 128)
+        # `n_positions` in GPT2 config
+        return self.cfg.get("max_position_embeddings", self.cfg.get("n_positions", 128))
 
     def predict(self, inputs: RaggedArray):
         self._model.eval()
@@ -180,8 +181,6 @@ class TransformersWrapper(PyTorchWrapper):
         padded = inputs.to_padded()
         if padded.ndim == 2:
             padded = padded.reshape(padded.shape + (1,))
-        if self.max_length:
-            padded = padded[:, : self.max_length]
         ids = padded[:, :, 0]
         neg_idx = ids < 0
         ids[neg_idx] = 0
