@@ -33,6 +33,8 @@ BASE_CLASS_FIELDS = [
     "max_len",
     "added_tokens_encoder",
     "added_tokens_decoder",
+    "init_kwargs",
+    "unique_added_tokens_encoder_list",
 ]
 
 
@@ -47,7 +49,10 @@ class SerializationMixin:
     """
 
     def prepare_for_serialization(self):
-        pass
+        self.unique_added_tokens_encoder_list = list(self.unique_added_tokens_encoder)
+
+    def finish_deserializing(self):
+        self.unique_added_tokens_encoder = set(self.unique_added_tokens_encoder_list)
 
     def from_bytes(self, bytes_data, exclude=tuple(), **kwargs):
         msg = srsly.msgpack_loads(bytes_data)
@@ -98,6 +103,7 @@ class SerializableBertTokenizer(transformers.BertTokenizer, SerializationMixin):
             self.do_lower_case = self.basic_tokenizer.do_lower_case
             self.never_split = self.basic_tokenizer.never_split
             self.tokenize_chinese_chars = self.basic_tokenizer.tokenize_chinese_chars
+        super().prepare_for_serialization()
 
     def finish_deserializing(self):
         self.ids_to_tokens = OrderedDict(
@@ -112,6 +118,7 @@ class SerializableBertTokenizer(transformers.BertTokenizer, SerializationMixin):
         self.wordpiece_tokenizer = WordpieceTokenizer(
             vocab=self.vocab, unk_token=self.unk_token
         )
+        super().finish_deserializing()
 
     def clean_token(self, text):
         if self.do_basic_tokenize:
@@ -175,6 +182,7 @@ class SerializableDistilBertTokenizer(
             self.do_lower_case = self.basic_tokenizer.do_lower_case
             self.never_split = self.basic_tokenizer.never_split
             self.tokenize_chinese_chars = self.basic_tokenizer.tokenize_chinese_chars
+        super().prepare_for_serialization()
 
     def finish_deserializing(self):
         self.ids_to_tokens = OrderedDict(
@@ -189,6 +197,7 @@ class SerializableDistilBertTokenizer(
         self.wordpiece_tokenizer = WordpieceTokenizer(
             vocab=self.vocab, unk_token=self.unk_token
         )
+        super().finish_deserializing()
 
     def clean_token(self, text):
         if self.do_basic_tokenize:
@@ -253,10 +262,12 @@ class SerializableGPT2Tokenizer(transformers.GPT2Tokenizer, SerializationMixin):
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
         self.cache = {}
         self.pat = regex.compile(self._regex_pattern, flags=regex.V0)
+        super().finish_deserializing()
 
     def prepare_for_serialization(self):
         self._regex_pattern = self.pat.pattern
         self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
+        super().prepare_for_serialization()
 
     def clean_token(self, text):
         text = clean_extended_unicode(text)
@@ -319,9 +330,11 @@ class SerializableXLMTokenizer(transformers.XLMTokenizer, SerializationMixin):
         self.fix_text = ftfy.fix_text
         self.cache = {}
         self.decoder = {v: k for k, v in self.encoder.items()}
+        super().finish_deserializing()
 
     def prepare_for_serialization(self):
         self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
+        super().prepare_for_serialization()
 
     def clean_token(self, text):
         # Model seems to just strip out all unicode so we need to do this, too,
@@ -390,10 +403,12 @@ class SerializableXLNetTokenizer(transformers.XLNetTokenizer, SerializationMixin
             vocab_path = Path(self.vocab_file)
             with vocab_path.open("rb") as f:
                 self.vocab_bytes = f.read()
+        super().prepare_for_serialization()
 
     def finish_deserializing(self):
         self.sp_model = sentencepiece.SentencePieceProcessor()
         self.sp_model.LoadFromSerializedProto(self.vocab_bytes)
+        super().finish_deserializing()
 
     def clean_token(self, text):
         text = clean_fractions(text)
@@ -466,10 +481,12 @@ class SerializableRobertaTokenizer(transformers.RobertaTokenizer, SerializationM
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
         self.cache = {}
         self.pat = regex.compile(self._regex_pattern, flags=regex.V0)
+        super().finish_deserializing()
 
     def prepare_for_serialization(self):
         self._regex_pattern = self.pat.pattern
         self._bpe_ranks = serialize_bpe_ranks(self.bpe_ranks)
+        super().prepare_for_serialization()
 
     def clean_token(self, text):
         text = clean_extended_unicode(text)
