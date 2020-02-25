@@ -177,7 +177,7 @@ class TransformersWrapper(PyTorchWrapper):
         return Activations(lh, po)
 
     def get_model_kwargs(self, inputs):
-        padded = inputs.to_padded()
+        padded = inputs.to_padded(value=-1)
         if padded.ndim == 2:
             padded = padded.reshape(padded.shape + (1,))
         if self.max_length:
@@ -188,6 +188,7 @@ class TransformersWrapper(PyTorchWrapper):
         ids = torch.as_tensor(ids, dtype=torch.int64)
         if padded.shape[2] == 2:
             segment_ids = padded[:, :, 1]
+            numpy.place(segment_ids, segment_ids<0, 0)
             segment_ids = torch.as_tensor(segment_ids, dtype=torch.int64)
         else:
             segment_ids = torch.zeros_like(ids)
