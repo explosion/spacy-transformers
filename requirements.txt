@@ -1,5 +1,5 @@
 spacy>=2.2.1,<2.3.0
-transformers>=2.0.0,<2.1.0
+transformers>=2.5.0,<2.6.0
 torch>=1.0.0
 torchcontrib>=0.0.2,<0.1.0
 srsly>=0.0.7,<1.1.0
