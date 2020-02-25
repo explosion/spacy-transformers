@@ -38,6 +38,7 @@ class TransformersWordPiecer(Pipe):
         self.vocab = vocab
         self.cfg = cfg
         self.model = model
+        self._num_added_tokens = None
 
     def __call__(self, doc):
         """Apply the pipe to one document. The document is
@@ -82,6 +83,7 @@ class TransformersWordPiecer(Pipe):
         RETURNS (tuple): A (strings, None) tuple.
         """
         output = []
+        max_seq_length = self.model.max_len - self.num_added_tokens()
         for doc in docs:
             doc_words = []
             doc_align = []
@@ -94,6 +96,9 @@ class TransformersWordPiecer(Pipe):
                     seg_words, seg_align = self._align(
                         segment, seg_words, offset=offset
                     )
+                    seg_words = seg_words[:max_seq_length]
+                    for idx in range(max_seq_length, len(seg_align)):
+                        seg_align[idx] = []
                     assert len(segment) == len(seg_align)
                     sent_words.append(seg_words)
                     sent_align.append(seg_align)
@@ -126,6 +131,16 @@ class TransformersWordPiecer(Pipe):
             for i in range(len(indices)):
                 indices[i] += offset
         return wp_tokens, align
+
+    def num_added_tokens(self):
+        # GPT2 returns 0 for `tokenizer.num_added_tokens()` but
+        # `tokenizer.add_special_tokens()` adds two '<|endoftext|>' tokens,
+        # so determine this once initially in practice
+        if self._num_added_tokens is None:
+            words = ["a", "b", "c"]
+            words_with_added = self.model.add_special_tokens([words])
+            self._num_added_tokens = len(words_with_added) - len(words)
+        return self._num_added_tokens
 
     def set_annotations(self, docs, outputs, tensors=None):
         """Assign the extracted tokens and IDs to the Doc objects.
