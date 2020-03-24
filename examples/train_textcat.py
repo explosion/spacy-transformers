@@ -219,8 +219,15 @@ def load_data(*, limit=0, dev_size=2000):
     random.shuffle(train_data)
     dev_data = train_data[:dev_size]
     train_data = train_data[dev_size:]
-    train_texts, train_labels = _prepare_partition(train_data, preprocess=False)
-    dev_texts, dev_labels = _prepare_partition(dev_data, preprocess=False)
+    # (temporary?) modification: run preprocessing for IMDB corpus to avoid
+    # empty sentences for longer whitespace sequences, in particular trailing
+    # whitespace (the dataset loader converts <br/><br/> to "\n\n\n\n")
+    #
+    # explanation: with the correct attention masks, empty sentences-as-docs
+    # are passed to spaCy's TextCategorizer, which can't currently handle empty
+    # docs (spaCy v2.2.4, thinc v7.4.0)
+    train_texts, train_labels = _prepare_partition(train_data, preprocess=True)
+    dev_texts, dev_labels = _prepare_partition(dev_data, preprocess=True)
     return (train_texts, train_labels), (dev_texts, dev_labels)
 
 
