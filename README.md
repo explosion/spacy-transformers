@@ -201,7 +201,7 @@ on the `Doc`, `Span` and `Token` objects:
 | `._.trf_last_hidden_state`   | `ndarray`         | The `last_hidden_state` output from the `transformers` model.                                                                                                 |
 | `._.trf_pooler_output`       | `List[ndarray]`   | The `pooler_output` output from the `transformers` model.                                                                                                     |
 | `._.trf_all_hidden_states`   | `List[ndarray]`   | The `all_hidden_states` output from the `transformers` model.                                                                                                 |
-| `._.all_attentions`          | `List[ndarray]`   | The `all_attentions` output from the `transformers` model.                                                                                                    |
+| `._.trf_all_attentions`          | `List[ndarray]`   | The `all_attentions` output from the `transformers` model.                                                                                                    |
 | `._.trf_d_last_hidden_state` | `ndarray`         | The gradient of the `last_hidden_state` output from the `transformers` model.                                                                                 |
 | `._.trf_d_pooler_output`     | `List[ndarray]`   | The gradient of the `pooler_output` output from the `transformers` model.                                                                                     |
 | `._.trf_d_all_hidden_states` | `List[ndarray]`   | The gradient of the `all_hidden_states` output from the `transformers` model.                                                                                 |
