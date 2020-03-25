@@ -67,7 +67,7 @@ LANG_FACTORY = "trf"
 
 def get_config(name):
     """Map a name to the appropriate transformers.*Config class."""
-    name = name.lower()
+    name = get_config_name(name)
     if name.startswith("roberta"):
         return transformers.RobertaConfig
     elif name.startswith("distilbert"):
@@ -86,7 +86,7 @@ def get_config(name):
 
 def get_model(name):
     """Map a name to the appropriate transformers.*Model class."""
-    name = name.lower()
+    name = get_config_name(name)
     if name.startswith("roberta"):
         return transformers.RobertaModel
     elif name.startswith("distilbert"):
@@ -105,7 +105,7 @@ def get_model(name):
 
 def get_tokenizer(name):
     """Get a transformers.*Tokenizer class from a name."""
-    name = name.lower()
+    name = get_config_name(name)
     if name.startswith("roberta"):
         return _tokenizers.SerializableRobertaTokenizer
     elif name.startswith("distilbert"):
@@ -120,6 +120,15 @@ def get_tokenizer(name):
         return _tokenizers.SerializableXLMTokenizer
     else:
         raise ValueError(f"Unsupported transformers config name: '{name}'")
+
+
+def get_config_name(name):
+    try:
+        name = transformers.AutoConfig.from_pretrained(name).model_type
+    except EnvironmentError:
+        name = name.lower()
+        name = name.split("/")[-1]
+    return name
 
 
 def pad_batch(
@@ -271,6 +280,7 @@ def get_segment_ids(name: str, *lengths) -> List[int]:
     else:
         msg = f"Expected 1 or 2 segments. Got {len(lengths)}"
         raise ValueError(msg)
+    name = get_config_name(name)
     if name.startswith("bert"):
         return get_bert_segment_ids(length1, length2)
     elif name.startswith("distilbert"):
