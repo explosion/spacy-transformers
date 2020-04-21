@@ -6,6 +6,7 @@ srsly>=0.0.7,<1.1.0
 ftfy>=5.0.0,<6.0.0
 dataclasses>=0.6,<0.7; python_version < "3.7"
 importlib_metadata>=0.20; python_version < "3.8"
+pytokenizations>=0.2.0
 # Testing
 pytest>=5.0.1,<5.1.0
 pytest-cov>=2.7.0,<2.8.0

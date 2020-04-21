@@ -1,5 +1,6 @@
 from spacy.pipeline import Pipe
 from spacy.util import minibatch
+from tokenizations import get_alignments
 import re
 import numpy
 
@@ -114,26 +115,18 @@ class TransformersWordPiecer(Pipe):
         return output
 
     def _align(self, segment, wp_tokens, *, offset=0):
-        retry, force = self.alignment_strategy
-        spacy_tokens = [self.model.clean_token(w.text) for w in segment]
-        new_wp_tokens = [self.model.clean_wp_token(t) for t in wp_tokens]
-        assert len(wp_tokens) == len(new_wp_tokens)
-        align = align_word_pieces(spacy_tokens, new_wp_tokens, retry=retry)
-        if align is None and not force:
-            spacy_string = "".join(spacy_tokens).lower()
-            wp_string = "".join(new_wp_tokens).lower()
-            print("spaCy:", spacy_string)
-            print("WP:", wp_string)
-            raise AssertionError((spacy_string, wp_string))
-        elif align is None and force:
-            # As a final fallback, we resort to word-piece tokenizing
-            # the spaCy tokens individually, to make the alignment
-            # trivial.
-            wp_tokens, align = _tokenize_individual_tokens(self.model, segment)
-        for indices in align:
-            for i in range(len(indices)):
-                indices[i] += offset
-        return wp_tokens, align
+        spacy_tokens = [w.text for w in segment]
+        a2b, b2a = get_alignments(spacy_tokens, wp_tokens)
+
+        # a2b must contain the boundary of `segment` (head and last token index)
+        # so insert them when they are missed.
+        if a2b and b2a:
+            if len(b2a[0]) == 0:
+                a2b[0].insert(0, 0)
+            if len(b2a[-1]) == 0:
+                a2b[-1].append(len(b2a) - 1)
+        a2b = [[i + offset for i in a] for a in a2b]
+        return wp_tokens, a2b
 
     def num_added_tokens(self):
         # GPT2 returns 0 for `tokenizer.num_added_tokens()` but
