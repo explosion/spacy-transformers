@@ -1,6 +1,6 @@
 from typing import Any, List
 from thinc.neural.ops import get_array_module
-from spacy.pipeline import Pipe
+from spacy.pipeline import Tok2Vec
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.util import minibatch
@@ -11,7 +11,9 @@ from ..activations import Activations, RaggedArray
 from ..util import get_config, get_model, get_sents, PIPES, ATTRS
 
 
-class TransformersTok2Vec(Pipe):
+# TODO: Add assignments for extension attributes.
+@component("trf_tok2vec", assigns=["doc.tensor"])
+class TransformersTok2Vec(Tok2Vec):
     """spaCy pipeline component to use transformer models.
 
     The component assigns the output of the transformer to the Doc's
@@ -20,14 +22,6 @@ class TransformersTok2Vec(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
-
-    name = PIPES.tok2vec
-    factory = PIPES.tok2vec
-
-    @classmethod
-    def from_nlp(cls, nlp, **cfg):
-        """Factory to add to Language.factories via entry point."""
-        return cls(nlp.vocab, **cfg)
 
     @classmethod
     def from_pretrained(cls, vocab: Vocab, name: str, **cfg):
@@ -44,121 +38,6 @@ class TransformersTok2Vec(Pipe):
         cfg["trf_config"] = dict(model._model.transformers_model.config.to_dict())
         self = cls(vocab, model=model, **cfg)
         return self
-
-    @classmethod
-    def Model(cls, **cfg) -> Any:
-        """Create an instance of `TransformersWrapper`, which holds the
-        Transformers model.
-
-        **cfg: Optional config parameters.
-        RETURNS (thinc.neural.Model): The wrapped model.
-        """
-        name = cfg.get("trf_name")
-        if not name:
-            raise ValueError(f"Need trf_name argument, e.g. 'bert-base-uncased'")
-        if cfg.get("from_pretrained"):
-            wrap = TransformersWrapper.from_pretrained(name)
-        else:
-            config = cfg["trf_config"]
-            # Work around floating point limitation in ujson:
-            # If we have the setting "layer_norm_eps" as 0,
-            # that's because of misprecision in serializing. Fix that.
-            config["layer_norm_eps"] = 1e-12
-            config_cls = get_config(name)
-            model_cls = get_model(name)
-            # Need to match the name their constructor expects.
-            if "vocab_size" in cfg["trf_config"]:
-                vocab_size = cfg["trf_config"]["vocab_size"]
-                cfg["trf_config"]["vocab_size_or_config_json_file"] = vocab_size
-            wrap = TransformersWrapper(name, config, model_cls(config_cls(**config)))
-        make_model = get_model_function(cfg.get("architecture", "tok2vec_per_sentence"))
-        model = make_model(wrap, cfg)
-        setattr(model, "nO", wrap.nO)
-        setattr(model, "_model", wrap)
-        return model
-
-    def __init__(self, vocab, model=True, **cfg):
-        """Initialize the component.
-
-        model (thinc.neural.Model / True): The component's model or `True` if
-            not initialized yet.
-        **cfg: Optional config parameters.
-        """
-        self.vocab = vocab
-        self.model = model
-        self.cfg = cfg
-
-    @property
-    def token_vector_width(self):
-        return self.model._model.nO
-
-    @property
-    def transformers_model(self):
-        return self.model._model.transformers_model
-
-    def __call__(self, doc):
-        """Process a Doc and assign the extracted features.
-
-        doc (spacy.tokens.Doc): The Doc to process.
-        RETURNS (spacy.tokens.Doc): The processed Doc.
-        """
-        self.require_model()
-        outputs = self.predict([doc])
-        self.set_annotations([doc], outputs)
-        return doc
-
-    def pipe(self, stream, batch_size=128):
-        """Process Doc objects as a stream and assign the extracted features.
-
-        stream (iterable): A stream of Doc objects.
-        batch_size (int): The number of texts to buffer.
-        YIELDS (spacy.tokens.Doc): Processed Docs in order.
-        """
-        for docs in minibatch(stream, size=batch_size):
-            docs = list(docs)
-            outputs = self.predict(docs)
-            self.set_annotations(docs, outputs)
-            for doc in docs:
-                yield doc
-
-    def begin_update(self, docs, drop=None, **cfg):
-        """Get the predictions and a callback to complete the gradient update.
-        This is only used internally within TransformersLanguage.update.
-        """
-        outputs, backprop = self.model.begin_update(docs, drop=drop)
-
-        def finish_update(docs, sgd=None):
-            assert len(docs)
-            d_lh = []
-            d_po = []
-            lh_lengths = []
-            po_lengths = []
-            for doc in docs:
-                d_lh.append(doc._.get(ATTRS.d_last_hidden_state))
-                d_po.append(doc._.get(ATTRS.d_pooler_output))
-                lh_lengths.append(doc._.get(ATTRS.d_last_hidden_state).shape[0])
-                po_lengths.append(doc._.get(ATTRS.d_pooler_output).shape[0])
-            xp = self.model.ops.xp
-            gradients = Activations(
-                RaggedArray(xp.vstack(d_lh), lh_lengths),
-                RaggedArray(xp.vstack(d_po), po_lengths),
-            )
-            backprop(gradients, sgd=sgd)
-            for doc in docs:
-                doc._.get(ATTRS.d_last_hidden_state).fill(0)
-                doc._.get(ATTRS.d_last_hidden_state).fill(0)
-            return None
-
-        return outputs, finish_update
-
-    def predict(self, docs):
-        """Run the transformer model on a batch of docs and return the
-        extracted features.
-
-        docs (iterable): A batch of Docs to process.
-        RETURNS (list): A list of Activations objects, one per doc.
-        """
-        return self.model.predict(docs)
 
     def set_annotations(self, docs: List[Doc], activations: Activations):
         """Assign the extracted features to the Doc objects and overwrite the
