@@ -19,4 +19,8 @@ class TokensPlus:
 @dataclass
 class TransformerOutput:
     tokens: TokensPlus
-    tensors: Tuple[torch.Tensor]
+    tensors: Tuple[FloatsXd]
+
+    @property
+    def width(self) -> int:
+        return self.tensors[-1].shape[-1]
