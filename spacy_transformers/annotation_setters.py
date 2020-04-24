@@ -1,18 +1,32 @@
-def set_tensors(docs, outputs, alignment):
-    for i, doc in enumerate(docs):
-        wp_tensor = outputs.tensors[-1][i]
+def set_tensors(docs: List[Doc], trfout: TransformerOutput) -> None:
+    wp_tensor = outputs.tensors[-1]
+    for doc in docs:
         # Count how often each word-piece token is represented. This allows
         # a weighted sum, so that we can make sure doc.tensor.sum()
         # equals wp_tensor.sum(). Do this with sensitivity to boundary tokens
-        wp_rows, align_sizes = alignment[i]
+        wp_indices = _align_doc(doc, trfout.spans, trfout.tokens)
+        doc.tensor = _get_aligned_tensor(wp_indices, wp_tensor)
 
-        xp = get_array_module(wp_tensor)
-        doc.tensor = xp.zeros((len(doc), outputs.width), dtype="f")
-        wp_weighted = wp_tensor / xp.array(align_sizes, dtype="f").reshape((-1, 1))
-        # TODO: Obviously incrementing the rows individually is bad. How
-        # to do in one shot without blowing up the memory?
-        for i, word_piece_slice in enumerate(wp_rows):
-            doc.tensor[i] = wp_weighted[word_piece_slice,].sum(0)
+
+def get_aligned_tensor(
+    wp_indices: List[List[Tuple[int, int]]],
+    wp_tensor: Floats3d
+) -> Floats2d:
+    """Given an alignment array, extract features from another tensor, with rows
+    weighted to account for multiple occurrence.
+    """
+    align_sizes = numpy.zeros((wp_tensor.shape[0], wp_tensor.shape[1]), dtype="f")
+    for token_alignment in alignment:
+        for i, j in token_alignment:
+            align_sizes[i, j] += 1
+    xp = get_array_module(outputs.tensors[-1])
+    tensor = xp.zeros((len(doc), wp_tensor.shape[-1]), dtype="f")
+    wp_weighted = wp_tensor / xp.array(align_sizes, dtype="f").reshape((-1, 1))
+    # TODO: Obviously incrementing the rows individually is bad. How
+    # to do in one shot without blowing up the memory?
+    for i, word_piece_slice in enumerate(wp_indices):
+        tensor[i] = wp_weighted[word_piece_slice,].sum(0)
+    return tensor
 
 
 def set_hooks(docs, outputs, alignment):
