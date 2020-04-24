@@ -9,6 +9,7 @@ from ._align import align_docs
 
 class AnnotationSetter:
     """Set annotations on the Doc from the transformer."""
+
     def __init__(self, set_tensor=False):
         self.cfg = {"set_tensor": set_tensor}
 
@@ -30,12 +31,13 @@ class Transformer(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
+
     def __init__(
-            self,
-            vocab: Vocab,
-            model: Model,
-            annotation_setter: Callable=AnnotationSetter(),
-            **cfg
+        self,
+        vocab: Vocab,
+        model: Model,
+        annotation_setter: Callable = AnnotationSetter(),
+        **cfg,
     ):
         self.vocab = vocab
         self.model = model
