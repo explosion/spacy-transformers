@@ -31,13 +31,15 @@ class AnnotationSetter:
                 token._.trf_alignment = alignments[i][j]
 
     @staticmethod
-    def set_tensors(docs: List[Doc], trf_output: TransformerOutput) -> None:
+    def set_tensor(docs: List[Doc], trf_output: TransformerOutput) -> None:
         # Copy the data to CPU while we futz around with it. We can optimize
         # this later.
         wp_tensor = to_numpy(trf_output.tensors[-1])
         # Get the number of rows, to reweight the WP rows by how many tokens
         # they align against.
-        align_sizes = numpy.zeros((wp_tensor.shape[0], wp_tensor.shape[1], 1), dtype="f")
+        align_sizes = numpy.zeros(
+            (wp_tensor.shape[0], wp_tensor.shape[1], 1), dtype="f"
+        )
         for doc in docs:
             for token in doc:
                 for wp_idx in token._.trf_alignment:
@@ -91,7 +93,10 @@ class Transformer(Pipe):
 
     def find_listeners(self, model):
         for node in model.walk():
-            if isinstance(node, TransformerListener) and node.upstream_name == self.name:
+            if (
+                isinstance(node, TransformerListener)
+                and node.upstream_name == self.name
+            ):
                 self.add_listener(node)
 
     def __call__(self, doc):

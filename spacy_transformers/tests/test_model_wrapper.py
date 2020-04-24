@@ -6,17 +6,18 @@ from ..model_wrapper import TransformerByName
 
 
 MODEL_NAMES = ["distilbert-base-uncased"]
-#"bert-base-uncased", "gpt2", "xlnet-base-cased"]
+# "bert-base-uncased", "gpt2", "xlnet-base-cased"]
+
 
 @pytest.fixture
 def nlp():
     return spacy.blank("en")
 
+
 @pytest.fixture
 def docs(nlp):
     texts = ["the cat sat on the mat.", "hello world."]
     return [nlp(text) for text in texts]
-
 
 
 @pytest.fixture(scope="session", params=MODEL_NAMES)

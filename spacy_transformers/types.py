@@ -8,6 +8,7 @@ from spacy.tokens import Span, Doc
 @dataclass
 class TokensPlus:
     """Dataclass to hold the output of the Huggingface 'batch_encode_plus' method."""
+
     input_ids: torch.Tensor
     attention_mask: torch.Tensor
     offset_mapping: List[List[Optional[Tuple[int, int]]]]
