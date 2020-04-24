@@ -6,13 +6,15 @@ _OffsetsT = List[Optional[Tuple[int, int]]]
 _AlignmentT = List[List[int]]
 
 
-def align_docs(spans: List[Span], span_alignments: List[List[List[Tuple[int, int]]]]) -> List[List[List[Tuple[int, int]]]]:
+def align_docs(
+    spans: List[Span], span_alignments: List[List[List[Tuple[int, int]]]]
+) -> List[List[List[Tuple[int, int]]]]:
     """
     For each token in each doc, get a list of (idx1, idx2) tuples that select
     the rows aligned to that token.
     """
     by_doc = _group_spans_by_doc(spans)
-    i = 0 # Keep track of which span we're up to in the flat list.
+    i = 0  # Keep track of which span we're up to in the flat list.
     doc_alignments: List[List[List[Tuple[int, int]]]] = []
     for doc, doc_spans in by_doc:
         doc_alignment: List[List[Tuple[int, int]]] = [[] for token in doc]
@@ -36,8 +38,7 @@ def _group_spans_by_doc(spans: List[Span]) -> List[Tuple[Doc, List[Span]]]:
 
 
 def align_spans(
-    spans: List[Span],
-    wp_offsets: List[_OffsetsT]
+    spans: List[Span], wp_offsets: List[_OffsetsT]
 ) -> List[List[List[Tuple[int, int]]]]:
     output = []
     for i, span in enumerate(spans):
@@ -49,7 +50,7 @@ def align_spans(
 
 def _get_token_offsets(span):
     start = span.start_char
-    return [(t.idx-start, t.idx-start + len(t)) for t in span]
+    return [(t.idx - start, t.idx - start + len(t)) for t in span]
 
 
 def align_offsets(offsets1: _OffsetsT, offsets2: _OffsetsT) -> _AlignmentT:

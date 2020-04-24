@@ -11,7 +11,7 @@ class AlignmentCase:
     string: str
     offsets1: List[Optional[Tuple[int, int]]]
     offsets2: List[Optional[Tuple[int, int]]]
-    a2b: List[List[int]] 
+    a2b: List[List[int]]
     b2a: List[List[int]]
 
     @property
@@ -24,7 +24,7 @@ class AlignmentCase:
         return words
 
     def make_doc(self):
-        return Doc(Vocab(), words=self.words1, spaces=[False]*len(self.words1))
+        return Doc(Vocab(), words=self.words1, spaces=[False] * len(self.words1))
 
     def make_spans(self):
         doc = self.make_doc()
@@ -33,41 +33,26 @@ class AlignmentCase:
 
 CASES = {
     "match": AlignmentCase(
-        "ab",
-        [(0, 1), (1, 2)],
-        [(0, 1), (1, 2)],
-        [[0], [1]],
-        [[0], [1]]
+        "ab", [(0, 1), (1, 2)], [(0, 1), (1, 2)], [[0], [1]], [[0], [1]]
     ),
-    "multi1": AlignmentCase(
-        "ab",
-        [(0, 2)],
-        [(0, 1), (1, 2)],
-        [[0, 1]],
-        [[0], [0]]
-    ),
-    "multi2": AlignmentCase(
-        "ab",
-        [(0, 1), (1, 2)],
-        [(0, 2)],
-        [[0], [0]],
-        [[0, 1]]
-    ),
+    "multi1": AlignmentCase("ab", [(0, 2)], [(0, 1), (1, 2)], [[0, 1]], [[0], [0]]),
+    "multi2": AlignmentCase("ab", [(0, 1), (1, 2)], [(0, 2)], [[0], [0]], [[0, 1]]),
     "mix1": AlignmentCase(
         "abc",
         [(0, 2), (2, 3)],
         [(0, 1), (1, 2), (2, 3)],
         [[0, 1], [2]],
-        [[0], [0], [1]]
+        [[0], [0], [1]],
     ),
     "nones": AlignmentCase(
         "abc",
         [None, (0, 2), (2, 3), None],
         [(0, 1), (1, 2), (2, 3)],
         [[], [0, 1], [2], []],
-        [[1], [1], [2]]
+        [[1], [1], [2]],
     ),
 }
+
 
 @pytest.mark.parametrize("case_id", list(CASES.keys()))
 def test_align_offsets(case_id):
@@ -91,7 +76,8 @@ def test_align_spans(case_id):
         for align in alignments[i]:
             for entry in align:
                 assert entry[0] == i
-    
+
+
 @pytest.mark.parametrize("case_id", list(CASES.keys()))
 def test_align_docs(case_id):
     # This is a pretty bad test, it doesn't check any of the likely logic errors.
