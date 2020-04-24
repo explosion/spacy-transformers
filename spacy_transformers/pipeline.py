@@ -71,8 +71,7 @@ class Transformer(Pipe):
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        alignment = self.aligner(docs, trf_outputs)
-        self.annotation_setter(docs, trf_outputs, aligner)
+        self.annotation_setter(docs, trf_outputs)
 
     def update(self, examples, drop=0.0, sgd=None, losses=None, set_annotations=False):
         """Update the model.
