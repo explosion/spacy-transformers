@@ -31,7 +31,7 @@ class AnnotationSetter:
                 token._.trf_alignment = alignments[i][j]
 
     @staticmethod
-    def set_tensor(docs: List[Doc], trf_output: TransformerOutput) -> None:
+    def set_tensors(docs: List[Doc], trf_output: TransformerOutput) -> None:
         # Copy the data to CPU while we futz around with it. We can optimize
         # this later.
         wp_tensor = to_numpy(trf_output.tensors[-1])
