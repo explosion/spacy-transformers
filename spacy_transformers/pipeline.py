@@ -1,15 +1,26 @@
 from typing import Any, List
-from thinc.neural.ops import get_array_module
-from spacy.pipeline import Tok2Vec
+from spacy.pipeline import Pipe
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.util import minibatch
 
-from ..util import get_config, get_model, get_sents, PIPES, ATTRS
+from ._align import align_docs
 
 
-# TODO: Add assignments for extension attributes.
-@component("transformer", assigns=["doc.tensor", "doc._.trf_output"])
+class AnnotationSetter:
+    """Set annotations on the Doc from the transformer."""
+    def __init__(self, set_tensor=False):
+        self.cfg = {"set_tensor": set_tensor}
+
+    def __call__(self, docs: List[Doc], trf_output: TransformerOutput) -> None:
+        alignments = align_docs(trf_output.spans, trf_output.tokens.offset_mapping)
+        for i, doc in enumerate(docs):
+            doc._.trf_output = trf_output
+            for j, token in enumerate(tokens):
+                token._.trf_alignment = alignments[i][j]
+
+
+@component("transformer", assigns=["doc._.trf_output", "token._.trf_alignment"])
 class Transformer(Pipe):
     """spaCy pipeline component to use transformer models.
 
@@ -19,7 +30,13 @@ class Transformer(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
-    def __init__(self, vocab, model, annotation_setter, **cfg):
+    def __init__(
+            self,
+            vocab: Vocab,
+            model: Model,
+            annotation_setter: Callable=AnnotationSetter(),
+            **cfg
+    ):
         self.vocab = vocab
         self.model = model
         self.annotation_setter = annotation_setter
