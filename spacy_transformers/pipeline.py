@@ -19,11 +19,10 @@ class Transformer(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
-    def __init__(self, vocab, model, annotation_setter, aligner, **cfg):
+    def __init__(self, vocab, model, annotation_setter, **cfg):
         self.vocab = vocab
         self.model = model
         self.annotation_setter = annotation_setter
-        self.aligner = aligner
         self.cfg = dict(cfg)
         self.listeners = []
 
