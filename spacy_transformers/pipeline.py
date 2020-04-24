@@ -1,10 +1,14 @@
-from typing import Any, List
-from spacy.pipeline import Pipe
+import numpy
+from typing import List, Callable
+from spacy.pipeline import Pipe, component
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
-from spacy.util import minibatch
+from spacy.gold import Example
+from spacy.util import minibatch, eg2doc, link_vectors_to_models
+from thinc.api import Model, to_numpy, get_array_module, set_dropout_rate
 
 from ._align import align_docs
+from .types import TransformerOutput
 
 
 class AnnotationSetter:
@@ -14,11 +18,42 @@ class AnnotationSetter:
         self.cfg = {"set_tensor": set_tensor}
 
     def __call__(self, docs: List[Doc], trf_output: TransformerOutput) -> None:
+        self.set_minimal(docs, trf_output)
+        if self.cfg.get("set_tensor"):
+            self.set_tensor(docs, trf_output)
+
+    @staticmethod
+    def set_minimal(docs: List[Doc], trf_output: TransformerOutput) -> None:
         alignments = align_docs(trf_output.spans, trf_output.tokens.offset_mapping)
         for i, doc in enumerate(docs):
             doc._.trf_output = trf_output
-            for j, token in enumerate(tokens):
+            for j, token in enumerate(doc):
                 token._.trf_alignment = alignments[i][j]
+
+    @staticmethod
+    def set_tensor(docs: List[Doc], trf_output: TransformerOutput) -> None:
+        # Copy the data to CPU while we futz around with it. We can optimize
+        # this later.
+        wp_tensor = to_numpy(trf_output.tensors[-1])
+        # Get the number of rows, to reweight the WP rows by how many tokens
+        # they align against.
+        align_sizes = numpy.zeros((wp_tensor.shape[0], wp_tensor.shape[1], 1), dtype="f")
+        for doc in docs:
+            for token in doc:
+                for wp_idx in token._.trf_alignment:
+                    i, j = wp_idx
+                    align_sizes[i, j] += 1
+        # Now calculate the tensor
+        wp_weighted = wp_tensor / align_sizes
+        for doc in docs:
+            doc.tensor = numpy.zeros((len(doc), wp_weighted.shape[-1]), dtype="f")
+            for i, token in enumerate(doc):
+                rows = wp_weighted[token._.trf_alignment]
+                doc.tensor[i] = rows.sum(axis=0)
+        # Now copy to desired device
+        xp = get_array_module(trf_output.tensors[-1])
+        for doc in docs:
+            doc.tensor = xp.array(doc.tensor)
 
 
 @component("transformer", assigns=["doc._.trf_output", "token._.trf_alignment"])
@@ -56,7 +91,7 @@ class Transformer(Pipe):
 
     def find_listeners(self, model):
         for node in model.walk():
-            if isinstance(node, Tok2VecListener) and node.upstream_name == self.name:
+            if isinstance(node, TransformerListener) and node.upstream_name == self.name:
                 self.add_listener(node)
 
     def __call__(self, doc):
@@ -77,7 +112,7 @@ class Transformer(Pipe):
 
     def predict(self, docs):
         outputs = self.model.predict(docs)
-        batch_id = Tok2VecListener.get_batch_id(docs)
+        batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners:
             listener.receive(batch_id, outputs, None)
         return outputs
@@ -128,10 +163,10 @@ class Transformer(Pipe):
 
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners[:-1]:
-            listener.receive(batch_id, tokvecs, accumulate_gradient)
-        self.listeners[-1].receive(batch_id, tokvecs, backprop)
+            listener.receive(batch_id, output, accumulate_gradient)
+        self.listeners[-1].receive(batch_id, output, backprop)
         if set_annotations:
-            self.set_annotations(docs, tokvecs)
+            self.set_annotations(docs, output)
 
     def get_loss(self, docs, golds, scores):
         pass
@@ -183,9 +218,9 @@ class TransformerListener(Model):
                 return True
 
 
-def forward(model: TransformerListener, inputs, is_train):
+def forward(model: TransformerListener, docs, is_train):
     if is_train:
-        model.verify_inputs(inputs)
+        model.verify_inputs(docs)
         return model._outputs, model._backprop
     else:
         return [doc._.trf_output for doc in docs], lambda dX: []
