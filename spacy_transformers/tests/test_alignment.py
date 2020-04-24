@@ -1,6 +1,6 @@
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional
 from dataclasses import dataclass
-from spacy.tokens import Doc, Span, Token
+from spacy.tokens import Doc
 from spacy.vocab import Vocab
 import pytest
 from .._align import align_offsets, align_spans, align_docs

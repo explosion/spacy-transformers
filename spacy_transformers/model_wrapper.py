@@ -1,11 +1,9 @@
-from typing import Tuple, Callable, List, Optional
+from typing import List
 
 import torch
 from spacy.tokens import Span, Doc
-from spacy.util import registry
 import thinc
-from thinc.api import PyTorchWrapper, Model, torch2xp, xp2torch, ArgsKwargs
-from thinc.types import FloatsXd
+from thinc.api import PyTorchWrapper, Model, ArgsKwargs
 from transformers import AutoModel, AutoTokenizer
 
 from .types import TransformerOutput, TokensPlus

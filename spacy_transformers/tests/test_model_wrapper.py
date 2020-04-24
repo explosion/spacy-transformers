@@ -1,8 +1,8 @@
 import pytest
 import spacy
 from thinc.api import Model
-from transformers import AutoModel
 from ..model_wrapper import TransformerByName
+from ..types import TransformerOutput
 
 
 MODEL_NAMES = ["distilbert-base-uncased"]
@@ -36,3 +36,4 @@ def test_model_init(name, trf_model):
 
 def test_model_predict(docs, trf_model):
     outputs = trf_model.predict(docs)
+    assert isinstance(outputs, TransformerOutput)

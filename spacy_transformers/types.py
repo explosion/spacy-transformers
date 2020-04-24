@@ -2,7 +2,7 @@ from typing import Optional, Tuple, List
 from dataclasses import dataclass
 import torch
 from thinc.types import FloatsXd
-from spacy.tokens import Span, Doc
+from spacy.tokens import Span
 
 
 @dataclass
