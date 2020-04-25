@@ -78,7 +78,7 @@ def get_doc_features_2d(doc: Doc, **kwargs) -> Floats2d:
     row_freqs[row_freqs == 0] = 1
     # Now get the array2d
     arrays = [span._.trf_get_features_2d(**kwargs) for span in doc._.trf_spans]
-    output = tensors[0]
+    output = arrays[0]
     for x in arrays[1:]:
         output += x
     output /= row_freqs
