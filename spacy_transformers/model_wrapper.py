@@ -103,7 +103,9 @@ def transformer_forward(
     tokens = TokensPlus(**token_data)
 
     tensors, bp_tensors = transformer(tokens, is_train)
-    output = TransformerOutput(tokens=tokens, tensors=tensors, spans=spans)
+    output = TransformerOutput(
+        tokens=tokens, tensors=tensors, spans=spans, ops=transformer.ops
+    )
 
     def backprop_transformer(d_output: TransformerOutput):
         _ = bp_tensors(d_output.tensors)
