@@ -55,6 +55,39 @@ def Transformer(
     )
 
 
+@thinc.registry.layers("spacy.DummyTransformer.v1")
+def DummyTransformer(depth: int=2, width: int=4, get_spans=get_doc_spans) -> Model[List[Doc], TransformerOutput]:
+    """Create a test model that produces a TransformerOutput object."""
+    tokenizer = DummyTokenizer()
+    return Model(
+        "test-transformer",
+        forward_dummy_transformer,
+        attrs={"width": width, "depth": depth, "get_spans": get_spans, "tokenizer": tokenizer}
+    )
+
+
+def forward_dummy_transformer(model, docs, is_train):
+    tokenizer = model.attrs["tokenizer"]
+    get_spans = model.attrs["get_spans"]
+    width = model.attrs["width"]
+    depth = model.attrs["depth"]
+
+    spans = get_spans(docs)
+    tokens = tokenizer(spans) 
+
+    tensors = []
+    shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
+    for i in range(depth):
+        tensors.append(torch.tensor(shape))
+    
+    output = TransformerOutput(tokens=tokens, tensors=tensors, spans=spans)
+    
+    def backprop(d_output: TransformerOutput):
+        return docs
+
+    return output, backprop
+
+
 def _convert_transformer_inputs(model, tokens: TokensPlus, is_train):
     # Adapter for the PyTorchWrapper. See https://thinc.ai/docs/usage-frameworks
     kwargs = {
