@@ -68,7 +68,7 @@ def _convert_transformer_inputs(model, tokens: TokensPlus, is_train):
 
 def _convert_transformer_outputs(model, inputs_outputs, is_train):
     _, tensors = inputs_outputs
- 
+
     def backprop(d_tensors: List[torch.Tensor]) -> ArgsKwargs:
         return ArgsKwargs(args=(tensors,), kwargs={"grad_tensors": d_tensors})
 

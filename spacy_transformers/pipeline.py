@@ -12,6 +12,7 @@ from .types import TransformerOutput
 
 class AnnotationSetter:
     """Set annotations on the Doc from the transformer."""
+
     def __init__(self, set_tensor=False):
         self.cfg = {"set_tensor": set_tensor}
 
@@ -27,8 +28,9 @@ class AnnotationSetter:
             doc.tensor = doc._.trf_get_features(ndim=2)
 
 
-@component("transformer", assigns=[
-    "doc._.trf_data", "span._.trf_row", "token._.trf_alignment"])
+@component(
+    "transformer", assigns=["doc._.trf_data", "span._.trf_row", "token._.trf_alignment"]
+)
 class Transformer(Pipe):
     """spaCy pipeline component to use transformer models.
 

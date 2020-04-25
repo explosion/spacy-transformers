@@ -33,6 +33,7 @@ def get_doc_features(doc: Doc, ndim: int, **kwargs):
     else:
         raise ValueError
 
+
 def get_span_features(span: Span, ndim: int, **kwargs):
     if ndim == 1:
         return span._.trf_get_features_1d(**kwargs)
@@ -64,7 +65,7 @@ def get_doc_features_1d(doc: Doc, **kwargs) -> Floats1d:
         output += v
     output /= len(vectors)
     return output
- 
+
 
 def get_doc_features_2d(doc: Doc, **kwargs) -> Floats2d:
     if not len(doc._.trf_spans):
@@ -82,7 +83,7 @@ def get_doc_features_2d(doc: Doc, **kwargs) -> Floats2d:
         output += x
     output /= row_freqs
     return output
- 
+
 
 def get_doc_features_3d(doc: Doc, **kwargs) -> Floats3d:
     if not len(doc._.trf_spans):
@@ -100,7 +101,7 @@ def get_doc_features_3d(doc: Doc, **kwargs) -> Floats3d:
         output += x
     output /= row_freqs
     return output
- 
+
 
 def get_span_features_1d(span: Span, **kwargs) -> Floats1d:
     wp_array = span.doc._.trf_data.arrays[-1][span._.trf_row]

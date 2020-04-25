@@ -23,7 +23,7 @@ class TokensPlus:
         return cls(
             input_ids=torch.zeros(0, 0),
             attention_mask=torch.zeros(0, 0),
-            offset_mapping=[]
+            offset_mapping=[],
         )
 
 
