@@ -1,5 +1,6 @@
 from typing import List, Callable
-from spacy.pipeline import Pipe, component
+from spacy.pipeline import Pipe
+from spacy.language import component
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.gold import Example
@@ -118,6 +119,8 @@ class Transformer(Pipe):
             docs = [docs]
         set_dropout_rate(self.model, drop)
         output, bp_output = self.model.begin_update(docs)
+        d_output = None
+
         losses.setdefault(self.name, 0.0)
 
         def accumulate_gradient(one_d_output: TransformerOutput):
@@ -125,9 +128,12 @@ class Transformer(Pipe):
             to all but the last listener. Only the last one does the backprop.
             """
             nonlocal d_output
-            for i, d_tensor in enumerate(one_d_output.tensors):
-                d_output.tensors[i] += d_tensor
-                losses[self.name] += float((d_tensor ** 2).sum())
+            if d_output is None:
+                d_output = one_d_output
+            else:
+                for i, d_tensor in enumerate(one_d_output.tensors):
+                    d_output.tensors[i] += d_tensor
+                    losses[self.name] += float((d_tensor ** 2).sum())
 
         def backprop(one_d_output: TransformerOutput):
             """Callback to actually do the backprop. Passed to last listener."""
