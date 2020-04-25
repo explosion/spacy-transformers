@@ -1,11 +1,10 @@
-import numpy
 from typing import List, Callable
 from spacy.pipeline import Pipe, component
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
-from thinc.api import Model, to_numpy, get_array_module, set_dropout_rate
+from thinc.api import Model, set_dropout_rate
 
 from ._align import align_docs
 from .types import TransformerOutput
@@ -13,52 +12,23 @@ from .types import TransformerOutput
 
 class AnnotationSetter:
     """Set annotations on the Doc from the transformer."""
-
     def __init__(self, set_tensor=False):
         self.cfg = {"set_tensor": set_tensor}
 
-    def __call__(self, docs: List[Doc], trf_output: TransformerOutput) -> None:
-        self.set_minimal(docs, trf_output)
-        if self.cfg.get("set_tensor"):
-            self.set_tensor(docs, trf_output)
-
-    @staticmethod
-    def set_minimal(docs: List[Doc], trf_output: TransformerOutput) -> None:
-        alignments = align_docs(trf_output.spans, trf_output.tokens.offset_mapping)
-        for i, doc in enumerate(docs):
-            doc._.trf_output = trf_output
-            for j, token in enumerate(doc):
-                token._.trf_alignment = alignments[i][j]
-
-    @staticmethod
-    def set_tensor(docs: List[Doc], trf_output: TransformerOutput) -> None:
-        # Copy the data to CPU while we futz around with it. We can optimize
-        # this later.
-        wp_tensor = to_numpy(trf_output.tensors[-1])
-        # Get the number of rows, to reweight the WP rows by how many tokens
-        # they align against.
-        align_sizes = numpy.zeros(
-            (wp_tensor.shape[0], wp_tensor.shape[1], 1), dtype="f"
-        )
+    def __call__(self, docs: List[Doc], trf_data: TransformerOutput) -> None:
         for doc in docs:
-            for token in doc:
-                for wp_idx in token._.trf_alignment:
-                    i, j = wp_idx
-                    align_sizes[i, j] += 1
-        # Now calculate the tensor
-        wp_weighted = wp_tensor / align_sizes
-        for doc in docs:
-            doc.tensor = numpy.zeros((len(doc), wp_weighted.shape[-1]), dtype="f")
-            for i, token in enumerate(doc):
-                rows = wp_weighted[token._.trf_alignment]
-                doc.tensor[i] = rows.sum(axis=0)
-        # Now copy to desired device
-        xp = get_array_module(trf_output.tensors[-1])
-        for doc in docs:
-            doc.tensor = xp.array(doc.tensor)
+            doc._.trf_data = trf_data
+        for i, span in enumerate(trf_data.spans):
+            span._.trf_row = i
+        alignments = align_docs(trf_data.spans, trf_data.tokens.offset_mapping)
+        for j, token in enumerate(doc):
+            token._.trf_alignment = alignments[i][j]
+        if self.cfg["set_tensor"]:
+            doc.tensor = doc._.trf_get_features(ndim=2)
 
 
-@component("transformer", assigns=["doc._.trf_output", "token._.trf_alignment"])
+@component("transformer", assigns=[
+    "doc._.trf_data", "span._.trf_row", "token._.trf_alignment"])
 class Transformer(Pipe):
     """spaCy pipeline component to use transformer models.
 
@@ -122,14 +92,14 @@ class Transformer(Pipe):
             listener.receive(batch_id, outputs, None)
         return outputs
 
-    def set_annotations(self, docs: List[Doc], trf_outputs: TransformerOutput):
+    def set_annotations(self, docs: List[Doc], trf_data: TransformerOutput):
         """Assign the extracted features to the Doc objects and overwrite the
         vector and similarity hooks.
 
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        self.annotation_setter(docs, trf_outputs)
+        self.annotation_setter(docs, trf_data)
 
     def update(self, examples, drop=0.0, sgd=None, losses=None, set_annotations=False):
         """Update the model.

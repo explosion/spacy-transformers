@@ -2,6 +2,7 @@ from typing import Optional, Tuple, List
 from dataclasses import dataclass
 import torch
 from thinc.types import FloatsXd
+from thinc.api import Ops, torch2xp
 from spacy.tokens import Span
 
 
@@ -17,13 +18,30 @@ class TokensPlus:
     num_truncated_tokens: Optional[torch.Tensor] = None
     special_tokens_mask: Optional[torch.Tensor] = None
 
+    @classmethod
+    def empty(cls) -> "TokensPlus":
+        return cls(
+            input_ids=torch.zeros(0, 0),
+            attention_mask=torch.zeros(0, 0),
+            offset_mapping=[]
+        )
+
 
 @dataclass
 class TransformerOutput:
     tokens: TokensPlus
-    tensors: Tuple[FloatsXd]
+    tensors: Tuple[torch.Tensor]
     spans: List[Span]
+    ops: Ops
+
+    @classmethod
+    def empty(cls, ops: Ops) -> "TransformerOutput":
+        return cls(tokens=TokensPlus.empty(), tensors=[], spans=[], ops=ops)
 
     @property
     def width(self) -> int:
         return self.tensors[-1].shape[-1]
+
+    @property
+    def arrays(self) -> List[FloatsXd]:
+        return [torch2xp(tensor) for tensor in self.tensors]

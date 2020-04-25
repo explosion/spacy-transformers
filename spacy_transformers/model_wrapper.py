@@ -45,6 +45,7 @@ def Transformer(
     wrapper = PyTorchWrapper(
         transformer,  # e.g. via AutoModel.from_pretrained(name),
         convert_inputs=_convert_transformer_inputs,
+        convert_outputs=_convert_transformer_outputs,
     )
     return Model(
         "transformer",
@@ -63,6 +64,15 @@ def _convert_transformer_inputs(model, tokens: TokensPlus, is_train):
     if tokens.token_type_ids is not None:
         kwargs["token_type_ids"] = tokens.token_type_ids
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
+
+
+def _convert_transformer_outputs(model, inputs_outputs, is_train):
+    _, tensors = inputs_outputs
+ 
+    def backprop(d_tensors: List[torch.Tensor]) -> ArgsKwargs:
+        return ArgsKwargs(args=(tensors,), kwargs={"grad_tensors": d_tensors})
+
+    return tensors, backprop
 
 
 def transformer_forward(
