@@ -21,7 +21,6 @@ def align_docs(
         doc_alignment: List[List[Tuple[int, int]]] = [[] for token in doc]
         for span in doc_spans:
             span_alignment = span_alignments[i]
-            print(span_alignment)
             for token, token_alignment in zip(span, span_alignment):
                 doc_alignment[token.i].extend(token_alignment)
             i += 1
