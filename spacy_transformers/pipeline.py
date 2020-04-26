@@ -206,4 +206,4 @@ def forward(model: TransformerListener, docs, is_train):
         model.verify_inputs(docs)
         return model._outputs, model._backprop
     else:
-        return [doc._.trf_output for doc in docs], lambda dX: []
+        return [doc._.trf_data for doc in docs], lambda dX: []
