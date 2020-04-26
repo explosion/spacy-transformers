@@ -84,7 +84,7 @@ def test_align_docs(case_id):
     # But at least it does run the code?
     case = CASES[case_id]
     spans = case.make_spans()
-    span_alignments = align_spans(spans, [case.offsets2])
-    doc_alignments = align_docs(spans, span_alignments)
+    doc_alignments = align_docs(spans, [case.offsets2])
     assert len(doc_alignments) == 1
+    span_alignments = align_spans(spans, [case.offsets2])
     assert doc_alignments == span_alignments

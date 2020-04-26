@@ -7,12 +7,14 @@ _AlignmentT = List[List[int]]
 
 
 def align_docs(
-    spans: List[Span], span_alignments: List[List[List[Tuple[int, int]]]]
+    spans: List[Span], span_offsets: List[List[Optional[Tuple[int, int]]]],
 ) -> List[List[List[Tuple[int, int]]]]:
     """
     For each token in each doc, get a list of (idx1, idx2) tuples that select
     the rows aligned to that token.
     """
+    span_alignments = align_spans(spans, span_offsets)
+    print("Span alignments", span_alignments)
     by_doc = _group_spans_by_doc(spans)
     i = 0  # Keep track of which span we're up to in the flat list.
     doc_alignments: List[List[List[Tuple[int, int]]]] = []
@@ -20,6 +22,7 @@ def align_docs(
         doc_alignment: List[List[Tuple[int, int]]] = [[] for token in doc]
         for span in doc_spans:
             span_alignment = span_alignments[i]
+            print(span_alignment)
             for token, token_alignment in zip(span, span_alignment):
                 doc_alignment[token.i].extend(token_alignment)
             i += 1
