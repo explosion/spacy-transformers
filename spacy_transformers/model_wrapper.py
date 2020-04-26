@@ -52,6 +52,7 @@ def Transformer(
         transformer_forward,
         layers=[wrapper],
         attrs={"tokenizer": tokenizer, "get_spans": get_spans},
+        dims={"nO": transformer.config.dim}
     )
 
 
