@@ -94,7 +94,7 @@ def DummyTransformerModel(width: int, depth: int):
         tensors = []
         shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
         for i in range(depth):
-            tensors.append(torch.tensor(shape))
+            tensors.append(torch.zeros(*shape))
         return tensors, lambda d_tensors: tokens
 
     return Model("dummy-transformer", _forward, attrs={"width": width, "depth": depth})

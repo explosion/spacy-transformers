@@ -31,3 +31,8 @@ def test_init(component):
 def test_predict(component, docs):
     trf_data = component.predict(docs)
     assert isinstance(trf_data, TransformerOutput)
+    assert len(trf_data.tensors) == component.model.layers[0].attrs["depth"]
+    n_tokens = trf_data.tokens.input_ids.shape[1]
+    width = component.model.layers[0].attrs["width"]
+    assert trf_data.arrays[-1].shape == (len(docs), n_tokens, width)
+
