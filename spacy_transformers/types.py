@@ -2,7 +2,7 @@ from typing import Optional, Tuple, List
 from dataclasses import dataclass
 import torch
 from thinc.types import FloatsXd
-from thinc.api import Ops, torch2xp
+from thinc.api import Ops, torch2xp, get_current_ops
 from spacy.tokens import Span
 
 
@@ -35,7 +35,8 @@ class TransformerOutput:
     ops: Ops
 
     @classmethod
-    def empty(cls, ops: Ops) -> "TransformerOutput":
+    def empty(cls) -> "TransformerOutput":
+        ops = get_current_ops()
         return cls(tokens=TokensPlus.empty(), tensors=[], spans=[], ops=ops)
 
     @property
