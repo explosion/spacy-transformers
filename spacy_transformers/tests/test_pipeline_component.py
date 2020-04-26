@@ -5,6 +5,7 @@ from thinc.api import Model
 from ..pipeline import Transformer, AnnotationSetter
 from .util import DummyTransformer
 from ..types import TransformerOutput
+from ..extensions import install_extensions
 
 
 @pytest.fixture
@@ -35,4 +36,17 @@ def test_predict(component, docs):
     n_tokens = trf_data.tokens.input_ids.shape[1]
     width = component.model.layers[0].attrs["width"]
     assert trf_data.arrays[-1].shape == (len(docs), n_tokens, width)
+
+
+def test_set_annotations(component, docs):
+    install_extensions()
+    trf_data = component.predict(docs)
+    component.set_annotations(docs, trf_data)
+    for doc in docs:
+        assert doc._.trf_data is trf_data
+    for i, span in enumerate(trf_data.spans):
+        assert span._.trf_row == i
+    for doc in docs:
+        for token in doc:
+            assert isinstance(token._.trf_alignment, list)
 
