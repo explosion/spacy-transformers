@@ -87,7 +87,7 @@ def transformer_forward(
     token_data = tokenizer.batch_encode_plus(
         [span.text for span in spans],
         add_special_tokens=True,
-        return_attention_mask=True,
+        return_attention_masks=True,
         return_lengths=True,
         return_offsets_mapping=True,
         pad_to_max_length=True,
