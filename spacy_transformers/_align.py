@@ -14,7 +14,6 @@ def align_docs(
     the rows aligned to that token.
     """
     span_alignments = align_spans(spans, span_offsets)
-    print("Span alignments", span_alignments)
     by_doc = _group_spans_by_doc(spans)
     i = 0  # Keep track of which span we're up to in the flat list.
     doc_alignments: List[List[List[Tuple[int, int]]]] = []
