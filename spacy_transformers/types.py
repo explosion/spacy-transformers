@@ -40,6 +40,17 @@ class TransformerOutput:
         return cls(tokens=TokensPlus.empty(), tensors=[], spans=[], ops=ops)
 
     @property
+    def docs(self):
+        seen = set()
+        docs = []
+        for span in self.spans:
+            key = id(span.doc)
+            if key not in seen:
+                docs.append(span.doc)
+                seen.add(key)
+        return docs
+
+    @property
     def width(self) -> int:
         return self.tensors[-1].shape[-1]
 
