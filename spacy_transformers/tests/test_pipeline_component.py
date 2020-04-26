@@ -2,10 +2,11 @@ import pytest
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from thinc.api import Model
-from ..pipeline import Transformer, AnnotationSetter
+
 from .util import DummyTransformer
+from ..pipeline import Transformer, AnnotationSetter
 from ..types import TransformerOutput
-from ..extensions import install_extensions
+from ..util import install_extensions
 
 
 @pytest.fixture
@@ -19,6 +20,10 @@ def docs(vocab):
 
 @pytest.fixture
 def component(vocab):
+    try:
+        install_extensions()
+    except ValueError:
+        pass
     return Transformer(Vocab(), DummyTransformer())
 
 def test_init(component):
@@ -39,7 +44,6 @@ def test_predict(component, docs):
 
 
 def test_set_annotations(component, docs):
-    install_extensions()
     trf_data = component.predict(docs)
     component.set_annotations(docs, trf_data)
     for doc in docs:

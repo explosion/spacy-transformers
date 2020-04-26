@@ -1,7 +1,7 @@
 import pytest
 import spacy
 from thinc.api import Model
-from ..model_wrapper import TransformerByName
+from ..wrapper import TransformerModelByName
 from ..types import TransformerOutput
 
 
@@ -27,7 +27,7 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def trf_model(name):
-    return TransformerByName(name)
+    return TransformerModelByName(name)
 
 
 def test_model_init(name, trf_model):

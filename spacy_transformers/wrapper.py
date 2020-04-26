@@ -1,29 +1,34 @@
+from typing import List, Optional, Dict
 import torch
-from thinc.api import PyTorchWrapper
+from transformers import AutoModel, AutoTokenizer
+from spacy.tokens import Token, Span, Doc
+import thinc
+from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
-from ..types import TokensPlus
+
+from .types import TokensPlus, TransformerOutput
+from .util import get_doc_spans, get_sent_spans
 
 
 @thinc.registry.layers("spacy.TransformerByName.v1")
-def TransformerByName(
+def TransformerModelByName(
     name: str, get_spans=get_doc_spans
 ) -> Model[List[Doc], TransformerOutput]:
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=True)
-    return Transformer(transformer, tokenizer, get_spans=get_spans)
+    return TransformerModel(transformer, tokenizer, get_spans=get_spans)
 
 
-@thinc.registry.layers("spacy.Transformer.v1")
-def Transformer(
+@thinc.registry.layers("spacy.TransformerModel.v1")
+def TransformerModel(
     transformer, tokenizer, get_spans=get_doc_spans
 ) -> Model[List[Doc], TransformerOutput]:
     wrapper = PyTorchTransformer(transformer)
     return Model(
         "transformer",
         forward,
-        layers=[transformer],
+        layers=[wrapper],
         attrs={"tokenizer": tokenizer, "get_spans": get_spans},
-        dims={"nO": wrapper.get_dim("nO")}
     )
 
 
@@ -71,7 +76,6 @@ def PyTorchTransformer(transformer):
         transformer,  # e.g. via AutoModel.from_pretrained(name),
         convert_inputs=_convert_transformer_inputs,
         convert_outputs=_convert_transformer_outputs,
-        dims={"nO": transformer.config.dim}
     )
 
 

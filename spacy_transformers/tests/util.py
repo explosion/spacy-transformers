@@ -6,7 +6,8 @@ from spacy.tokens import Doc
 from thinc.api import Model
 
 from ..types import TransformerOutput
-from ..model_wrapper import get_doc_spans, transformer_forward
+from ..util import get_doc_spans
+from ..wrapper import forward as transformer_forward
 
 
 class DummyTokenizer:
