@@ -1,11 +1,12 @@
 from typing import Optional, Dict, List
 import torch
+import copy
 
 from spacy.tokens import Doc
 from thinc.api import Model
 
 from ..types import TransformerOutput
-from ..model_wrapper import get_doc_spans
+from ..model_wrapper import get_doc_spans, transformer_forward
 
 
 class DummyTokenizer:
@@ -46,7 +47,20 @@ class DummyTokenizer:
             output["attention_mask"].append(mask)
             output["token_type_ids"].append(type_ids)
             output["offset_mapping"].append(offsets)
+        output = self._pad(output)
         return output
+
+    def _pad(self, batch):
+        batch = copy.deepcopy(batch)
+        longest = max(len(ids) for ids in batch["input_ids"])
+        for i in range(len(batch["input_ids"])):
+            length = len(batch["input_ids"][i])
+            difference = longest - length
+            batch["attention_mask"][i] = [1] * length + [0] * difference
+            batch["input_ids"][i].extend([0] * difference)
+            batch["token_type_ids"][i].extend([2] * difference)
+            batch["offset_mapping"][i].extend([None] * difference)
+        return batch
 
     def _tokenize(self, text):
         offsets = []
@@ -61,7 +75,7 @@ class DummyTokenizer:
         type_ids = [0] + [1] * len(words) + [0]
         words = [self.start_symbol] + words + [self.end_symbol]
         offsets = [None] + offsets + [None]
-        mask = list(range(len(words)))
+        mask = [1] * len(words)
         return words, offsets, mask, type_ids
 
     def _encode_words(self, words):
@@ -73,40 +87,26 @@ class DummyTokenizer:
         return ids
 
 
+def DummyTransformerModel(width: int, depth: int):
+    def _forward(model, tokens, is_train):
+        width = model.attrs["width"]
+        depth = model.attrs["depth"]
+        tensors = []
+        shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
+        for i in range(depth):
+            tensors.append(torch.tensor(shape))
+        return tensors, lambda d_tensors: tokens
+
+    return Model("dummy-transformer", _forward, attrs={"width": width, "depth": depth})
+
+
 def DummyTransformer(
     depth: int = 2, width: int = 4, get_spans=get_doc_spans
 ) -> Model[List[Doc], TransformerOutput]:
     """Create a test model that produces a TransformerOutput object."""
-    tokenizer = DummyTokenizer()
     return Model(
-        "test-transformer",
-        forward_dummy_transformer,
-        attrs={
-            "width": width,
-            "depth": depth,
-            "get_spans": get_spans,
-            "tokenizer": tokenizer,
-        },
+        "dummy-transformer",
+        transformer_forward,
+        layers=[DummyTransformerModel(width=width, depth=depth)],
+        attrs={"get_spans": get_spans, "tokenizer": DummyTokenizer()},
     )
-
-
-def forward_dummy_transformer(model, docs, is_train):
-    tokenizer = model.attrs["tokenizer"]
-    get_spans = model.attrs["get_spans"]
-    width = model.attrs["width"]
-    depth = model.attrs["depth"]
-
-    spans = get_spans(docs)
-    tokens = tokenizer(spans)
-
-    tensors = []
-    shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
-    for i in range(depth):
-        tensors.append(torch.tensor(shape))
-
-    output = TransformerOutput(tokens=tokens, tensors=tensors, spans=spans)
-
-    def backprop(d_output: TransformerOutput):
-        return docs
-
-    return output, backprop
