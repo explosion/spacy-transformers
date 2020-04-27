@@ -47,8 +47,6 @@ def forward(
         return_attention_masks=True,
         return_lengths=True,
         return_offsets_mapping=False,
-        pad_to_max_length=True,
-        max_length=256,
         return_tensors="pt",  
         return_token_type_ids=None,  # Sets to model default
     )
@@ -59,8 +57,6 @@ def forward(
         return_attention_masks=True,
         return_lengths=True,
         return_offsets_mapping=True,
-        pad_to_max_length=True,
-        max_length=256,
         return_tensors=None,  
         return_token_type_ids=None,  # Sets to model default
     )
