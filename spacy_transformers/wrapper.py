@@ -5,12 +5,13 @@ from spacy.tokens import Token, Span, Doc
 import thinc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
+from spacy.util import registry
 
 from .types import TokensPlus, TransformerOutput
 from .util import get_doc_spans, get_sent_spans
 
 
-@thinc.registry.layers("spacy.TransformerByName.v1")
+@registry.architectures.register("spacy.TransformerByName.v1")
 def TransformerModelByName(
     name: str, get_spans=get_doc_spans
 ) -> Model[List[Doc], TransformerOutput]:
@@ -19,7 +20,7 @@ def TransformerModelByName(
     return TransformerModel(transformer, tokenizer, get_spans=get_spans)
 
 
-@thinc.registry.layers("spacy.TransformerModel.v1")
+@registry.architectures.register("spacy.TransformerModel.v1")
 def TransformerModel(
     transformer, tokenizer, get_spans=get_doc_spans
 ) -> Model[List[Doc], TransformerOutput]:
@@ -40,8 +41,19 @@ def forward(
     transformer = model.layers[0]
 
     spans = get_spans(docs)
-
     token_data = tokenizer.batch_encode_plus(
+        [span.text for span in spans],
+        add_special_tokens=True,
+        return_attention_masks=True,
+        return_lengths=True,
+        return_offsets_mapping=False,
+        pad_to_max_length=True,
+        max_length=256,
+        return_tensors="pt",  
+        return_token_type_ids=None,  # Sets to model default
+    )
+    # Work around https://github.com/huggingface/transformers/issues/3224
+    extra_token_data = tokenizer.batch_encode_plus(
         [span.text for span in spans],
         add_special_tokens=True,
         return_attention_masks=True,
@@ -49,14 +61,14 @@ def forward(
         return_offsets_mapping=True,
         pad_to_max_length=True,
         max_length=256,
-        return_tensors=None,  # Work around bug :(
+        return_tensors=None,  
         return_token_type_ids=None,  # Sets to model default
     )
-    # Work around https://github.com/huggingface/transformers/issues/3224
-    token_data["input_ids"] = torch.tensor(token_data["input_ids"])
-    token_data["attention_mask"] = torch.tensor(token_data["attention_mask"])
-    if "token_type_ids" in token_data:
-        token_data["token_type_ids"] = torch.tensor(token_data["token_type_ids"])
+    # There seems to be some bug where it's flattening single-entry batches?
+    if len(spans) == 1:
+        token_data["offset_mapping"] = [extra_token_data["offset_mapping"]]
+    else:
+        token_data["offset_mapping"] = extra_token_data["offset_mapping"]
     tokens = TokensPlus(**token_data)
 
     tensors, bp_tensors = transformer(tokens, is_train)
