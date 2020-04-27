@@ -49,6 +49,10 @@ class DummyTokenizer:
             output["token_type_ids"].append(type_ids)
             output["offset_mapping"].append(offsets)
         output = self._pad(output)
+        if return_tensors == "pt":
+            output["input_ids"] = torch.tensor(output["input_ids"])
+            output["attention_mask"] = torch.tensor(output["attention_mask"])
+            output["token_type_ids"] = torch.tensor(output["token_type_ids"])
         return output
 
     def _pad(self, batch):
