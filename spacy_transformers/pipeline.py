@@ -130,6 +130,8 @@ class Transformer(Pipe):
             nonlocal d_output
             if d_output is None:
                 d_output = one_d_output
+                for i, d_tensor in enumerate(one_d_output.tensors):
+                    losses[self.name] += float((d_tensor ** 2).sum())
             else:
                 for i, d_tensor in enumerate(one_d_output.tensors):
                     d_output.tensors[i] += d_tensor

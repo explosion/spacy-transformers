@@ -2,12 +2,13 @@ from typing import List
 
 import torch
 import numpy
-from thinc.api import chain, Model, xp2torch
+from thinc.api import chain, Model, xp2torch, to_numpy
 from thinc.types import Floats2d
 
 from spacy.util import registry
 
 from .pipeline import TransformerListener
+from ._align import align_docs
 from .types import TransformerOutput
 
 
@@ -27,19 +28,16 @@ def trf_data_to_tensor(width) -> Model[TransformerOutput, List[Floats2d]]:
     
 def forward(model, trf_data, is_train):
     width = trf_data.width
-    docs = trf_data.docs
-    outputs = [numpy.zeros((len(doc), width), dtype="f") for doc in docs]
+    alignment = align_docs(trf_data.spans, trf_data.tokens.offset_mapping)
+    outputs = [numpy.zeros((len(a), width), dtype="f") for a in alignment]
     indices = []
-    wp_array = trf_data.arrays[-1]
-    for i, doc in enumerate(docs):
+    wp_array = to_numpy(trf_data.arrays[-1])
+    for i, doc_align in enumerate(alignment):
         indices.append([])
-        for j, token in enumerate(doc):
-            if token._.trf_alignment:
-                wp_idx = token._.trf_alignment[-1]
-                outputs[i][j] = wp_array[wp_idx]
-                indices.append(wp_idx)
-            else:
-                indices.append([])
+        for j, tok_align in enumerate(doc_align):
+            wp_idx = tok_align[-1]
+            outputs[i][j] = wp_array[wp_idx]
+            indices[-1].append(wp_idx)
     outputs = [model.ops.asarray(arr) for arr in outputs]
 
     def backprop(d_outputs):
