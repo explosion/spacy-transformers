@@ -63,7 +63,7 @@ def _convert_transformer_inputs(model, tokens: BatchEncoding, is_train):
         "input_ids": tokens["input_ids"],
         "attention_mask": tokens["attention_mask"],
     }
-    if tokens.token_type_ids is not None:
+    if "token_type_ids" in tokens:
         kwargs["token_type_ids"] = tokens["token_type_ids"]
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
 
