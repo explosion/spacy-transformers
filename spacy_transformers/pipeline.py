@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Callable, Optional
 from spacy.pipeline import Pipe
 from spacy.language import component
 from spacy.tokens import Doc
@@ -7,31 +7,11 @@ from spacy.gold import Example
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
 from thinc.api import Model, set_dropout_rate
 
-from ._align import align_docs
-from .types import TransformerOutput
+from .util import null_annotation_setter
+from .types import FullTransformerBatch, TransformerData
 
 
-class AnnotationSetter:
-    """Set annotations on the Doc from the transformer."""
-
-    def __init__(self, set_tensor=False):
-        self.cfg = {"set_tensor": set_tensor}
-
-    def __call__(self, docs: List[Doc], trf_data: TransformerOutput) -> None:
-        for doc in docs:
-            doc._.trf_data = trf_data
-        for i, span in enumerate(trf_data.spans):
-            span._.trf_row = i
-        alignments = align_docs(trf_data.spans, trf_data.tokens.offset_mapping)
-        for j, token in enumerate(doc):
-            token._.trf_alignment = alignments[i][j]
-        if self.cfg["set_tensor"]:
-            doc.tensor = doc._.trf_get_features(ndim=2)
-
-
-@component(
-    "transformer", assigns=["doc._.trf_data", "span._.trf_row", "token._.trf_alignment"]
-)
+@component("transformer", assigns=["doc._.trf_data"])
 class Transformer(Pipe):
     """spaCy pipeline component to use transformer models.
 
@@ -45,8 +25,8 @@ class Transformer(Pipe):
     def __init__(
         self,
         vocab: Vocab,
-        model: Model,
-        annotation_setter: Callable = AnnotationSetter(),
+        model: Model[List[Doc], FullTransformerBatch],
+        annotation_setter: Callable = null_annotation_setter,
         **cfg,
     ):
         self.vocab = vocab
@@ -88,21 +68,23 @@ class Transformer(Pipe):
             self.set_annotations(docs, outputs)
             yield from batch
 
-    def predict(self, docs):
-        outputs = self.model.predict(docs)
+    def predict(self, docs) -> FullTransformerBatch:
+        activations = self.model.predict(docs)
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners:
-            listener.receive(batch_id, outputs, None)
-        return outputs
+            listener.receive(batch_id, activations.doc_data, None)
+        return (activations, doc_data)
 
-    def set_annotations(self, docs: List[Doc], trf_data: TransformerOutput):
+    def set_annotations(self, docs: List[Doc], predictions: FullTransformerBatch):
         """Assign the extracted features to the Doc objects and overwrite the
         vector and similarity hooks.
 
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        self.annotation_setter(docs, trf_data)
+        for doc, data in zip(docs, predictions.doc_data):
+            doc._.trf_data = data
+        self.annotation_setter(docs, predictions)
 
     def update(self, examples, drop=0.0, sgd=None, losses=None, set_annotations=False):
         """Update the model.
@@ -118,40 +100,41 @@ class Transformer(Pipe):
         if isinstance(docs, Doc):
             docs = [docs]
         set_dropout_rate(self.model, drop)
-        output, bp_output = self.model.begin_update(docs)
-        d_output = None
+        trf_batch, bp_trf_batch = self.model.begin_update(docs)
+        d_doc_data = None
 
         losses.setdefault(self.name, 0.0)
 
-        def accumulate_gradient(one_d_output: TransformerOutput):
+        def accumulate_gradient(one_d_doc_data: List[TransformerData]):
             """Accumulate tok2vec loss and gradient. This is passed as a callback
             to all but the last listener. Only the last one does the backprop.
             """
-            nonlocal d_output
-            if d_output is None:
-                d_output = one_d_output
-                for i, d_tensor in enumerate(one_d_output.tensors):
+            nonlocal d_doc_data
+            if d_doc_data is None:
+                d_doc_data = one_d_doc_data
+                for i, d_tensor in enumerate(one_d_doc_data.tensors):
                     losses[self.name] += float((d_tensor ** 2).sum())
             else:
-                for i, d_tensor in enumerate(one_d_output.tensors):
+                for i, d_tensor in enumerate(one_d_doc_data.tensors):
                     d_output.tensors[i] += d_tensor
                     losses[self.name] += float((d_tensor ** 2).sum())
 
-        def backprop(one_d_output: TransformerOutput):
+        def backprop(one_d_doc_data: List[TransformerData]):
             """Callback to actually do the backprop. Passed to last listener."""
-            nonlocal d_output
-            accumulate_gradient(one_d_output)
-            d_docs = bp_output(d_output)
+            nonlocal d_doc_data
+            accumulate_gradient(one_d_doc_data)
+            d_trf_batch = _unmerge(d_doc_data) # TODO
+            d_docs = bp_output(d_trf_batch)
             if sgd is not None:
                 self.model.finish_update(sgd)
             return d_docs
 
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners[:-1]:
-            listener.receive(batch_id, output, accumulate_gradient)
-        self.listeners[-1].receive(batch_id, output, backprop)
+            listener.receive(batch_id, trf_data.doc_data, accumulate_gradient)
+        self.listeners[-1].receive(batch_id, trf_data.doc_data, backprop)
         if set_annotations:
-            self.set_annotations(docs, output)
+            self.set_annotations(docs, trf_data)
 
     def get_loss(self, docs, golds, scores):
         pass
@@ -176,7 +159,11 @@ class TransformerListener(Model):
 
     name = "transformer-listener"
 
-    def __init__(self, upstream_name, width):
+    _batch_id: Optional[int]
+    _outputs: Optional[List[TransformerData]]
+    _backprop: Optional[Callable[[List[TransformerData]], List[Doc]]]
+
+    def __init__(self, upstream_name, width) -> Model[List[Doc], List[TransformerData]]:
         Model.__init__(self, name=self.name, forward=forward, dims={"nO": width})
         self.upstream_name = upstream_name
         self._batch_id = None
@@ -184,7 +171,7 @@ class TransformerListener(Model):
         self._backprop = None
 
     @classmethod
-    def get_batch_id(cls, inputs):
+    def get_batch_id(cls, inputs: List[Doc]):
         return sum(sum(token.orth for token in doc) for doc in inputs)
 
     def receive(self, batch_id, outputs, backprop):
@@ -209,6 +196,6 @@ def forward(model: TransformerListener, docs, is_train):
         return model._outputs, model._backprop
     else:
         if len(docs) == 0:
-            return TransformerOutput.empty(), lambda d_data: docs
+            return [TransformerData.empty()], lambda d_data: docs
         else:
-            return docs[0]._.trf_data, lambda d_data: docs
+            return [doc._.trf_data for doc in docs], lambda d_data: docs

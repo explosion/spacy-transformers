@@ -33,26 +33,27 @@ def transformer_tok2vec_v1(name: str, width: int):
     return tok2vec
 
 
-def trf_data_to_tensor(width) -> Model[TransformerOutput, List[Floats2d]]:
+def trf_data_to_tensor(width) -> Model[List[TransformerData], List[Floats2d]]:
     return Model("trf-data-to-tensor", forward, dims={"nO": width})
 
     
-def forward(model, trf_data, is_train):
-    width = trf_data.width
-    alignment = align_docs(trf_data.spans, trf_data.tokens.offset_mapping)
-    outputs = [numpy.zeros((len(a), width), dtype="f") for a in alignment]
+def forward(model, trf_datas: List[TransformerData], is_train):
+    width = model.get_dim("width")
+    outputs = []
     indices = []
-    wp_array = to_numpy(trf_data.arrays[-1])
-    for i, doc_align in enumerate(alignment):
+    for trf_data in trf_datas:
+        wp_array = trf_data.tensors[-1]
+        outputs.append(numpy.zeros(wp_array.shape, dtype="f"))
         indices.append([])
-        for j, tok_align in enumerate(doc_align):
+        for i, tok_align in enumerate(trf_data.align):
             wp_idx = tok_align[-1]
-            outputs[i][j] = wp_array[wp_idx]
+            outputs[-1][i] = wp_array[wp_idx]
             indices[-1].append(wp_idx)
     outputs = [model.ops.asarray(arr) for arr in outputs]
 
     def backprop(d_outputs):
-        d_tensors = [torch.zeros_like(t) for t in trf_data.tensors]
+        d_tensors = [numpy.zeros(t.shape, dtype="f") for t in d_outputs]
+        d_trf_data = []
         for i in range(len(d_outputs)):
             d_output = xp2torch(d_outputs[i])
             for j, token_indices in enumerate(indices[i]):

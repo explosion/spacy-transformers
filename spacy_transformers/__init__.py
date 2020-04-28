@@ -1,3 +1,3 @@
 from .util import install_extensions
 from .wrapper import TransformerModelByName, TransformerModel
-from .pipeline import AnnotationSetter, Transformer, TransformerListener
+from .pipeline import Transformer, TransformerListener

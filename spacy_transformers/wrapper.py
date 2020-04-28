@@ -7,14 +7,15 @@ from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
-from .types import TokensPlus, TransformerOutput
+from .types import FullTransformerBatch, TransformerData
 from .util import get_doc_spans, get_sent_spans
+from ._batch_encoding import BatchEncoding
 
 
 @registry.architectures.register("spacy.TransformerByName.v1")
 def TransformerModelByName(
     name: str, get_spans=get_doc_spans
-) -> Model[List[Doc], TransformerOutput]:
+) -> Model[List[Doc], TransformerData]:
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=True)
     return TransformerModel(transformer, tokenizer, get_spans=get_spans)
@@ -23,7 +24,7 @@ def TransformerModelByName(
 @registry.architectures.register("spacy.TransformerModel.v1")
 def TransformerModel(
     transformer, tokenizer, get_spans=get_doc_spans
-) -> Model[List[Doc], TransformerOutput]:
+) -> Model[List[Doc], TransformerData]:
     wrapper = PyTorchTransformer(transformer)
     return Model(
         "transformer",
@@ -35,44 +36,17 @@ def TransformerModel(
 
 def forward(
     model: Model, docs: List[Doc], is_train: bool
-) -> TransformerOutput:
+) -> FullTransformerBatch:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]
 
     spans = get_spans(docs)
-    token_data = tokenizer.batch_encode_plus(
-        [span.text for span in spans],
-        add_special_tokens=True,
-        return_attention_masks=True,
-        return_lengths=True,
-        return_offsets_mapping=False,
-        return_tensors="pt",  
-        return_token_type_ids=None,  # Sets to model default
-    )
-    # Work around https://github.com/huggingface/transformers/issues/3224
-    extra_token_data = tokenizer.batch_encode_plus(
-        [span.text for span in spans],
-        add_special_tokens=True,
-        return_attention_masks=True,
-        return_lengths=True,
-        return_offsets_mapping=True,
-        return_tensors=None,  
-        return_token_type_ids=None,  # Sets to model default
-    )
-    # There seems to be some bug where it's flattening single-entry batches?
-    if len(spans) == 1:
-        token_data["offset_mapping"] = [extra_token_data["offset_mapping"]]
-    else:
-        token_data["offset_mapping"] = extra_token_data["offset_mapping"]
-    tokens = TokensPlus(**token_data)
+    token_data = hugginface_tokenize(tokenizer, [span.text for span in spans])
+    tensors, bp_tensors = transformer(token_data, is_train)
+    output = FullTransformerBatch(spans=spans, tokens=token_data, tensors=tensors)
 
-    tensors, bp_tensors = transformer(tokens, is_train)
-    output = TransformerOutput(
-        tokens=tokens, tensors=tensors, spans=spans, ops=transformer.ops
-    )
-
-    def backprop_transformer(d_output: TransformerOutput):
+    def backprop_transformer(d_output: FullTransformerBatch):
         _ = bp_tensors(d_output.tensors)
         return docs
 
@@ -87,14 +61,14 @@ def PyTorchTransformer(transformer):
     )
 
 
-def _convert_transformer_inputs(model, tokens: TokensPlus, is_train):
+def _convert_transformer_inputs(model, tokens: BatchEncoding, is_train):
     # Adapter for the PyTorchWrapper. See https://thinc.ai/docs/usage-frameworks
     kwargs = {
-        "input_ids": tokens.input_ids,
-        "attention_mask": tokens.attention_mask,
+        "input_ids": tokens["input_ids"],
+        "attention_mask": tokens["attention_mask"],
     }
     if tokens.token_type_ids is not None:
-        kwargs["token_type_ids"] = tokens.token_type_ids
+        kwargs["token_type_ids"] = tokens["token_type_ids"]
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
 
 
