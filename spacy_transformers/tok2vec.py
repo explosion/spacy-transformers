@@ -8,14 +8,25 @@ from thinc.types import Floats2d
 from spacy.util import registry
 
 from .pipeline import TransformerListener
+from .wrapper import TransformerModelByName
 from ._align import align_docs
 from .types import TransformerOutput
 
 
-@registry.architectures.register("spacy.Tok2VecTransformer.v1")
-def transformer_tok2vec_v1(width):
+@registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
+def transformer_listener_tok2vec_v1(width: int):
     tok2vec = chain(
         TransformerListener("transformer", width=width),
+        trf_data_to_tensor(width)
+    )
+    tok2vec.set_dim("nO", width)
+    return tok2vec
+
+
+@registry.architectures.register("spacy.Tok2VecTransformer.v1")
+def transformer_tok2vec_v1(name: str, width: int):
+    tok2vec = chain(
+        TransformerModelByName(name),
         trf_data_to_tensor(width)
     )
     tok2vec.set_dim("nO", width)
