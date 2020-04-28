@@ -114,5 +114,5 @@ def DummyTransformer(
         transformer_forward,
         layers=[DummyTransformerModel(width=width, depth=depth)],
         attrs={"get_spans": get_spans, "tokenizer": DummyTokenizer()},
-        dims={"nO": width}
+        dims={"nO": width},
     )

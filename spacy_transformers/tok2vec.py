@@ -14,8 +14,7 @@ from .types import TransformerData
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
 def transformer_listener_tok2vec_v1(width: int):
     tok2vec = chain(
-        TransformerListener("transformer", width=width),
-        trf_data_to_tensor(width)
+        TransformerListener("transformer", width=width), trf_data_to_tensor(width)
     )
     tok2vec.set_dim("nO", width)
     return tok2vec
@@ -23,10 +22,7 @@ def transformer_listener_tok2vec_v1(width: int):
 
 @registry.architectures.register("spacy.Tok2VecTransformer.v1")
 def transformer_tok2vec_v1(name: str, width: int):
-    tok2vec = chain(
-        TransformerModelByName(name),
-        trf_data_to_tensor(width)
-    )
+    tok2vec = chain(TransformerModelByName(name), trf_data_to_tensor(width))
     tok2vec.set_dim("nO", width)
     return tok2vec
 
@@ -34,7 +30,7 @@ def transformer_tok2vec_v1(name: str, width: int):
 def trf_data_to_tensor(width) -> Model[List[TransformerData], List[Floats2d]]:
     return Model("trf-data-to-tensor", forward, dims={"nO": width})
 
-    
+
 def forward(model, trf_datas: List[TransformerData], is_train):
     outputs = []
     indices = []
@@ -55,12 +51,12 @@ def forward(model, trf_datas: List[TransformerData], is_train):
             for j, token_indices in enumerate(indices[i]):
                 for entry in token_indices:
                     d_tensors[-1][i, j] += d_output[j]
-        
+
         return TransformerData(
             spans=trf_data.spans,
             tokens=trf_data.tokens,
             tensors=d_tensors,
-            ops=trf_data.ops
+            ops=trf_data.ops,
         )
 
     return outputs, backprop

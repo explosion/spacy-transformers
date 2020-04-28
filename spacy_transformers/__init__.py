@@ -8,5 +8,5 @@ __all__ = [
     "TransformerModelByName",
     "TransformerModel",
     "Transformer",
-    "TransformerListener"
+    "TransformerListener",
 ]

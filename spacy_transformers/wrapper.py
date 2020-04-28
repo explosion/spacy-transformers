@@ -32,9 +32,7 @@ def TransformerModel(
     )
 
 
-def forward(
-    model: Model, docs: List[Doc], is_train: bool
-) -> FullTransformerBatch:
+def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBatch:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]

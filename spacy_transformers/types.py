@@ -12,9 +12,11 @@ from .util import transpose_list
 
 BatchEncoding = Dict
 
+
 @dataclass
 class TransformerData:
     """Transformer tokens and outputs for one Doc object."""
+
     spans: List[Tuple[int, int]]
     tokens: BatchEncoding
     tensors: List[Floats3d]
@@ -22,12 +24,7 @@ class TransformerData:
 
     @classmethod
     def empty(cls) -> "TransformerData":
-        return cls(
-            tokens=BatchEncoding(),
-            tensors=[],
-            spans=[],
-            align=[],
-        )
+        return cls(tokens=BatchEncoding(), tensors=[], spans=[], align=[],)
 
     @property
     def width(self) -> int:
@@ -42,10 +39,7 @@ class FullTransformerBatch:
     _doc_data: Optional[List[TransformerData]]
 
     def __init__(
-        self,
-        spans: List[Span],
-        tokens: BatchEncoding,
-        tensors: List[torch.Tensor]
+        self, spans: List[Span], tokens: BatchEncoding, tensors: List[torch.Tensor]
     ):
         self.spans = spans
         self.tokens = tokens
@@ -63,7 +57,7 @@ class FullTransformerBatch:
         return FullTransformerBatch(
             spans=self.spans,
             tokens=self.tokens,
-            tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)]
+            tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)],
         )
 
     def split_by_doc(self) -> List["TransformerData"]:
@@ -83,9 +77,9 @@ class FullTransformerBatch:
             outputs.append(
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
-                    tensors=[torch2xp(t[start : end]) for t in self.tensors],
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
                     tokens=tokens,
-                    align=align
+                    align=align,
                 )
             )
             start += len(doc_spans)
@@ -98,5 +92,5 @@ class FullTransformerBatch:
             if not hasattr(value, "__getitem__"):
                 output[key] = value
             else:
-                output[key] = value[start : end]
+                output[key] = value[start:end]
         return output

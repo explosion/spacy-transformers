@@ -13,9 +13,13 @@ from ..util import install_extensions
 def vocab():
     return Vocab()
 
+
 @pytest.fixture
 def docs(vocab):
-    return [Doc(vocab, words=["hello", "world"]), Doc(vocab, words=["this", "is", "another"])]
+    return [
+        Doc(vocab, words=["hello", "world"]),
+        Doc(vocab, words=["this", "is", "another"]),
+    ]
 
 
 @pytest.fixture
@@ -25,6 +29,7 @@ def component(vocab):
     except ValueError:
         pass
     return Transformer(Vocab(), DummyTransformer())
+
 
 def test_init(component):
     assert isinstance(component.vocab, Vocab)
@@ -56,6 +61,6 @@ def test_set_annotations(component, docs):
 
 
 def test_listeners(component, docs):
-    docs = list(component.pipe(docs)) 
+    docs = list(component.pipe(docs))
     for listener in component.listeners:
         assert listener.verify_inputs(docs)

@@ -12,6 +12,7 @@ def install_extensions():
 def get_doc_spans(docs):
     return [doc[:] for doc in docs]
 
+
 def get_sent_spans(docs):
     sents = []
     for doc in docs:
@@ -36,7 +37,7 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_attention_masks=True,
         return_lengths=True,
         return_offsets_mapping=False,
-        return_tensors="pt",  
+        return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
     )
     # Work around https://github.com/huggingface/transformers/issues/3224
@@ -46,7 +47,7 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_attention_masks=True,
         return_lengths=True,
         return_offsets_mapping=True,
-        return_tensors=None,  
+        return_tensors=None,
         return_token_type_ids=None,  # Sets to model default
     )
     # There seems to be some bug where it's flattening single-entry batches?
@@ -63,7 +64,7 @@ def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncodin
         if not hasattr(value, "__getitem__"):
             output[key] = value
         else:
-            output[key] = value[start : end]
+            output[key] = value[start:end]
     return output
 
 
