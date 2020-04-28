@@ -14,7 +14,7 @@ def align_docs(
     the rows aligned to that token.
     """
     span_alignments = align_spans(spans, span_offsets)
-    by_doc = _group_spans_by_doc(spans)
+    by_doc = group_spans_by_doc(spans)
     i = 0  # Keep track of which span we're up to in the flat list.
     doc_alignments: List[List[List[Tuple[int, int]]]] = []
     for doc, doc_spans in by_doc:
@@ -28,7 +28,7 @@ def align_docs(
     return doc_alignments
 
 
-def _group_spans_by_doc(spans: List[Span]) -> List[Tuple[Doc, List[Span]]]:
+def group_spans_by_doc(spans: List[Span]) -> List[Tuple[Doc, List[Span]]]:
     """Group spans according to the doc object they refer to."""
     doc_map = defaultdict(list)
     id2doc = {}
