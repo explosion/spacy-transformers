@@ -1,5 +1,5 @@
 from typing import List
-from spacy.tokens import Token, Span, Doc
+from spacy.tokens import Doc
 
 from .types import TransformerData, FullTransformerBatch
 from ._batch_encoding import BatchEncoding
@@ -17,6 +17,16 @@ def get_sent_spans(docs):
     for doc in docs:
         sents.extend(doc.sents)
     return sents
+
+
+def transpose_list(nested_list):
+    output = []
+    for i, entry in enumerate(nested_list):
+        while len(output) < len(entry):
+            output.append([None] * len(nested_list))
+        for j, x in enumerate(entry):
+            output[j][i] = x
+    return output
 
 
 def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
@@ -40,7 +50,7 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_token_type_ids=None,  # Sets to model default
     )
     # There seems to be some bug where it's flattening single-entry batches?
-    if len(spans) == 1:
+    if len(texts) == 1:
         token_data["offset_mapping"] = [extra_token_data["offset_mapping"]]
     else:
         token_data["offset_mapping"] = extra_token_data["offset_mapping"]
@@ -60,5 +70,3 @@ def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncodin
 def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
     """Set no additional annotations on the Doc objects."""
     pass
-
-

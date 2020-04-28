@@ -1,15 +1,13 @@
-from typing import List, Optional, Dict
+from typing import List
 import torch
 from transformers import AutoModel, AutoTokenizer
-from spacy.tokens import Token, Span, Doc
-import thinc
+from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
-from .types import FullTransformerBatch, TransformerData
-from .util import get_doc_spans, get_sent_spans
-from ._batch_encoding import BatchEncoding
+from .types import BatchEncoding, FullTransformerBatch, TransformerData
+from .util import get_doc_spans, huggingface_tokenize
 
 
 @registry.architectures.register("spacy.TransformerByName.v1")
@@ -42,7 +40,7 @@ def forward(
     transformer = model.layers[0]
 
     spans = get_spans(docs)
-    token_data = hugginface_tokenize(tokenizer, [span.text for span in spans])
+    token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
     tensors, bp_tensors = transformer(token_data, is_train)
     output = FullTransformerBatch(spans=spans, tokens=token_data, tensors=tensors)
 

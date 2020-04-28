@@ -1,16 +1,14 @@
 from typing import List
 
-import torch
 import numpy
-from thinc.api import chain, Model, xp2torch, to_numpy
+from thinc.api import chain, Model, xp2torch
 from thinc.types import Floats2d
 
 from spacy.util import registry
 
 from .pipeline import TransformerListener
 from .wrapper import TransformerModelByName
-from ._align import align_docs
-from .types import TransformerOutput
+from .types import TransformerData
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
@@ -38,7 +36,6 @@ def trf_data_to_tensor(width) -> Model[List[TransformerData], List[Floats2d]]:
 
     
 def forward(model, trf_datas: List[TransformerData], is_train):
-    width = model.get_dim("width")
     outputs = []
     indices = []
     for trf_data in trf_datas:
@@ -53,14 +50,13 @@ def forward(model, trf_datas: List[TransformerData], is_train):
 
     def backprop(d_outputs):
         d_tensors = [numpy.zeros(t.shape, dtype="f") for t in d_outputs]
-        d_trf_data = []
         for i in range(len(d_outputs)):
             d_output = xp2torch(d_outputs[i])
             for j, token_indices in enumerate(indices[i]):
                 for entry in token_indices:
                     d_tensors[-1][i, j] += d_output[j]
         
-        return TransformerOutput(
+        return TransformerData(
             spans=trf_data.spans,
             tokens=trf_data.tokens,
             tensors=d_tensors,

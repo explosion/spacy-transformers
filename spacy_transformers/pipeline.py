@@ -73,7 +73,7 @@ class Transformer(Pipe):
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners:
             listener.receive(batch_id, activations.doc_data, None)
-        return (activations, doc_data)
+        return activations
 
     def set_annotations(self, docs: List[Doc], predictions: FullTransformerBatch):
         """Assign the extracted features to the Doc objects and overwrite the
@@ -100,41 +100,41 @@ class Transformer(Pipe):
         if isinstance(docs, Doc):
             docs = [docs]
         set_dropout_rate(self.model, drop)
-        trf_batch, bp_trf_batch = self.model.begin_update(docs)
-        d_doc_data = None
+        trf_full, bp_trf_full = self.model.begin_update(docs)
+        d_tensors = []
 
         losses.setdefault(self.name, 0.0)
 
-        def accumulate_gradient(one_d_doc_data: List[TransformerData]):
+        def accumulate_gradient(d_trf_datas: List[TransformerData]):
             """Accumulate tok2vec loss and gradient. This is passed as a callback
             to all but the last listener. Only the last one does the backprop.
             """
-            nonlocal d_doc_data
-            if d_doc_data is None:
-                d_doc_data = one_d_doc_data
-                for i, d_tensor in enumerate(one_d_doc_data.tensors):
+            nonlocal d_tensors
+            for i, d_trf_data in enumerate(d_trf_datas):
+                for d_tensor in d_trf_data.tensors:
                     losses[self.name] += float((d_tensor ** 2).sum())
-            else:
-                for i, d_tensor in enumerate(one_d_doc_data.tensors):
-                    d_output.tensors[i] += d_tensor
-                    losses[self.name] += float((d_tensor ** 2).sum())
+                if i >= len(d_tensors):
+                    d_tensors.append(d_trf_data.tensors)
+                else:
+                    for j, d_tensor in enumerate(d_trf_data.tensors):
+                        d_tensors[i][j] += d_tensor
 
-        def backprop(one_d_doc_data: List[TransformerData]):
+        def backprop(d_trf_datas: List[TransformerData]):
             """Callback to actually do the backprop. Passed to last listener."""
-            nonlocal d_doc_data
-            accumulate_gradient(one_d_doc_data)
-            d_trf_batch = _unmerge(d_doc_data) # TODO
-            d_docs = bp_output(d_trf_batch)
+            nonlocal d_tensors
+            accumulate_gradient(d_trf_datas)
+            d_trf_full = trf_full.unsplit_by_doc(d_tensors)
+            d_docs = bp_trf_full(d_trf_full)
             if sgd is not None:
                 self.model.finish_update(sgd)
             return d_docs
 
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners[:-1]:
-            listener.receive(batch_id, trf_data.doc_data, accumulate_gradient)
-        self.listeners[-1].receive(batch_id, trf_data.doc_data, backprop)
+            listener.receive(batch_id, trf_full.doc_data, accumulate_gradient)
+        self.listeners[-1].receive(batch_id, trf_full.doc_data, backprop)
         if set_annotations:
-            self.set_annotations(docs, trf_data)
+            self.set_annotations(docs, trf_full)
 
     def get_loss(self, docs, golds, scores):
         pass

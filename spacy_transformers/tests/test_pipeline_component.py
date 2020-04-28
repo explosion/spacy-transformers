@@ -56,7 +56,6 @@ def test_set_annotations(component, docs):
 
 
 def test_listeners(component, docs):
-    width = component.model.layers[0].attrs["width"]
     docs = list(component.pipe(docs)) 
     for listener in component.listeners:
         assert listener.verify_inputs(docs)
