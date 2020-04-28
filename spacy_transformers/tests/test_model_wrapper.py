@@ -2,7 +2,7 @@ import pytest
 import spacy
 from thinc.api import Model
 from ..wrapper import TransformerModelByName
-from ..types import TransformerOutput
+from ..types import FullTransformerBatch
 
 
 MODEL_NAMES = ["distilbert-base-uncased"]
@@ -36,4 +36,4 @@ def test_model_init(name, trf_model):
 
 def test_model_predict(docs, trf_model):
     outputs = trf_model.predict(docs)
-    assert isinstance(outputs, TransformerOutput)
+    assert isinstance(outputs, FullTransformerBatch)

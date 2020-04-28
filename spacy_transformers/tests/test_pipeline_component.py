@@ -4,8 +4,8 @@ from spacy.tokens import Doc
 from thinc.api import Model
 
 from .util import DummyTransformer
-from ..pipeline import Transformer, AnnotationSetter
-from ..types import TransformerOutput
+from ..pipeline import Transformer, null_annotation_setter
+from ..types import TransformerData, FullTransformerBatch
 from ..util import install_extensions
 
 
@@ -34,30 +34,26 @@ def component(vocab):
 def test_init(component):
     assert isinstance(component.vocab, Vocab)
     assert isinstance(component.model, Model)
-    assert isinstance(component.annotation_setter, AnnotationSetter)
+    assert hasattr(component.annotation_setter, "__call__")
     assert component.listeners == []
     assert component.cfg == {}
 
 
 def test_predict(component, docs):
     trf_data = component.predict(docs)
-    assert isinstance(trf_data, TransformerOutput)
+    assert isinstance(trf_data, FullTransformerBatch)
     assert len(trf_data.tensors) == component.model.layers[0].attrs["depth"]
-    n_tokens = trf_data.tokens.input_ids.shape[1]
+    n_tokens = trf_data.tokens["input_ids"].shape[1]
     width = component.model.layers[0].attrs["width"]
-    assert trf_data.arrays[-1].shape == (len(docs), n_tokens, width)
+    assert trf_data.tensors[-1].shape == (len(docs), n_tokens, width)
 
 
 def test_set_annotations(component, docs):
     trf_data = component.predict(docs)
     component.set_annotations(docs, trf_data)
     for doc in docs:
-        assert doc._.trf_data is trf_data
-    for i, span in enumerate(trf_data.spans):
-        assert span._.trf_row == i
-    for doc in docs:
-        for token in doc:
-            assert isinstance(token._.trf_alignment, list)
+        assert isinstance(doc._.trf_data, TransformerData)
+        assert len(doc._.trf_data.spans) == 1
 
 
 def test_listeners(component, docs):

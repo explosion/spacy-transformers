@@ -8,7 +8,6 @@ from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
 
 from ._align import align_docs
-from .util import transpose_list
 
 BatchEncoding = Dict
 
@@ -24,7 +23,7 @@ class TransformerData:
 
     @classmethod
     def empty(cls) -> "TransformerData":
-        return cls(tokens=BatchEncoding(), tensors=[], spans=[], align=[],)
+        return cls(tokens={}, tensors=[], spans=[], align=[],)
 
     @property
     def width(self) -> int:
@@ -94,3 +93,15 @@ class FullTransformerBatch:
             else:
                 output[key] = value[start:end]
         return output
+
+
+def transpose_list(nested_list):
+    output = []
+    for i, entry in enumerate(nested_list):
+        while len(output) < len(entry):
+            output.append([None] * len(nested_list))
+        for j, x in enumerate(entry):
+            output[j][i] = x
+    return output
+
+

@@ -1,8 +1,7 @@
 from typing import List
 from spacy.tokens import Doc
 
-from .types import TransformerData, FullTransformerBatch
-from ._batch_encoding import BatchEncoding
+from .types import TransformerData, FullTransformerBatch, BatchEncoding
 
 
 def install_extensions():
@@ -18,16 +17,6 @@ def get_sent_spans(docs):
     for doc in docs:
         sents.extend(doc.sents)
     return sents
-
-
-def transpose_list(nested_list):
-    output = []
-    for i, entry in enumerate(nested_list):
-        while len(output) < len(entry):
-            output.append([None] * len(nested_list))
-        for j, x in enumerate(entry):
-            output[j][i] = x
-    return output
 
 
 def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:

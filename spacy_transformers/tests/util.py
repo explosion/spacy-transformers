@@ -5,7 +5,7 @@ import copy
 from spacy.tokens import Doc
 from thinc.api import Model
 
-from ..types import TransformerOutput
+from ..types import TransformerData, FullTransformerBatch
 from ..util import get_doc_spans
 from ..wrapper import forward as transformer_forward
 
@@ -97,7 +97,7 @@ def DummyTransformerModel(width: int, depth: int):
         width = model.attrs["width"]
         depth = model.attrs["depth"]
         tensors = []
-        shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
+        shape = (tokens["input_ids"].shape[0], tokens["input_ids"].shape[1], width)
         for i in range(depth):
             tensors.append(torch.zeros(*shape))
         return tensors, lambda d_tensors: tokens
@@ -107,8 +107,8 @@ def DummyTransformerModel(width: int, depth: int):
 
 def DummyTransformer(
     depth: int = 2, width: int = 4, get_spans=get_doc_spans
-) -> Model[List[Doc], TransformerOutput]:
-    """Create a test model that produces a TransformerOutput object."""
+) -> Model[List[Doc], TransformerData]:
+    """Create a test model that produces a FullTransformerBatch object."""
     return Model(
         "dummy-transformer",
         transformer_forward,
