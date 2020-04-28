@@ -78,7 +78,7 @@ class FullTransformerBatch:
                     spans=[(span.start, span.end) for span in doc_spans],
                     tensors=[torch2xp(t[start:end]) for t in self.tensors],
                     tokens=tokens,
-                    align=align,
+                    align=[[(i-start, j) for i, j in idx] for idx in align]
                 )
             )
             start += len(doc_spans)
