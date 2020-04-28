@@ -36,7 +36,8 @@ def forward(model, trf_datas: List[TransformerData], is_train):
     indices = []
     for trf_data in trf_datas:
         wp_array = trf_data.tensors[-1]
-        outputs.append(numpy.zeros(wp_array.shape, dtype="f"))
+        shape = (len(trf_data.align), wp_array.shape[-1])
+        outputs.append(numpy.zeros(shape, dtype="f"))
         indices.append([])
         for i, tok_align in enumerate(trf_data.align):
             wp_idx = tok_align[-1]
@@ -44,19 +45,22 @@ def forward(model, trf_datas: List[TransformerData], is_train):
             indices[-1].append(wp_idx)
     outputs = [model.ops.asarray(arr) for arr in outputs]
 
-    def backprop(d_outputs):
-        d_tensors = [numpy.zeros(t.shape, dtype="f") for t in d_outputs]
-        for i in range(len(d_outputs)):
-            d_output = xp2torch(d_outputs[i])
-            for j, token_indices in enumerate(indices[i]):
-                for entry in token_indices:
-                    d_tensors[-1][i, j] += d_output[j]
-
-        return TransformerData(
-            spans=trf_data.spans,
-            tokens=trf_data.tokens,
-            tensors=d_tensors,
-            ops=trf_data.ops,
-        )
+    def backprop(d_outputs: List[Floats2d]) -> List[TransformerData]:
+        assert len(d_outputs) == len(trf_datas)
+        d_trf_datas = []
+        for trf_data, d_output, rows in zip(trf_datas, d_outputs, indices):
+            d_tensors = [numpy.zeros((0, 0), dtype="f") for x in trf_data.tensors]
+            d_tensors[-1] = numpy.zeros(trf_data.tensors[-1].shape, dtype="f")
+            for i, wp_row in enumerate(rows):
+                d_tensors[-1][wp_row] += d_output[i]
+            d_trf_datas.append(
+                TransformerData(
+                    spans=trf_data.spans,
+                    tokens=trf_data.tokens,
+                    tensors=[model.ops.asarray(x) for x in d_tensors],
+                    align=trf_data.align
+                )
+            )
+        return trf_datas
 
     return outputs, backprop
