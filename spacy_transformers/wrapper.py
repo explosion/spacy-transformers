@@ -24,11 +24,13 @@ def TransformerModel(
     transformer, tokenizer, get_spans=get_doc_spans
 ) -> Model[List[Doc], TransformerData]:
     wrapper = PyTorchTransformer(transformer)
+    width = transformer.config.dim
     return Model(
         "transformer",
         forward,
         layers=[wrapper],
         attrs={"tokenizer": tokenizer, "get_spans": get_spans},
+        dims={"nO": width}
     )
 
 
