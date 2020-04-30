@@ -1,5 +1,6 @@
 import plac
 from pathlib import Path
+from thinc.api import use_pytorch_for_gpu_memory
 from spacy_transformers import install_extensions, TransformerModelByName
 from spacy_transformers import Transformer
 import spacy_transformers.tok2vec
@@ -12,6 +13,7 @@ def main(config_path, train_path, eval_path, gpu_id):
     train_path = Path(train_path)
     eval_path = Path(eval_path)
     install_extensions()
+    use_pytorch_for_gpu_memory()
     train_from_config(config_path, {"train": train_path, "dev": eval_path},
         use_gpu=gpu_id)
 
