@@ -11,6 +11,18 @@ def install_extensions():
 def get_doc_spans(docs):
     return [doc[:] for doc in docs]
 
+def configure_strided_spans(window, stride):
+    def get_strided_spans(docs):
+        spans = []
+        for doc in docs:
+            start = 0
+            for i in range(len(doc) // stride):
+                spans.append(doc[start : start + window])
+                start += stride
+            if start < len(doc):
+                spans.append(doc[start : ])
+        return spans
+    return get_strided_spans
 
 def get_sent_spans(docs):
     sents = []
