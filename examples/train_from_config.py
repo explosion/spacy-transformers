@@ -5,6 +5,7 @@ from spacy_transformers import install_extensions, TransformerModelByName
 from spacy_transformers import Transformer
 import spacy_transformers.tok2vec
 from spacy.cli.train_from_config import train_from_config
+import spacy.util
 
 
 def main(config_path, train_path, eval_path, gpu_id):
@@ -13,9 +14,10 @@ def main(config_path, train_path, eval_path, gpu_id):
     train_path = Path(train_path)
     eval_path = Path(eval_path)
     install_extensions()
-    use_pytorch_for_gpu_memory()
-    train_from_config(config_path, {"train": train_path, "dev": eval_path},
-        use_gpu=gpu_id)
+    if gpu_id >= 0:
+        spacy.util.use_gpu(gpu_id)
+        use_pytorch_for_gpu_memory()
+    train_from_config(config_path, {"train": train_path, "dev": eval_path})
 
 
 if __name__ == "__main__":
