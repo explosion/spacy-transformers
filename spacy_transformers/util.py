@@ -69,6 +69,14 @@ def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncodin
     return output
 
 
+def find_last_hidden(tensors) -> int:
+    for i, tensor in reversed(list(enumerate(tensors))):
+        if len(tensor.shape) == 3:
+            return i
+    else:
+        raise ValueError("No 3d tensors")
+
+
 def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
     """Set no additional annotations on the Doc objects."""
     pass
