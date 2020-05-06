@@ -107,12 +107,12 @@ def DummyTransformerModel(width: int, depth: int):
 
 def DummyTransformer(
     depth: int = 2, width: int = 4, get_spans=get_doc_spans
-) -> Model[List[Doc], TransformerData]:
+) -> Model[List[Doc], List[TransformerData]]:
     """Create a test model that produces a FullTransformerBatch object."""
     return Model(
         "dummy-transformer",
         transformer_forward,
         layers=[DummyTransformerModel(width=width, depth=depth)],
-        attrs={"get_spans": get_spans, "tokenizer": DummyTokenizer()},
+        attrs={"get_spans": get_spans, "tokenizer": DummyTokenizer(), "grad_factor": 1.0},
         dims={"nO": width},
     )
