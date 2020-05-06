@@ -8,13 +8,16 @@ from spacy.util import registry
 
 from .pipeline import TransformerListener
 from .wrapper import TransformerModelByName
+from .tagger import transformer_linear_v1
 from .types import TransformerData, FullTransformerBatch
+from .util import find_last_hidden
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
 def transformer_listener_tok2vec_v1(width: int, grad_factor: float=1.0):
     tok2vec = chain(
         TransformerListener("transformer", width=width),
+        transformer_linear_v1(nO=width),
         trf_data_to_tensor(width, grad_factor)
     )
     tok2vec.set_dim("nO", width)
@@ -26,6 +29,7 @@ def transformer_tok2vec_v1(name: str, width: int, grad_factor: float=1.0):
     tok2vec = chain(
         TransformerModelByName(name),
         get_trf_data(),
+        transformer_linear_v1(nO=width),
         trf_data_to_tensor(width, grad_factor))
     tok2vec.set_dim("nO", width)
     return tok2vec
@@ -48,7 +52,7 @@ def forward(model, trf_datas: List[TransformerData], is_train):
     outputs = []
     indices = []
     for trf_data in trf_datas:
-        tensor_i = find_last_3d(trf_data.tensors)
+        tensor_i = find_last_hidden(trf_data.tensors)
         wp_array = to_numpy(trf_data.tensors[tensor_i])
         shape = (len(trf_data.align), wp_array.shape[-1])
         outputs.append(numpy.zeros(shape, dtype="f"))
@@ -64,7 +68,7 @@ def forward(model, trf_datas: List[TransformerData], is_train):
         assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
         for trf_data, d_output, rows in zip(trf_datas, d_outputs, indices):
-            t_i = find_last_3d(trf_data.tensors)
+            t_i = find_last_hidden(trf_data.tensors)
             d_tensors = [numpy.zeros(x.shape, dtype="f") for x in trf_data.tensors]
             d_tensors[tensor_i] = numpy.zeros(trf_data.tensors[t_i].shape, dtype="f")
             d_output = to_numpy(d_output)
@@ -84,11 +88,3 @@ def forward(model, trf_datas: List[TransformerData], is_train):
         return trf_datas
 
     return outputs, backprop
-
-
-def find_last_3d(tensors) -> int:
-    for i, tensor in reversed(list(enumerate(tensors))):
-        if len(tensor.shape) == 3:
-            return i
-    else:
-        raise ValueError("No 3d tensors")
