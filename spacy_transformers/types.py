@@ -27,7 +27,11 @@ class TransformerData:
 
     @property
     def width(self) -> int:
-        return self.tensors[-1].shape[-1]
+        for tensor in reversed(self.tensors):
+            if len(tensor.shape) == 3:
+                return tensor.shape[-1]
+        else:
+            raise ValueError("Cannot find last hidden layer")
 
 
 @dataclass
