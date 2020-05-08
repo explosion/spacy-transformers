@@ -27,12 +27,15 @@ class Transformer(Pipe):
         vocab: Vocab,
         model: Model[List[Doc], FullTransformerBatch],
         annotation_setter: Callable = null_annotation_setter,
+        *,
+        max_batch_size: int=8,
         **cfg,
     ):
         self.vocab = vocab
         self.model = model
         self.annotation_setter = annotation_setter
         self.cfg = dict(cfg)
+        self.cfg["max_batch_size"] = max_batch_size
         self.listeners = []
 
     def create_listener(self):
@@ -58,6 +61,7 @@ class Transformer(Pipe):
         return doc
 
     def pipe(self, stream, batch_size=128, n_threads=-1, as_example=False):
+        batch_size = max(batch_size, self.cfg["max_batch_size"])
         for batch in minibatch(stream, batch_size):
             batch = list(batch)
             if as_example:
