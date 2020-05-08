@@ -23,9 +23,9 @@ def transformer_listener_tok2vec_v1(width: int, grad_factor: float=1.0):
 
 
 @registry.architectures.register("spacy.Tok2VecTransformer.v1")
-def transformer_tok2vec_v1(name: str, width: int, grad_factor: float=1.0):
+def transformer_tok2vec_v1(get_spans, name: str, width: int, grad_factor: float=1.0):
     tok2vec = chain(
-        TransformerModelByName(name),
+        TransformerModelByName(name, get_spans=get_spans),
         get_trf_data(),
         trf_data_to_tensor(width, grad_factor))
     return tok2vec
@@ -81,6 +81,6 @@ def forward(model, trf_datas: List[TransformerData], is_train):
                     align=trf_data.align
                 )
             )
-        return trf_datas
+        return d_trf_datas
 
     return outputs, backprop
