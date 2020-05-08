@@ -34,15 +34,12 @@ def init(model, X=None, Y=None):
 
 
 def forward(model, X: List[TransformerData], is_train: bool):
-    print("x.shape", [x.tensors[-1].shape for x in X])
     X2d = _get_2d(X)
     Y2d, get_dX2d = model.layers[0](X2d, is_train)
 
     def backprop_trf_linear(dY: List[TransformerData]) -> List[TransformerData]:
         dX2d = get_dX2d(_get_2d(dY))
-        print([dx.shape for dx in dX2d])
         dX = _replace_last_hidden(dX2d, dY)
-        print([dx.tensors[-1].shape for dx in dX])
         return dX
 
     return _replace_last_hidden(Y2d, X), backprop_trf_linear
