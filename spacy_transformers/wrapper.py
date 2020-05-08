@@ -13,11 +13,10 @@ from .util import configure_get_doc_spans, huggingface_tokenize, configure_strid
 
 @registry.architectures.register("spacy.TransformerByName.v2")
 def TransformerModelByName(
-        name: str, get_spans: Callable, grad_factor: float=1.0) -> Model[List[Doc], TransformerData]:
+        name: str, get_spans: Callable) -> Model[List[Doc], TransformerData]:
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=True)
-    return TransformerModel(transformer, tokenizer, get_spans=get_spans,
-        grad_factor=grad_factor)
+    return TransformerModel(transformer, tokenizer, get_spans=get_spans)
 
 
 @registry.architectures.register("spacy.TransformerModel.v1")
