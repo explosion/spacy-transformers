@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Callable
 from spacy.tokens import Doc
+from thinc.config import registry
 
 from .types import TransformerData, FullTransformerBatch, BatchEncoding
 
@@ -8,10 +9,11 @@ def install_extensions():
     Doc.set_extension("trf_data", default=TransformerData.empty())
 
 
-def get_doc_spans(docs):
-    return [doc[:] for doc in docs]
 
-def configure_strided_spans(window, stride):
+registry.create("spanners")
+
+@registry.spanners("spacy-transformers.strided_spans.v1")
+def configure_strided_spans(window: int, stride: int) -> Callable:
     def get_strided_spans(docs):
         spans = []
         for doc in docs:
@@ -24,11 +26,22 @@ def configure_strided_spans(window, stride):
         return spans
     return get_strided_spans
 
-def get_sent_spans(docs):
-    sents = []
-    for doc in docs:
-        sents.extend(doc.sents)
-    return sents
+
+@registry.spanners("spacy-transformers.get_sent_spans.v1")
+def configure_get_sent_spans():
+    def get_sent_spans(docs):
+        sents = []
+        for doc in docs:
+            sents.extend(doc.sents)
+        return sents
+    return get_sent_spans
+
+
+@registry.spanners("spacy-transformers.get_doc_spans.v1")
+def configure_get_doc_spans():
+    def get_doc_spans(docs):
+        return [doc[:] for doc in docs]
+    return get_doc_spans
 
 
 def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
@@ -56,6 +69,7 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         token_data["offset_mapping"] = [extra_token_data["offset_mapping"]]
     else:
         token_data["offset_mapping"] = extra_token_data["offset_mapping"]
+    token_data["input_texts"] = [tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]]
     return token_data
 
 
