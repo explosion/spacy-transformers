@@ -17,10 +17,8 @@ from .util import find_last_hidden
 def transformer_listener_tok2vec_v1(width: int, grad_factor: float=1.0):
     tok2vec = chain(
         TransformerListener("transformer", width=width),
-        transformer_linear_v1(nO=width),
         trf_data_to_tensor(width, grad_factor)
     )
-    tok2vec.set_dim("nO", width)
     return tok2vec
 
 
@@ -29,9 +27,7 @@ def transformer_tok2vec_v1(name: str, width: int, grad_factor: float=1.0):
     tok2vec = chain(
         TransformerModelByName(name),
         get_trf_data(),
-        transformer_linear_v1(nO=width),
         trf_data_to_tensor(width, grad_factor))
-    tok2vec.set_dim("nO", width)
     return tok2vec
 
 
