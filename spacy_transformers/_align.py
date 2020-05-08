@@ -60,15 +60,15 @@ def align_offsets(offsets1: _OffsetsT, offsets2: _OffsetsT) -> _AlignmentT:
     map2 = _get_char_map(offsets2)
     alignment: _AlignmentT = []
     for entry in offsets1:
-        align_i = []
+        align_i = set()
         if entry is not None:
             start, end = entry
             # Iterate over the characters in offsets1
             for j in range(start, end):
                 if j in map2:
                     # Add the token from offsets2 that that character is in.
-                    align_i.append(map2[j])
-        alignment.append(align_i)
+                    align_i.add(map2[j])
+        alignment.append(list(sorted(align_i)))
     return alignment
 
 
