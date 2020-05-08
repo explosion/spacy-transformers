@@ -1,19 +1,19 @@
-from typing import List
+from typing import List, Callable
 import torch
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, AutoModelForTokenClassification
+from transformers import AutoConfig
 from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
 from .types import BatchEncoding, FullTransformerBatch, TransformerData
-from .util import get_doc_spans, huggingface_tokenize, configure_strided_spans
+from .util import configure_get_doc_spans, huggingface_tokenize, configure_strided_spans
 
 
-@registry.architectures.register("spacy.TransformerByName.v1")
+@registry.architectures.register("spacy.TransformerByName.v2")
 def TransformerModelByName(
-    name: str, get_spans=get_doc_spans, grad_factor: float=1.0
-) -> Model[List[Doc], TransformerData]:
+        name: str, get_spans: Callable, grad_factor: float=1.0) -> Model[List[Doc], TransformerData]:
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=True)
     return TransformerModel(transformer, tokenizer, get_spans=get_spans,
@@ -22,18 +22,15 @@ def TransformerModelByName(
 
 @registry.architectures.register("spacy.TransformerModel.v1")
 def TransformerModel(
-    transformer, tokenizer, get_spans=get_doc_spans, grad_factor: float=1.0
+        transformer, tokenizer, get_spans: Callable
 ) -> Model[List[Doc], TransformerData]:
     wrapper = PyTorchTransformer(transformer)
-    #get_spans = configure_strided_spans(64, 16)
-    #width = transformer.config.dim
-    width = 768
     return Model(
         "transformer",
         forward,
         layers=[wrapper],
-        attrs={"tokenizer": tokenizer, "get_spans": get_spans, "grad_factor": grad_factor},
-        dims={"nO": width}
+        attrs={"tokenizer": tokenizer, "get_spans": get_spans},
+        dims={"nO": None}
     )
 
 
@@ -41,15 +38,15 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]
-    grad_factor = model.attrs["grad_factor"]
 
     spans = get_spans(docs)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
     tensors, bp_tensors = transformer(token_data, is_train)
+    tensors = list(tensors)
     output = FullTransformerBatch(spans=spans, tokens=token_data, tensors=tensors)
 
     def backprop_transformer(d_output: FullTransformerBatch):
-        _ = bp_tensors([t * grad_factor for t in d_output.tensors])
+        _ = bp_tensors(d_output.tensors)
         return docs
 
     return output, backprop_transformer
