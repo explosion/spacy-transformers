@@ -1,9 +1,11 @@
 import numpy
+from dataclasses import dataclass
 from typing import List, Tuple
 import tokenizations
 from thinc.api import Ragged
 
 
+@dataclass
 class BatchAlignment:
     """Alignment for a batch of texts between wordpieces and tokens."""
     wp2tok: Ragged

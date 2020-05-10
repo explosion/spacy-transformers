@@ -167,7 +167,7 @@ class TransformerListener(Model):
     _outputs: Optional[List[TransformerData]]
     _backprop: Optional[Callable[[List[TransformerData]], List[Doc]]]
 
-    def __init__(self, upstream_name, width) -> Model[List[Doc], List[TransformerData]]:
+    def __init__(self, upstream_name, width):
         Model.__init__(self, name=self.name, forward=forward, dims={"nO": width})
         self.upstream_name = upstream_name
         self._batch_id = None

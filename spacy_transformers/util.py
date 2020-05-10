@@ -1,5 +1,5 @@
 import numpy
-from typing import List, Callable
+from typing import List, Callable, cast
 from typing import Optional, Tuple, List, Dict
 import torch
 from dataclasses import dataclass
@@ -7,7 +7,7 @@ from spacy.tokens import Doc
 from thinc.config import registry
 
 from collections import defaultdict
-from thinc.types import Ragged, Floats2d, Floats3d
+from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
 from thinc.api import get_array_module
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
@@ -24,7 +24,7 @@ class TransformerData:
 
     spans: List[Tuple[int, int]]
     tokens: BatchEncoding
-    tensors: List[Floats3d]
+    tensors: List[FloatsXd]
     wp2tok: Ragged
     tok2wp: Ragged
 
@@ -42,21 +42,21 @@ class TransformerData:
         else:
             raise ValueError("Cannot find last hidden layer")
 
-    def get_tok_aligned(self, ops, wp: Floats3d) -> Ragged:
-        wp2d = ops.reshape2f(wp, -1, wp.shape[-1])
+    def get_tok_aligned(self, wp: Floats3d) -> Ragged:
+        wp2d = cast(Floats2d, wp.reshape((-1, wp.shape[-1])))
         return Ragged(wp2d[self.wp2tok.data], self.wp2tok.lengths)
 
-    def get_wp_aligned(self, ops, tok: Floats2d) -> Ragged:
+    def get_wp_aligned(self, tok: Floats2d) -> Ragged:
         return Ragged(tok[self.tok2wp.data], self.tok2wp.lengths)
 
 
 @dataclass
 class FullTransformerBatch:
-    spans = List[Span]
+    spans: List[Span]
     tokens: BatchEncoding
     tensors: List[torch.Tensor]
     align: BatchAlignment
-    _doc_data: Optional[List[TransformerData]]
+    _doc_data: Optional[List[TransformerData]] = None
 
     @property
     def doc_data(self) -> List[TransformerData]:
@@ -86,11 +86,13 @@ class FullTransformerBatch:
         for doc_spans in spans_by_doc.values():
             end = start + len(doc_spans)
             wp2tok, tok2wp = self.align.slice(start, end)
+
+            torch_slices = [t[start:end] for t in self.tensors]
             outputs.append(
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
                     tokens=slice_tokens(self.tokens, start, end),
+                    tensors=[torch2xp(t) for t in torch_slices], # type: ignore
                     wp2tok=wp2tok,
                     tok2wp=tok2wp
                 )
