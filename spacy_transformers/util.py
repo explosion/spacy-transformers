@@ -1,18 +1,22 @@
 import numpy
+import catalogue
 from typing import List, Callable, cast
 from typing import Optional, Tuple, List, Dict
 import torch
 from dataclasses import dataclass
 from spacy.tokens import Doc
-from thinc.config import registry
 
 from collections import defaultdict
 from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
 from thinc.api import get_array_module
 from thinc.api import torch2xp, xp2torch
+from thinc.types import Decorator
 from spacy.tokens import Span
 from ._align import BatchAlignment
 
+
+# TODO: How should we register this?
+spanners = catalogue.create("spacy-transformers", "spanners")
 
 
 BatchEncoding = Dict
@@ -106,9 +110,7 @@ def install_extensions():
 
 
 
-registry.create("spanners")
-
-@registry.spanners("spacy-transformers.strided_spans.v1")
+@spanners("spacy-transformers.strided_spans.v1")
 def configure_strided_spans(window: int, stride: int) -> Callable:
     def get_strided_spans(docs):
         spans = []
@@ -123,7 +125,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
     return get_strided_spans
 
 
-@registry.spanners("spacy-transformers.get_sent_spans.v1")
+@spanners("spacy-transformers.get_sent_spans.v1")
 def configure_get_sent_spans():
     def get_sent_spans(docs):
         sents = []
@@ -133,7 +135,7 @@ def configure_get_sent_spans():
     return get_sent_spans
 
 
-@registry.spanners("spacy-transformers.get_doc_spans.v1")
+@spanners("spacy-transformers.get_doc_spans.v1")
 def configure_get_doc_spans():
     def get_doc_spans(docs):
         return [doc[:] for doc in docs]

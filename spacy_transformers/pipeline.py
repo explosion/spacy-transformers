@@ -36,7 +36,7 @@ class Transformer(Pipe):
         self.annotation_setter = annotation_setter
         self.cfg = dict(cfg)
         self.cfg["max_batch_size"] = max_batch_size
-        self.listeners = []
+        self.listeners: List[TransformerListener] = []
 
     def create_listener(self):
         listener = TransformerListener(

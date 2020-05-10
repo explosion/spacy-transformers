@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, cast
 
 from thinc.api import chain, Model, xp2torch, to_numpy, Ragged
-from thinc.types import Floats2d
+from thinc.types import Floats2d, Floats3d, FloatsXd
 
 from spacy.util import registry
 
@@ -11,21 +11,20 @@ from .util import find_last_hidden, TransformerData, FullTransformerBatch
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
-def transformer_listener_tok2vec_v1(pooling, width: int, grad_factor: float=1.0):
-    tok2vec = chain(
+def transformer_listener_tok2vec_v1(pooling, width: int, grad_factor: float=1.0) -> Model[List[TransformerData], List[Floats2d]]:
+    return chain(
         TransformerListener("transformer", width=width),
         trf_data_to_tensor(pooling, width, grad_factor)
     )
-    return tok2vec
 
 
 @registry.architectures.register("spacy.Tok2VecTransformer.v1")
-def transformer_tok2vec_v1(pooling, get_spans, name: str, width: int, grad_factor: float=1.0):
-    tok2vec = chain(
+def transformer_tok2vec_v1(pooling, get_spans, name: str, width: int, grad_factor: float=1.0) -> Model[List[TransformerData], List[Floats2d]]:
+    return chain(
         TransformerModelByName(name, get_spans=get_spans),
         get_trf_data(),
-        trf_data_to_tensor(pooling, width, grad_factor))
-    return tok2vec
+        trf_data_to_tensor(pooling, width, grad_factor)
+    )
 
 
 def get_trf_data() -> Model[FullTransformerBatch, List[TransformerData]]:
@@ -53,7 +52,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     backprops = []
     for trf_data in trf_datas:
         src = trf_data.tensors[find_last_hidden(trf_data.tensors)]
-        dst = trf_data.get_tok_aligned(src)
+        dst = trf_data.get_tok_aligned(cast(Floats3d, src))
         output, get_d_dst = pooling(dst, is_train)
         outputs.append(output)
         backprops.append(get_d_dst)
@@ -62,10 +61,11 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
         for trf_data, d_output, backprop in zip(trf_datas, d_outputs, backprops):
-            d_dst = backprop(d_output)
-            d_src = trf_data.get_wp_aligned(d_dst)
-            d_src *= grad_factor
-            d_tensors = [model.ops.alloc(x.shape, dtype="f") for x in trf_data.tensors]
+            # TODO: Backprop
+            d_dst = get_d_dst(d_output)
+            d_src = trf_data.get_wp_aligned(d_dst.data)
+            d_src.data *= grad_factor
+            d_tensors: List[FloatsXd] = [model.ops.alloc(x.shape, dtype="f") for x in trf_data.tensors]
             d_tensors[find_last_hidden(d_tensors)] = d_src
             d_trf_datas.append(
                 TransformerData(

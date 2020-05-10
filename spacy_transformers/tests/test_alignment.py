@@ -1,6 +1,6 @@
 from typing import List, Tuple, Optional
 import pytest
-from .._align import Alignment
+from .._align import BatchAlignment
 
 
 def flatten_strings(words1, words2):
