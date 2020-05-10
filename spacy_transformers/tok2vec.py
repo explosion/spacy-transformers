@@ -51,29 +51,31 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     outputs = []
     backprops = []
     for trf_data in trf_datas:
-        src = trf_data.tensors[find_last_hidden(trf_data.tensors)]
-        dst = trf_data.get_tok_aligned(cast(Floats3d, src))
+        t_i = find_last_hidden(trf_data.tensors)
+        src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
+        dst, get_d_src = trf_data.align_to_tokens(model.ops, src)
         output, get_d_dst = pooling(dst, is_train)
         outputs.append(output)
-        backprops.append(get_d_dst)
+        backprops.append((get_d_dst, get_d_src))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
         assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
-        for trf_data, d_output, backprop in zip(trf_datas, d_outputs, backprops):
-            # TODO: Backprop
+        zipped = zip(trf_datas, d_outputs, backprops)
+        for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
             d_dst = get_d_dst(d_output)
-            d_src = trf_data.get_wp_aligned(d_dst.data)
-            d_src.data *= grad_factor
-            d_tensors: List[FloatsXd] = [model.ops.alloc(x.shape, dtype="f") for x in trf_data.tensors]
-            d_tensors[find_last_hidden(d_tensors)] = d_src
+            d_src = get_d_src(d_dst)
+            d_src *= grad_factor
+            d_tensors: List[FloatsXd] = [model.ops.alloc(x.shape, dtype=x.dtype) for x in trf_data.tensors]
+            t_i = find_last_hidden(d_tensors)
+            d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
                     spans=trf_data.spans,
                     tokens=trf_data.tokens,
-                    wp2tok=trf_data.wp2tok,
-                    tok2wp=trf_data.tok2wp,
+                    trf2tok=trf_data.trf2tok,
+                    tok2trf=trf_data.tok2trf,
                 )
             )
         return d_trf_datas
