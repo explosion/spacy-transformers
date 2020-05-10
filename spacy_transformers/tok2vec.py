@@ -9,8 +9,7 @@ from spacy.util import registry
 from .pipeline import TransformerListener
 from .wrapper import TransformerModelByName
 from .tagger import transformer_linear_v1
-from .types import TransformerData, FullTransformerBatch
-from .util import find_last_hidden
+from .util import find_last_hidden, TransformerData, FullTransformerBatch
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
@@ -43,42 +42,32 @@ def trf_data_to_tensor(width: int, grad_factor: float) -> Model[List[Transformer
     return Model("trf-data-to-tensor", forward, dims={"nO": width}, attrs={"grad_factor": grad_factor})
 
 
-def forward(model, trf_datas: List[TransformerData], is_train):
+def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     grad_factor = model.attrs["grad_factor"]
     outputs = []
-    indices = []
     for trf_data in trf_datas:
-        tensor_i = find_last_hidden(trf_data.tensors)
-        wp_array = to_numpy(trf_data.tensors[tensor_i])
-        shape = (len(trf_data.align), wp_array.shape[-1])
-        outputs.append(numpy.zeros(shape, dtype="f"))
-        indices.append([])
-        for i, tok_align in enumerate(trf_data.align):
-            wp_idx0 = [x[0] for x in tok_align]
-            wp_idx1 = [x[1] for x in tok_align]
-            outputs[-1][i] = wp_array[wp_idx0, wp_idx1].mean(axis=0)
-            indices[-1].append(tok_align)
-    outputs = [model.ops.asarray(arr) for arr in outputs]
+        src = trf_data.tensors[find_last_hidden(trf_data.tensors)]
+        dst = trf_data.get_tok_aligned(src)
+        outputs.append(dst)
 
     def backprop(d_outputs: List[Floats2d]) -> List[TransformerData]:
+        # TODO:
+        # * Implement BatchAlignment.slice
+        # * Test
         assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
-        for trf_data, d_output, rows in zip(trf_datas, d_outputs, indices):
-            t_i = find_last_hidden(trf_data.tensors)
-            d_tensors = [numpy.zeros(x.shape, dtype="f") for x in trf_data.tensors]
-            d_tensors[tensor_i] = numpy.zeros(trf_data.tensors[t_i].shape, dtype="f")
-            d_output = to_numpy(d_output)
-            for i, entries in enumerate(rows):
-                token_grad = d_output[i] / len(entries)
-                for wp_row in entries:
-                    d_tensors[t_i][wp_row] += token_grad
-            d_tensors[t_i] *= grad_factor
+        for trf_data, d_dst in zip(trf_datas, d_outputs):
+            d_tensors = [model.ops.alloc(x.shape, dtype="f") for x in trf_data.tensors]
+            d_src = d_tensors[find_last_hidden(d_tensors)]
+            d_src = trf_data.get_wp_aligned(d_dst)
+            d_src *= grad_factor
             d_trf_datas.append(
                 TransformerData(
+                    tensors=d_tensors,
                     spans=trf_data.spans,
                     tokens=trf_data.tokens,
-                    tensors=[model.ops.asarray(x) for x in d_tensors],
-                    align=trf_data.align
+                    wp2tok=trf_data.wp2tok,
+                    tok2wp=trf_data.tok2wp,
                 )
             )
         return d_trf_datas

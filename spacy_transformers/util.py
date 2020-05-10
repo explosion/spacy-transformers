@@ -1,8 +1,102 @@
 from typing import List, Callable
+from typing import Optional, Tuple, List, Dict
+import torch
+from dataclasses import dataclass
 from spacy.tokens import Doc
 from thinc.config import registry
 
-from .types import TransformerData, FullTransformerBatch, BatchEncoding
+from collections import defaultdict
+from thinc.types import Floats3d
+from thinc.api import get_array_module
+from thinc.api import torch2xp, xp2torch
+from spacy.tokens import Span
+from ._align import Alignment
+
+
+
+BatchEncoding = Dict
+
+
+@dataclass
+class TransformerData:
+    """Transformer tokens and outputs for one Doc object."""
+
+    spans: List[Tuple[int, int]]
+    tokens: BatchEncoding
+    tensors: List[Floats3d]
+    wp2tok: Ints1d
+    tok2wp: Ints1d
+
+    @classmethod
+    def empty(cls) -> "TransformerData":
+        a2b = numpy.zeros((0,), dtype="i")
+        b2a = numpy.zeros((0,), dtype="i")
+        return cls([], {}, [], a2b, b2a)
+
+    @property
+    def width(self) -> int:
+        for tensor in reversed(self.tensors):
+            if len(tensor.shape) == 3:
+                return tensor.shape[-1]
+        else:
+            raise ValueError("Cannot find last hidden layer")
+
+    def get_tok_aligned(self, ops, wp: Floats3d) -> Floats2d:
+        tok = ops.alloc2f(self.wp2tok.shape[0], wp.shape[1])
+        return ops.scatter_add(dst, self.wp2tok, wp)
+
+    def get_wp_aligned(self, ops, tok: Floats2d) -> Floats3d:
+        wp = ops.alloc2f(self.wp2tok.shape[0], tok.shape[1])
+        return ops.scatter_add(wp, self.tok2wp, tok)
+
+
+@dataclass
+class FullTransformerBatch:
+    spans = List[Span]
+    tokens: BatchEncoding
+    tensors: List[torch.Tensor]
+    align: Alignment
+    _doc_data: Optional[List[TransformerData]]
+
+    @property
+    def doc_data(self) -> List[TransformerData]:
+        if self._doc_data is None:
+            self._doc_data = self.split_by_doc()
+        return self._doc_data
+
+    def unsplit_by_doc(self, arrays: List[List[Floats3d]]) -> "FullTransformerBatch":
+        xp = get_array_module(arrays[0][0])
+        return FullTransformerBatch(
+            spans=self.spans,
+            tokens=self.tokens,
+            tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)],
+            align=self.align
+        )
+
+    def split_by_doc(self) -> List["TransformerData"]:
+        """Split a TransformerData that represents a batch into a list with
+        one TransformerData per Doc.
+        """
+        spans_by_doc = defaultdict(list)
+        for span in self.spans:
+            key = id(span.doc)
+            spans_by_doc[key].append(span)
+        outputs = []
+        start = 0
+        for doc_spans in spans_by_doc.values():
+            end = start + len(doc_spans)
+            wp2tok, tok2wp = self.align.slice(start, end)
+            outputs.append(
+                TransformerData(
+                    spans=[(span.start, span.end) for span in doc_spans],
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
+                    tokens=slice_tokens(self.tokens, start, end),
+                    wp2tok=wp2tok,
+                    tok2wp=tok2wp
+                )
+            )
+            start += len(doc_spans)
+        return outputs
 
 
 def install_extensions():
@@ -54,21 +148,6 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
     )
-    # Work around https://github.com/huggingface/transformers/issues/3224
-    extra_token_data = tokenizer.batch_encode_plus(
-        texts,
-        add_special_tokens=True,
-        return_attention_masks=True,
-        return_lengths=True,
-        return_offsets_mapping=True,
-        return_tensors=None,
-        return_token_type_ids=None,  # Sets to model default
-    )
-    # There seems to be some bug where it's flattening single-entry batches?
-    if len(texts) == 1:
-        token_data["offset_mapping"] = [extra_token_data["offset_mapping"]]
-    else:
-        token_data["offset_mapping"] = extra_token_data["offset_mapping"]
     token_data["input_texts"] = [tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]]
     return token_data
 
@@ -94,3 +173,23 @@ def find_last_hidden(tensors) -> int:
 def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
     """Set no additional annotations on the Doc objects."""
     pass
+
+
+def slice_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncoding:
+    output = {}
+    for key, value in inputs.items():
+        if not hasattr(value, "__getitem__"):
+            output[key] = value
+        else:
+            output[key] = value[start:end]
+    return output
+
+
+def transpose_list(nested_list):
+    output = []
+    for i, entry in enumerate(nested_list):
+        while len(output) < len(entry):
+            output.append([None] * len(nested_list))
+        for j, x in enumerate(entry):
+            output[j][i] = x
+    return output

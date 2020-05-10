@@ -40,9 +40,15 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
 
     spans = get_spans(docs)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
+    a2b, b2a = align_batch(spans, token_data["input_texts"])
     tensors, bp_tensors = transformer(token_data, is_train)
-    tensors = list(tensors)
-    output = FullTransformerBatch(spans=spans, tokens=token_data, tensors=tensors)
+    output = FullTransformerBatch(
+        spans=spans,
+        tokens=token_data,
+        tensors=tensors
+        align_a2b=a2b,
+        align_b2a=b2a
+    )
 
     def backprop_transformer(d_output: FullTransformerBatch):
         _ = bp_tensors(d_output.tensors)
