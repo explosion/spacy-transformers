@@ -26,7 +26,7 @@ def transformer_tok2vec_v1(get_spans, name: str, width: int, grad_factor: float=
     tok2vec = chain(
         TransformerModelByName(name, get_spans=get_spans),
         get_trf_data(),
-        trf_data_to_tensor(width, grad_factor))
+        trf_data_to_tensor(pooling, width, grad_factor))
     return tok2vec
 
 
@@ -38,26 +38,37 @@ def get_trf_data() -> Model[FullTransformerBatch, List[TransformerData]]:
     return Model("get-trf-data", _forward)
 
 
-def trf_data_to_tensor(width: int, grad_factor: float) -> Model[List[TransformerData], List[Floats2d]]:
-    return Model("trf-data-to-tensor", forward, dims={"nO": width}, attrs={"grad_factor": grad_factor})
+def trf_data_to_tensor(pooling: Model[Ragged, Floats2d], width: int, grad_factor: float) -> Model[List[TransformerData], List[Floats2d]]:
+    return Model(
+        "trf-data-to-tensor",
+        forward,
+        layers=[pooling],
+        dims={"nO": width},
+        attrs={"grad_factor": grad_factor}
+    )
 
 
 def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
+    pooling: Pooling[Ragged, Floats2d] = model.layers[0]
     grad_factor = model.attrs["grad_factor"]
     outputs = []
+    backprops = []
     for trf_data in trf_datas:
         src = trf_data.tensors[find_last_hidden(trf_data.tensors)]
         dst = trf_data.get_tok_aligned(src)
+        output, backprop = pooling(dst, is_train)
         outputs.append(dst)
+        backprops.append(backprop)
 
     def backprop(d_outputs: List[Floats2d]) -> List[TransformerData]:
         assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
-        for trf_data, d_dst in zip(trf_datas, d_outputs):
-            d_tensors = [model.ops.alloc(x.shape, dtype="f") for x in trf_data.tensors]
-            d_src = d_tensors[find_last_hidden(d_tensors)]
+        for trf_data, d_output, backprop in zip(trf_datas, d_outputs, backprops):
+            d_dst = backprop(d_output)
             d_src = trf_data.get_wp_aligned(d_dst)
             d_src *= grad_factor
+            d_tensors = [model.ops.alloc(x.shape, dtype="f") for x in trf_data.tensors]
+            d_tensors[find_last_hidden(d_tensors)] = d_src
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
