@@ -8,6 +8,7 @@ from thinc.api import Ragged
 @dataclass
 class BatchAlignment:
     """Alignment for a batch of texts between wordpieces and tokens."""
+
     wp2tok: Ragged
     tok2wp: Ragged
     wp_lengths: List[int]
@@ -30,12 +31,11 @@ class BatchAlignment:
         # Get the slice, and adjust the data so they point to the right part
         # of the target array. We're trusting that nothing will point past the
         # ends.
-        wp2tok = self.wp2tok[wp_start : wp_end]
-        tok2wp = self.tok2wp[tok_start : tok_end]
+        wp2tok = self.wp2tok[wp_start:wp_end]
+        tok2wp = self.tok2wp[tok_start:tok_end]
         wp2tok.data -= tok_start
         tok2wp.data -= wp_start
         return wp2tok, tok2wp
-
 
 
 def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged]:
@@ -61,5 +61,5 @@ def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged
         a_start += a_stride
     return (
         Ragged(numpy.array(A2B, dtype="i"), numpy.array(a2b_lengths, dtype="i")),
-        Ragged(numpy.array(B2A, dtype="i"), numpy.array(b2a_lengths, dtype="i"))
+        Ragged(numpy.array(B2A, dtype="i"), numpy.array(b2a_lengths, dtype="i")),
     )

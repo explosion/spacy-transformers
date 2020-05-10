@@ -28,7 +28,7 @@ class Transformer(Pipe):
         model: Model[List[Doc], FullTransformerBatch],
         annotation_setter: Callable = null_annotation_setter,
         *,
-        max_batch_size: int=8,
+        max_batch_size: int = 8,
         **cfg,
     ):
         self.vocab = vocab

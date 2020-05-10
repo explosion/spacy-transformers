@@ -87,7 +87,7 @@ class FullTransformerBatch:
             spans=self.spans,
             tokens=self.tokens,
             tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)],
-            align=self.align
+            align=self.align,
         )
 
     def split_by_doc(self) -> List["TransformerData"]:
@@ -109,9 +109,9 @@ class FullTransformerBatch:
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
                     tokens=slice_tokens(self.tokens, start, end),
-                    tensors=[torch2xp(t) for t in torch_slices], # type: ignore
+                    tensors=[torch2xp(t) for t in torch_slices],  # type: ignore
                     trf2tok=trf2tok,
-                    tok2trf=tok2trf
+                    tok2trf=tok2trf,
                 )
             )
             start += len(doc_spans)
@@ -120,7 +120,6 @@ class FullTransformerBatch:
 
 def install_extensions():
     Doc.set_extension("trf_data", default=TransformerData.empty())
-
 
 
 @spanners("spacy-transformers.strided_spans.v1")
@@ -133,8 +132,9 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
                 spans.append(doc[start : start + window])
                 start += stride
             if start < len(doc):
-                spans.append(doc[start : ])
+                spans.append(doc[start:])
         return spans
+
     return get_strided_spans
 
 
@@ -145,6 +145,7 @@ def configure_get_sent_spans():
         for doc in docs:
             sents.extend(doc.sents)
         return sents
+
     return get_sent_spans
 
 
@@ -152,6 +153,7 @@ def configure_get_sent_spans():
 def configure_get_doc_spans():
     def get_doc_spans(docs):
         return [doc[:] for doc in docs]
+
     return get_doc_spans
 
 
@@ -165,7 +167,9 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
     )
-    token_data["input_texts"] = [tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]]
+    token_data["input_texts"] = [
+        tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]
+    ]
     return token_data
 
 

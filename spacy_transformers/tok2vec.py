@@ -11,19 +11,23 @@ from .util import find_last_hidden, TransformerData, FullTransformerBatch
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
-def transformer_listener_tok2vec_v1(pooling, width: int, grad_factor: float=1.0) -> Model[List[TransformerData], List[Floats2d]]:
+def transformer_listener_tok2vec_v1(
+    pooling, width: int, grad_factor: float = 1.0
+) -> Model[List[TransformerData], List[Floats2d]]:
     return chain(
         TransformerListener("transformer", width=width),
-        trf_data_to_tensor(pooling, width, grad_factor)
+        trf_data_to_tensor(pooling, width, grad_factor),
     )
 
 
 @registry.architectures.register("spacy.Tok2VecTransformer.v1")
-def transformer_tok2vec_v1(pooling, get_spans, name: str, width: int, grad_factor: float=1.0) -> Model[List[TransformerData], List[Floats2d]]:
+def transformer_tok2vec_v1(
+    pooling, get_spans, name: str, width: int, grad_factor: float = 1.0
+) -> Model[List[TransformerData], List[Floats2d]]:
     return chain(
         TransformerModelByName(name, get_spans=get_spans),
         get_trf_data(),
-        trf_data_to_tensor(pooling, width, grad_factor)
+        trf_data_to_tensor(pooling, width, grad_factor),
     )
 
 
@@ -31,17 +35,21 @@ def get_trf_data() -> Model[FullTransformerBatch, List[TransformerData]]:
     def _forward(model, trf_full, is_train):
         def backprop(d_trf_datas):
             return trf_full.unsplit_by_doc([x.tensors for x in d_trf_datas])
+
         return trf_full.doc_data, backprop
+
     return Model("get-trf-data", _forward)
 
 
-def trf_data_to_tensor(pooling: Model[Ragged, Floats2d], width: int, grad_factor: float) -> Model[List[TransformerData], List[Floats2d]]:
+def trf_data_to_tensor(
+    pooling: Model[Ragged, Floats2d], width: int, grad_factor: float
+) -> Model[List[TransformerData], List[Floats2d]]:
     return Model(
         "trf-data-to-tensor",
         forward,
         layers=[pooling],
         dims={"nO": width},
-        attrs={"grad_factor": grad_factor}
+        attrs={"grad_factor": grad_factor},
     )
 
 
@@ -66,7 +74,9 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_dst = get_d_dst(d_output)
             d_src = get_d_src(d_dst)
             d_src *= grad_factor
-            d_tensors: List[FloatsXd] = [model.ops.alloc(x.shape, dtype=x.dtype) for x in trf_data.tensors]
+            d_tensors: List[FloatsXd] = [
+                model.ops.alloc(x.shape, dtype=x.dtype) for x in trf_data.tensors
+            ]
             t_i = find_last_hidden(d_tensors)
             d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(

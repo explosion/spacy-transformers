@@ -15,13 +15,17 @@ def flatten_strings(words1, words2):
     return flat1, flat2
 
 
-@pytest.mark.parametrize("words1", "words2", [
-    ([["a", "b"]], [["a", "b"]]),
-    ([["ab"]], [["a", "b"]]),
-    ([["a", "b"]], [["ab"]]),
-    ([["ab", "c"]], [["a", "bc"]]),
-    ([["ab", "cd"]], [["a", "bc" "d"]]),
-])
+@pytest.mark.parametrize(
+    "words1",
+    "words2",
+    [
+        ([["a", "b"]], [["a", "b"]]),
+        ([["ab"]], [["a", "b"]]),
+        ([["a", "b"]], [["ab"]]),
+        ([["ab", "c"]], [["a", "bc"]]),
+        ([["ab", "cd"]], [["a", "bc" "d"]]),
+    ],
+)
 def test_alignments_match(words1, words2):
     align = BatchAlignment.from_strings(words1, words2)
     flat_words1, flat_words2 = flatten_strings(words1, words2)

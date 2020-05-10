@@ -13,7 +13,8 @@ from .util import huggingface_tokenize
 
 @registry.architectures.register("spacy.TransformerByName.v2")
 def TransformerModelByName(
-        name: str, get_spans: Callable) -> Model[List[Doc], TransformerData]:
+    name: str, get_spans: Callable
+) -> Model[List[Doc], TransformerData]:
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=True)
     return TransformerModel(transformer, tokenizer, get_spans=get_spans)
@@ -21,7 +22,7 @@ def TransformerModelByName(
 
 @registry.architectures.register("spacy.TransformerModel.v1")
 def TransformerModel(
-        transformer, tokenizer, get_spans: Callable
+    transformer, tokenizer, get_spans: Callable
 ) -> Model[List[Doc], TransformerData]:
     wrapper = PyTorchTransformer(transformer)
     return Model(
@@ -29,7 +30,7 @@ def TransformerModel(
         forward,
         layers=[wrapper],
         attrs={"tokenizer": tokenizer, "get_spans": get_spans},
-        dims={"nO": None}
+        dims={"nO": None},
     )
 
 
@@ -45,7 +46,9 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
         spans=spans,
         tokens=token_data,
         tensors=tensors,
-        align=BatchAlignment.from_strings(list(map(list, spans)), token_data["input_texts"]),
+        align=BatchAlignment.from_strings(
+            list(map(list, spans)), token_data["input_texts"]
+        ),
     )
 
     def backprop_transformer(d_output: FullTransformerBatch):

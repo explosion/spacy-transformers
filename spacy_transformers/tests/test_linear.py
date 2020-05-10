@@ -13,22 +13,27 @@ from .util import DummyTransformer
 def trf_width() -> int:
     return 768
 
+
 @pytest.fixture
 def trf_depth() -> int:
     return 4
+
 
 @pytest.fixture
 def output_width() -> int:
     return 128
 
+
 @pytest.fixture
 def transformer_model(trf_width, trf_depth) -> Model[List[Doc], List[TransformerData]]:
     return DummyTransformer(width=trf_width, depth=trf_depth)
+
 
 @pytest.fixture
 def docs() -> List[Doc]:
     vocab = Vocab()
     return [Doc(vocab, words=["hello", "one"]), Doc(vocab, words=["hi", "two"])]
+
 
 @pytest.fixture
 def transformer_batch(transformer_model, docs):
