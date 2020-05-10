@@ -1,11 +1,11 @@
-from typing import Optional, Dict, List, Union
+from typing import List
 import torch
 import copy
 
 from spacy.tokens import Doc
 from thinc.api import Model
 
-from ..types import TransformerData, FullTransformerBatch
+from ..types import TransformerData
 from ..util import configure_get_doc_spans
 from ..wrapper import forward as transformer_forward
 

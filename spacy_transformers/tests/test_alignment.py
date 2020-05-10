@@ -1,4 +1,3 @@
-from typing import List, Tuple, Optional
 import pytest
 from .._align import BatchAlignment
 

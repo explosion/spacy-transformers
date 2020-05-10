@@ -1,7 +1,7 @@
-from typing import List, cast
+from typing import List
 
-from thinc.api import chain, Model, xp2torch, to_numpy, Ragged
-from thinc.types import Floats2d, Floats3d, FloatsXd
+from thinc.api import chain, Model, Ragged
+from thinc.types import Floats2d, FloatsXd
 
 from spacy.util import registry
 

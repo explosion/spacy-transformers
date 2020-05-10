@@ -1,7 +1,6 @@
 import numpy
 import catalogue
-from typing import List, Callable, cast
-from typing import Optional, Tuple, List, Dict
+from typing import List, Callable, Optional, Tuple, Dict
 import torch
 from dataclasses import dataclass
 from spacy.tokens import Doc
@@ -10,7 +9,6 @@ from collections import defaultdict
 from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
 from thinc.api import get_array_module
 from thinc.api import torch2xp, xp2torch
-from thinc.types import Decorator
 from spacy.tokens import Span
 from ._align import BatchAlignment
 

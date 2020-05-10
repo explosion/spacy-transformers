@@ -4,7 +4,7 @@ from spacy.tokens import Doc
 from thinc.api import Model
 
 from .util import DummyTransformer
-from ..pipeline import Transformer, null_annotation_setter
+from ..pipeline import Transformer
 from ..types import TransformerData, FullTransformerBatch
 from ..util import install_extensions
 
