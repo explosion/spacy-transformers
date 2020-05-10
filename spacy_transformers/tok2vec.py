@@ -51,9 +51,6 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         outputs.append(dst)
 
     def backprop(d_outputs: List[Floats2d]) -> List[TransformerData]:
-        # TODO:
-        # * Implement BatchAlignment.slice
-        # * Test
         assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
         for trf_data, d_dst in zip(trf_datas, d_outputs):

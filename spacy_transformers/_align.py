@@ -1,11 +1,6 @@
 from typing import List, Tuple, Optional, Dict
 from collections import defaultdict
 import tokenizations
-from spacy.tokens import Doc, Span
-
-
-_OffsetsT = List[Optional[Tuple[int, int]]]
-_AlignmentT = List[List[int]]
 
 
 class BatchAlignment:
