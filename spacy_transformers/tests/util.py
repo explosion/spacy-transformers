@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 import torch
 import copy
 
@@ -19,27 +19,27 @@ class DummyTokenizer:
 
     def batch_encode_plus(
         self,
-        texts: List[str],
-        add_special_tokens: bool = True,
-        max_length: Optional[int] = None,
+        texts,
+        add_special_tokens = True,
+        max_length = None,
         stride: int = 0,
-        truncation_strategy: str = "longest_first",
-        pad_to_max_length: bool = False,
-        is_pretokenized: bool = False,
-        return_tensors: Optional[str] = None,
-        return_token_type_ids: Optional[bool] = None,
-        return_attention_masks: Optional[bool] = None,
-        return_overflowing_tokens: bool = False,
-        return_special_tokens_masks: bool = False,
-        return_offsets_mapping: bool = False,
-        return_lengths: bool = False,
-    ) -> Dict:
+        truncation_strategy = "longest_first",
+        pad_to_max_length = False,
+        is_pretokenized = False,
+        return_tensors = None,
+        return_token_type_ids = None,
+        return_attention_masks = None,
+        return_overflowing_tokens = False,
+        return_special_tokens_masks = False,
+        return_offsets_mapping = False,
+        return_lengths = False,
+    ):
         output = {
             "input_ids": [],
             "attention_mask": [],
             "token_type_ids": [],
             "offset_mapping": [],
-        }
+        } # type: ignore
 
         for text in texts:
             words, offsets, mask, type_ids = self._tokenize(text)
@@ -50,9 +50,9 @@ class DummyTokenizer:
             output["offset_mapping"].append(offsets)
         output = self._pad(output)
         if return_tensors == "pt":
-            output["input_ids"] = torch.tensor(output["input_ids"])
-            output["attention_mask"] = torch.tensor(output["attention_mask"])
-            output["token_type_ids"] = torch.tensor(output["token_type_ids"])
+            output["input_ids"] = torch.tensor(output["input_ids"]) # type: ignore
+            output["attention_mask"] = torch.tensor(output["attention_mask"]) # type: ignore
+            output["token_type_ids"] = torch.tensor(output["token_type_ids"]) # type: ignore
         return output
 
     def _pad(self, batch):
