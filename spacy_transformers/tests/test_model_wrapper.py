@@ -2,7 +2,7 @@ import pytest
 import spacy
 from thinc.api import Model
 from ..wrapper import TransformerModelByName
-from ..types import FullTransformerBatch
+from ..util import FullTransformerBatch
 
 
 MODEL_NAMES = ["distilbert-base-uncased"]

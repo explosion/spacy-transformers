@@ -6,9 +6,9 @@ from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
-from .types import BatchEncoding, FullTransformerBatch, TransformerData
-from ._align import BatchAlignment
 from .util import huggingface_tokenize
+from .util import BatchEncoding, FullTransformerBatch, TransformerData
+from ._align import BatchAlignment
 
 
 @registry.architectures.register("spacy.TransformerByName.v2")

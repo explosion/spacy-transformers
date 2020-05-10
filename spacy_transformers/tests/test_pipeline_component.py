@@ -5,7 +5,7 @@ from thinc.api import Model
 
 from .util import DummyTransformer
 from ..pipeline import Transformer
-from ..types import TransformerData, FullTransformerBatch
+from ..util import TransformerData, FullTransformerBatch
 from ..util import install_extensions
 
 

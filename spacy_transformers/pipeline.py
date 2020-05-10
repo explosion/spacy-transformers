@@ -8,7 +8,7 @@ from spacy.util import minibatch, eg2doc, link_vectors_to_models
 from thinc.api import Model, set_dropout_rate
 
 from .util import null_annotation_setter
-from .types import FullTransformerBatch, TransformerData
+from .util import FullTransformerBatch, TransformerData
 
 
 @component("transformer", assigns=["doc._.trf_data"])
