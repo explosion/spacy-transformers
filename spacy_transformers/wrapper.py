@@ -1,14 +1,14 @@
 from typing import List, Callable
 import torch
-from transformers import AutoModel, AutoTokenizer, AutoModelForTokenClassification
-from transformers import AutoConfig
+from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
 from .types import BatchEncoding, FullTransformerBatch, TransformerData
-from .util import configure_get_doc_spans, huggingface_tokenize, configure_strided_spans
+from ._align import BatchAlignment
+from .util import huggingface_tokenize
 
 
 @registry.architectures.register("spacy.TransformerByName.v2")
@@ -40,14 +40,12 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
 
     spans = get_spans(docs)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
-    a2b, b2a = align_batch(spans, token_data["input_texts"])
     tensors, bp_tensors = transformer(token_data, is_train)
     output = FullTransformerBatch(
         spans=spans,
         tokens=token_data,
-        tensors=tensors
-        align_a2b=a2b,
-        align_b2a=b2a
+        tensors=tensors,
+        align=BatchAlignment.from_strings(list(map(list, spans)), token_data["input_texts"]),
     )
 
     def backprop_transformer(d_output: FullTransformerBatch):

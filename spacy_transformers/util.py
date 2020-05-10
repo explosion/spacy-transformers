@@ -1,3 +1,4 @@
+import numpy
 from typing import List, Callable
 from typing import Optional, Tuple, List, Dict
 import torch
@@ -6,11 +7,11 @@ from spacy.tokens import Doc
 from thinc.config import registry
 
 from collections import defaultdict
-from thinc.types import Ragged, Floats3d
+from thinc.types import Ragged, Floats2d, Floats3d
 from thinc.api import get_array_module
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
-from ._align import Alignment
+from ._align import BatchAlignment
 
 
 
@@ -43,7 +44,7 @@ class TransformerData:
 
     def get_tok_aligned(self, ops, wp: Floats3d) -> Ragged:
         wp2d = ops.reshape2f(wp, -1, wp.shape[-1])
-        return Ragged(wp2d[self.wp2tok.data, self.wp2tok.lengths)
+        return Ragged(wp2d[self.wp2tok.data], self.wp2tok.lengths)
 
     def get_wp_aligned(self, ops, tok: Floats2d) -> Ragged:
         return Ragged(tok[self.tok2wp.data], self.tok2wp.lengths)
@@ -54,7 +55,7 @@ class FullTransformerBatch:
     spans = List[Span]
     tokens: BatchEncoding
     tensors: List[torch.Tensor]
-    align: Alignment
+    align: BatchAlignment
     _doc_data: Optional[List[TransformerData]]
 
     @property

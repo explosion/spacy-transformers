@@ -1,28 +1,26 @@
 from typing import List
 
-import numpy
-from thinc.api import chain, Model, xp2torch, to_numpy
+from thinc.api import chain, Model, xp2torch, to_numpy, Ragged
 from thinc.types import Floats2d
 
 from spacy.util import registry
 
 from .pipeline import TransformerListener
 from .wrapper import TransformerModelByName
-from .tagger import transformer_linear_v1
 from .util import find_last_hidden, TransformerData, FullTransformerBatch
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
-def transformer_listener_tok2vec_v1(width: int, grad_factor: float=1.0):
+def transformer_listener_tok2vec_v1(pooling, width: int, grad_factor: float=1.0):
     tok2vec = chain(
         TransformerListener("transformer", width=width),
-        trf_data_to_tensor(width, grad_factor)
+        trf_data_to_tensor(pooling, width, grad_factor)
     )
     return tok2vec
 
 
 @registry.architectures.register("spacy.Tok2VecTransformer.v1")
-def transformer_tok2vec_v1(get_spans, name: str, width: int, grad_factor: float=1.0):
+def transformer_tok2vec_v1(pooling, get_spans, name: str, width: int, grad_factor: float=1.0):
     tok2vec = chain(
         TransformerModelByName(name, get_spans=get_spans),
         get_trf_data(),
@@ -49,7 +47,7 @@ def trf_data_to_tensor(pooling: Model[Ragged, Floats2d], width: int, grad_factor
 
 
 def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
-    pooling: Pooling[Ragged, Floats2d] = model.layers[0]
+    pooling: Model[Ragged, Floats2d] = model.layers[0]
     grad_factor = model.attrs["grad_factor"]
     outputs = []
     backprops = []

@@ -1,12 +1,13 @@
-from typing import List, Tuple, Optional, Dict
-from collections import defaultdict
+import numpy
+from typing import List, Tuple
 import tokenizations
+from thinc.api import Ragged
 
 
 class BatchAlignment:
     """Alignment for a batch of texts between wordpieces and tokens."""
-    wp2tok: Ints1d
-    tok2wp: Ints1d
+    wp2tok: Ragged
+    tok2wp: Ragged
     wp_lengths: List[int]
     tok_lengths: List[int]
 
@@ -38,13 +39,14 @@ class BatchAlignment:
 def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged]:
     if len(A) != len(B):
         raise ValueError("Cannot align batches of different sizes.")
-    batch_size = len(A)
-    a_stride = max(len(a) for a in A, default=0)
-    b_stride = max(len(b) for b in B), default=0
+    a_stride = max((len(a) for a in A), default=0)
+    b_stride = max((len(b) for b in B), default=0)
     A2B = []
     B2A = []
     a2b_lengths = []
     b2a_lengths = []
+    a_start = 0
+    b_start = 0
     for i, (a, b) in enumerate(zip(A, B)):
         a2b, b2a = tokenizations.get_alignments(a, b)
         for b_js in a2b:
