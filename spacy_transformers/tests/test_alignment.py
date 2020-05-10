@@ -15,8 +15,7 @@ def flatten_strings(words1, words2):
 
 
 @pytest.mark.parametrize(
-    "words1",
-    "words2",
+    "words1,words2",
     [
         ([["a", "b"]], [["a", "b"]]),
         ([["ab"]], [["a", "b"]]),
