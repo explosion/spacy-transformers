@@ -6,7 +6,7 @@ from spacy.tokens import Doc
 from thinc.config import registry
 
 from collections import defaultdict
-from thinc.types import Floats3d
+from thinc.types import Ragged, Floats3d
 from thinc.api import get_array_module
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
@@ -24,8 +24,8 @@ class TransformerData:
     spans: List[Tuple[int, int]]
     tokens: BatchEncoding
     tensors: List[Floats3d]
-    wp2tok: Ints1d
-    tok2wp: Ints1d
+    wp2tok: Ragged
+    tok2wp: Ragged
 
     @classmethod
     def empty(cls) -> "TransformerData":
@@ -41,13 +41,12 @@ class TransformerData:
         else:
             raise ValueError("Cannot find last hidden layer")
 
-    def get_tok_aligned(self, ops, wp: Floats3d) -> Floats2d:
-        tok = ops.alloc2f(self.wp2tok.shape[0], wp.shape[1])
-        return ops.scatter_add(dst, self.wp2tok, wp)
+    def get_tok_aligned(self, ops, wp: Floats3d) -> Ragged:
+        wp2d = ops.reshape2f(wp, -1, wp.shape[-1])
+        return Ragged(wp2d[self.wp2tok.data, self.wp2tok.lengths)
 
-    def get_wp_aligned(self, ops, tok: Floats2d) -> Floats3d:
-        wp = ops.alloc2f(self.wp2tok.shape[0], tok.shape[1])
-        return ops.scatter_add(wp, self.tok2wp, tok)
+    def get_wp_aligned(self, ops, tok: Floats2d) -> Ragged:
+        return Ragged(tok[self.tok2wp.data], self.tok2wp.lengths)
 
 
 @dataclass
