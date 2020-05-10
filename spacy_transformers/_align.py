@@ -17,7 +17,7 @@ class BatchAlignment:
         tok_lengths = [len(x) for x in tok]
         return cls(wp2tok, tok2wp, wp_lengths, tok_lengths)
 
-    def slice(self, start: int, end: int) -> Tuple[Ints1d, Ints1d]:
+    def slice(self, start: int, end: int) -> Tuple[Ragged, Ragged]:
         """Extract the alignment for a subset of the batch, adjusting the
         indices accordingly."""
         wp_start = sum(self.wp_lengths[:start])
@@ -27,40 +27,35 @@ class BatchAlignment:
         # Get the slice, and adjust the data so they point to the right part
         # of the target array. We're trusting that nothing will point past the
         # ends.
-        wp2tok = self.wp2tok[wp_start : wp_end] - tok_start
-        tok2wp = self.tok2wp[tok_start : tok_end] - wp_start
-        # Handle, which indicates null alignment
-        wp2tok[wp2tok < 0] = -1
-        tok2wp[tok2wp < 0] = -1
+        wp2tok = self.wp2tok[wp_start : wp_end]
+        tok2wp = self.tok2wp[tok_start : tok_end]
+        wp2tok.data -= tok_start
+        tok2wp.data -= wp_start
         return wp2tok, tok2wp
 
 
 
-def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ints1d, Ints1d]:
+def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged]:
     if len(A) != len(B):
         raise ValueError("Cannot align batches of different sizes.")
     batch_size = len(A)
     a_stride = max(len(a) for a in A, default=0)
     b_stride = max(len(b) for b in B), default=0
-    A2B = numpy.zeros((batch_size * a_stride,), dtype="i")
-    B2A = numpy.zeros((batch_size * b_stride,), dtype="i")
-    A2B.fill(-1)
-    B2A.fill(-1)
+    A2B = []
+    B2A = []
+    a2b_lengths = []
+    b2a_lengths = []
     for i, (a, b) in enumerate(zip(A, B)):
         a2b, b2a = tokenizations.get_alignments(a, b)
-        for a_j, b_js in enumerate(a2b):
-            for b_j in b_js:
-                B2A[i * b_stride + b_j] = i * a_stride + a_j
-        for b_j, a_js in enumerate(a2b):
-            for a_j in a_js:
-                A2B[i * a_stride + a_j] = i * b_stride + b_j
-    # To use the alignment table, we do like:
-    # 
-    # A_ = ops.scatter_add(A, B2A, B)
-    # B_ = ops.scatter_add(B, A2B, A)
-    # 
-    # This will iterate over the table and do A[B2A[i]] += B[i] etc
-    # Note that the indices are flat, so you have to reshape your table to 2d.
-    # You also have to append a dummy value to the end of the destination array
-    # and strip it, so that there's a way to do non-alignment.
-    return A2B, B2A
+        for b_js in a2b:
+            A2B.extend([b_start + b_j for b_j in b_js])
+            a2b_lengths.append(len(b_js))
+        for a_js in b2a:
+            B2A.extend([a_start + a_j for a_j in a_js])
+            b2a_lengths.append(len(a_js))
+        b_start += b_stride
+        a_start += a_stride
+    return (
+        Ragged(numpy.array(A2B, dtype="i"), numpy.array(a2b_lengths, dtype="i")),
+        Ragged(numpy.array(B2A, dtype="i"), numpy.array(b2a_lengths, dtype="i"))
+    )
