@@ -2,7 +2,7 @@ import pytest
 import spacy
 from thinc.api import Model
 from ..wrapper import TransformerModelByName
-from ..util import FullTransformerBatch
+from ..util import FullTransformerBatch, configure_get_doc_spans
 
 
 MODEL_NAMES = ["distilbert-base-uncased"]
@@ -27,7 +27,7 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def trf_model(name):
-    return TransformerModelByName(name)
+    return TransformerModelByName(name, get_spans=configure_get_doc_spans())
 
 
 def test_model_init(name, trf_model):
