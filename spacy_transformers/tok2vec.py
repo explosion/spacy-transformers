@@ -24,18 +24,36 @@ def transformer_listener_tok2vec_v1(
 def transformer_tok2vec_v1(
     pooling, get_spans, name: str, width: int, grad_factor: float = 1.0
 ) -> Model[List[TransformerData], List[Floats2d]]:
-    return chain(
+    return debug_print(chain(
         TransformerModelByName(name, get_spans=get_spans),
         get_trf_data(),
         trf_data_to_tensor(pooling, width, grad_factor),
-    )
+    ))
+
+
+def debug_print(layer):
+    def debug_forward(model, docs, is_train):
+        transformer, get_trf, get_tokvecs= model.layers
+        tensors, bp_tensors = transformer(docs, is_train)
+        trf, bp_trf = get_trf(tensors, is_train)
+        tokvecs, bp_tokvecs = get_tokvecs(trf, is_train)
+        for i, doc in enumerate(docs):
+            assert len(doc) == tokvecs[i].shape[0], (i, len(doc), tokvecs[i].shape, trf[i].n_tok)
+
+        def backprop_debug(d_tokvecs):
+            return bp_tensors(bp_trf(bp_tokvecs(d_tokvecs)))
+
+        return tokvecs, backprop_debug
+
+    return Model("debug", debug_forward, layers=layer.layers, init=layer.init,
+        dims=layer._dims)
 
 
 def get_trf_data() -> Model[FullTransformerBatch, List[TransformerData]]:
     def _forward(model, trf_full, is_train):
         def backprop(d_trf_datas):
             return trf_full.unsplit_by_doc([x.tensors for x in d_trf_datas])
-
+        
         return trf_full.doc_data, backprop
 
     return Model("get-trf-data", _forward)
@@ -60,32 +78,33 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     backprops = []
     for trf_data in trf_datas:
         t_i = find_last_hidden(trf_data.tensors)
+        orig_shape = trf_data.tensors[t_i].shape
         src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
         dst, get_d_src = trf_data.align_to_tokens(model.ops, src)
         output, get_d_dst = pooling(dst, is_train)
+        assert output.shape[0] == trf_data.n_tok, (output.shape[0], trf_data.n_tok)
         outputs.append(output)
         backprops.append((get_d_dst, get_d_src))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
-        assert len(d_outputs) == len(trf_datas)
         d_trf_datas = []
         zipped = zip(trf_datas, d_outputs, backprops)
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
             d_dst = get_d_dst(d_output)
             d_src = get_d_src(d_dst)
             d_src *= grad_factor
+            t_i = find_last_hidden(trf_data.tensors)
             d_tensors: List[FloatsXd] = [
                 model.ops.alloc(x.shape, dtype=x.dtype) for x in trf_data.tensors
             ]
-            t_i = find_last_hidden(d_tensors)
             d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
                     spans=trf_data.spans,
                     tokens=trf_data.tokens,
-                    trf2tok=trf_data.trf2tok,
                     tok2trf=trf_data.tok2trf,
+                    trf2tok=trf_data.trf2tok,
                 )
             )
         return d_trf_datas

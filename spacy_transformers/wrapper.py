@@ -46,6 +46,9 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
         spans=spans,
         tokens=token_data,
         tensors=tensors,
+        # TODO: This isn't right: we can have the same token in multiple
+        # spans, and we want to fix the alignment for that. So we should
+        # pass the Span objects in directly, and let it sort out the alignment.
         align=BatchAlignment.from_strings(
             [[tok.text for tok in span] for span in spans], token_data["input_texts"]
         ),

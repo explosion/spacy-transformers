@@ -9,40 +9,45 @@ from thinc.api import Ragged
 class BatchAlignment:
     """Alignment for a batch of texts between wordpieces and tokens."""
 
-    wp2tok: Ragged
-    tok2wp: Ragged
-    wp_lengths: List[int]
+    tok2trf: Ragged
+    trf2tok: Ragged
+    trf_lengths: List[int]
     tok_lengths: List[int]
 
     @classmethod
-    def from_strings(cls, wp: List[List[str]], tok: List[List[str]]):
-        wp2tok, tok2wp = _align_batch(wp, tok)
-        wp_lengths = [len(x) for x in wp]
+    def from_strings(cls, tok: List[List[str]], trf: List[List[str]]):
+        # TODO: This needs to take into account that the same token can
+        # be in multiple spans.
+        tok2trf, trf2tok = _align_batch(tok, trf)
+        trf_lengths = [len(x) for x in trf]
         tok_lengths = [len(x) for x in tok]
-        return cls(wp2tok, tok2wp, wp_lengths, tok_lengths)
+        return cls(
+            tok2trf=tok2trf,
+            trf2tok=trf2tok,
+            trf_lengths=trf_lengths,
+            tok_lengths=tok_lengths
+        )
 
     def slice(self, start: int, end: int) -> Tuple[Ragged, Ragged]:
         """Extract the alignment for a subset of the batch, adjusting the
         indices accordingly."""
-        wp_start = sum(self.wp_lengths[:start])
-        wp_end = sum(self.wp_lengths[:end])
         tok_start = sum(self.tok_lengths[:start])
         tok_end = sum(self.tok_lengths[:end])
+        trf_start = sum(self.trf_lengths[:start])
+        trf_end = sum(self.trf_lengths[:end])
         # Get the slice, and adjust the data so they point to the right part
         # of the target array. We're trusting that nothing will point past the
         # ends.
-        wp2tok = self.wp2tok[wp_start:wp_end]
-        tok2wp = self.tok2wp[tok_start:tok_end]
-        wp2tok.data -= tok_start
-        tok2wp.data -= wp_start
-        return wp2tok, tok2wp
+        tok2trf = self.tok2trf[tok_start:tok_end]
+        trf2tok = self.trf2tok[trf_start:trf_end]
+        tok2trf.data -= trf_start
+        trf2tok.data -= tok_start
+        return tok2trf, trf2tok
 
 
 def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged]:
     if len(A) != len(B):
         raise ValueError("Cannot align batches of different sizes.")
-    a_stride = max((len(a) for a in A), default=0)
-    b_stride = max((len(b) for b in B), default=0)
     A2B = []
     B2A = []
     a2b_lengths = []
@@ -57,8 +62,10 @@ def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged
         for a_js in b2a:
             B2A.extend([a_start + a_j for a_j in a_js])
             b2a_lengths.append(len(a_js))
-        b_start += b_stride
-        a_start += a_stride
+        a_start += len(a)
+        b_start += len(b)
+    assert len(a2b_lengths) == sum(len(a) for a in A)
+    assert len(b2a_lengths) == sum(len(b) for b in B)
     return (
         Ragged(numpy.array(A2B, dtype="i"), numpy.array(a2b_lengths, dtype="i")),
         Ragged(numpy.array(B2A, dtype="i"), numpy.array(b2a_lengths, dtype="i")),

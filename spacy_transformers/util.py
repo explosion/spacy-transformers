@@ -7,14 +7,11 @@ from spacy.tokens import Doc
 
 from collections import defaultdict
 from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
-from thinc.api import get_array_module
+from thinc.api import get_array_module, registry
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
 from ._align import BatchAlignment
 
-
-# TODO: How should we register this?
-spanners = catalogue.create("spacy-transformers", "spanners")
 
 
 BatchEncoding = Dict
@@ -27,8 +24,8 @@ class TransformerData:
     spans: List[Tuple[int, int]]
     tokens: BatchEncoding
     tensors: List[FloatsXd]
-    trf2tok: Ragged
     tok2trf: Ragged
+    trf2tok: Ragged
 
     @classmethod
     def empty(cls) -> "TransformerData":
@@ -44,22 +41,33 @@ class TransformerData:
         else:
             raise ValueError("Cannot find last hidden layer")
 
-    def align_to_tokens(self, ops, wp: Floats2d) -> Tuple[Ragged, Callable]:
-        aligned = Ragged(wp[self.trf2tok.data], self.trf2tok.lengths)
+    @property
+    def n_tok(self) -> int:
+        return self.tok2trf.lengths.shape[0]
 
-        def backprop_tok_alignment(d_aligned: Ragged) -> Floats3d:
-            d_wp = ops.alloc2f(len(d_aligned), d_aligned.data.shape[1])
-            ops.scatter_add(d_wp, self.trf2tok.data, d_aligned.data)
+    @property
+    def n_trf(self) -> int:
+        return self.trf2tok.lengths.shape[0]
+
+    def align_to_tokens(self, ops, wp: Floats2d) -> Tuple[Ragged, Callable]:
+        tok2trf = self.tok2trf.data.ravel()
+        aligned = Ragged(wp[tok2trf], ops.asarray(self.tok2trf.lengths))
+
+        def backprop_tok_alignment(d_aligned: Ragged) -> Floats2d:
+            d_wp = ops.alloc2f(self.trf2tok.lengths.shape[0], d_aligned.data.shape[1])
+            ops.scatter_add(d_wp, tok2trf, d_aligned.data)
             return d_wp
 
         return aligned, backprop_tok_alignment
 
     def align_to_transformer(self, ops, tok: Floats2d) -> Tuple[Ragged, Callable]:
-        aligned = Ragged(tok[self.tok2trf.data], self.tok2trf.lengths)
+        shape = tok2.shape
+        tok2trf = self.tok2trf.data.ravel()
+        aligned = Ragged(tok[self.tok2trf.data], ops.asarray(self.tok2trf.lengths))
 
         def backprop_wp_alignment(d_aligned: Ragged) -> Floats2d:
-            d_tok = ops.alloc2f(len(d_aligned), d_aligned.data.shape[1])
-            ops.scatter_add(d_tok, self.tok2trf.data, d_aligned.data)
+            d_tok = ops.alloc2f(*shape)
+            ops.scatter_add(d_tok, tok2trf.data, d_aligned.data)
             return d_tok
 
         return aligned, backprop_wp_alignment
@@ -100,7 +108,7 @@ class FullTransformerBatch:
         start = 0
         for doc_spans in spans_by_doc.values():
             end = start + len(doc_spans)
-            trf2tok, tok2trf = self.align.slice(start, end)
+            tok2trf, trf2tok = self.align.slice(start, end)
 
             torch_slices = [t[start:end] for t in self.tensors]
             outputs.append(
@@ -108,8 +116,8 @@ class FullTransformerBatch:
                     spans=[(span.start, span.end) for span in doc_spans],
                     tokens=slice_tokens(self.tokens, start, end),
                     tensors=[torch2xp(t) for t in torch_slices],  # type: ignore
-                    trf2tok=trf2tok,
                     tok2trf=tok2trf,
+                    trf2tok=trf2tok,
                 )
             )
             start += len(doc_spans)
@@ -120,7 +128,7 @@ def install_extensions():
     Doc.set_extension("trf_data", default=TransformerData.empty())
 
 
-@spanners("spacy-transformers.strided_spans.v1")
+@registry.layers("spacy-transformers.strided_spans.v1")
 def configure_strided_spans(window: int, stride: int) -> Callable:
     def get_strided_spans(docs):
         spans = []
@@ -136,7 +144,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
     return get_strided_spans
 
 
-@spanners("spacy-transformers.get_sent_spans.v1")
+@registry.layers("spacy-transformers.get_sent_spans.v1")
 def configure_get_sent_spans():
     def get_sent_spans(docs):
         sents = []
@@ -147,7 +155,7 @@ def configure_get_sent_spans():
     return get_sent_spans
 
 
-@spanners("spacy-transformers.get_doc_spans.v1")
+@registry.layers("spacy-transformers.get_doc_spans.v1")
 def configure_get_doc_spans():
     def get_doc_spans(docs):
         return [doc[:] for doc in docs]
