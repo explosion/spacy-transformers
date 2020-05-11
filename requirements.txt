@@ -1,6 +1,7 @@
 transformers>=2.9.0,<2.10.0
 pytokenizations
 spacy>=3.0.0,<3.1.0
+thinc==8.0.0a6
 torch>=1.0.0
 torchcontrib>=0.0.2,<0.1.0
 srsly>=2.0.0,<3.0.0
