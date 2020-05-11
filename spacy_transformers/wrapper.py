@@ -47,7 +47,7 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
         tokens=token_data,
         tensors=tensors,
         align=BatchAlignment.from_strings(
-            list(map(list, spans)), token_data["input_texts"]
+            [[tok.text for tok in span] for span in spans], token_data["input_texts"]
         ),
     )
 
