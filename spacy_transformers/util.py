@@ -172,6 +172,7 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_offsets_mapping=False,
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
+        pad_to_max_length=True
     )
     token_data["input_texts"] = [
         tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]

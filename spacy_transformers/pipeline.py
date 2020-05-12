@@ -33,6 +33,7 @@ class Transformer(Pipe):
     ):
         self.vocab = vocab
         self.model = model
+        assert isinstance(self.model, Model)
         self.annotation_setter = annotation_setter
         self.cfg = dict(cfg)
         self.cfg["max_batch_size"] = max_batch_size

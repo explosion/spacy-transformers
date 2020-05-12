@@ -22,10 +22,15 @@ def transformer_listener_tok2vec_v1(
 
 @registry.architectures.register("spacy.Tok2VecTransformer.v1")
 def transformer_tok2vec_v1(
-    pooling, get_spans, name: str, width: int, grad_factor: float = 1.0
+    pooling,
+    get_spans,
+    name: str,
+    width: int,
+    fast_tokenizer: bool,
+    grad_factor: float = 1.0
 ) -> Model[List[TransformerData], List[Floats2d]]:
     return debug_print(chain(
-        TransformerModelByName(name, get_spans=get_spans),
+        TransformerModelByName(name, fast_tokenizer=fast_tokenizer, get_spans=get_spans),
         get_trf_data(),
         trf_data_to_tensor(pooling, width, grad_factor),
     ))
@@ -37,8 +42,14 @@ def debug_print(layer):
         tensors, bp_tensors = transformer(docs, is_train)
         trf, bp_trf = get_trf(tensors, is_train)
         tokvecs, bp_tokvecs = get_tokvecs(trf, is_train)
-        for i, doc in enumerate(docs):
-            assert len(doc) == tokvecs[i].shape[0], (i, len(doc), tokvecs[i].shape, trf[i].n_tok)
+        #print("Tokvecs", [t2v.shape for t2v in tokvecs])
+        #for i, doc in enumerate(docs):
+        #    if tokvecs[i].size == 0:
+        #        print(doc)
+        #        print([t.shape for t in trf[i].tensors])
+        #        print(tokvecs[i].shape)
+        #        raise ValueError("Empty tok2vec")
+        #    assert len(doc) == tokvecs[i].shape[0], (i, len(doc), tokvecs[i].shape, trf[i].n_tok)
 
         def backprop_debug(d_tokvecs):
             return bp_tensors(bp_trf(bp_tokvecs(d_tokvecs)))
@@ -82,6 +93,12 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
         dst, get_d_src = trf_data.align_to_tokens(model.ops, src)
         output, get_d_dst = pooling(dst, is_train)
+        # TODO: Things are going wrong if there's no aligned tokens, either in
+        # aligned_to_tokens or pooling. Need to figure it out and fix it where
+        # it occurs.
+        if output.size == 0:
+            output = model.ops.alloc2f(trf_data.n_tok, trf_data.width)
+            get_d_dst = None
         assert output.shape[0] == trf_data.n_tok, (output.shape[0], trf_data.n_tok)
         outputs.append(output)
         backprops.append((get_d_dst, get_d_src))
@@ -90,14 +107,15 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         d_trf_datas = []
         zipped = zip(trf_datas, d_outputs, backprops)
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
-            d_dst = get_d_dst(d_output)
-            d_src = get_d_src(d_dst)
-            d_src *= grad_factor
-            t_i = find_last_hidden(trf_data.tensors)
             d_tensors: List[FloatsXd] = [
                 model.ops.alloc(x.shape, dtype=x.dtype) for x in trf_data.tensors
             ]
-            d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
+            if d_output.size != 0 and get_d_dst is not None:
+                d_dst = get_d_dst(d_output)
+                d_src = get_d_src(d_dst)
+                d_src *= grad_factor
+                t_i = find_last_hidden(trf_data.tensors)
+                d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,

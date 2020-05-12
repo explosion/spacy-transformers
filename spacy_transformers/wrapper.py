@@ -13,11 +13,13 @@ from ._align import BatchAlignment
 
 @registry.architectures.register("spacy.TransformerByName.v2")
 def TransformerModelByName(
-    name: str, get_spans: Callable
+    name: str, get_spans: Callable, fast_tokenizer: bool
 ) -> Model[List[Doc], TransformerData]:
     transformer = AutoModel.from_pretrained(name)
-    tokenizer = AutoTokenizer.from_pretrained(name, use_fast=True)
-    return TransformerModel(transformer, tokenizer, get_spans=get_spans)
+    tokenizer = AutoTokenizer.from_pretrained(name, use_fast=fast_tokenizer)
+    transformer = transformer.cuda()
+    model = TransformerModel(transformer, tokenizer, get_spans=get_spans)
+    return model
 
 
 @registry.architectures.register("spacy.TransformerModel.v1")
