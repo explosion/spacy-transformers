@@ -14,7 +14,6 @@ class BatchAlignment:
     trf_lengths: List[int]
     tok_lengths: List[int]
 
-    @classmethod
     def from_strings(cls, tok: List[List[str]], trf: List[List[str]]):
         # TODO: This needs to take into account that the same token can
         # be in multiple spans.
@@ -45,15 +44,32 @@ class BatchAlignment:
         return tok2trf, trf2tok
 
 
-def _align_batch(A: List[List[str]], B: List[List[str]]) -> Tuple[Ragged, Ragged]:
+def _align_batch(spans: List[Span], wordpieces: List[List[str]]) -> Tuple[Ragged, Ragged]:
     if len(A) != len(B):
         raise ValueError("Cannot align batches of different sizes.")
-    A2B = []
-    B2A = []
+    token_positions: Dict[Tuple[int, int], int] = {}
+    flat_tokens = []
+    for span in spans:
+        for token in span:
+            key = (id(span.doc), token.start_char)
+            if key not in token_positions:
+                token_positions[key] = len(token_positions) 
+    A2B = [[] for _ in range(len(token_positions))]
+    B2A = [[] for _ in range(sum(len(wp) for wp in wordpieces))]
     a2b_lengths = []
     b2a_lengths = []
     a_start = 0
     b_start = 0
+    for i, (span, wp_texts) in enumerate(zip(spans, wordpieces)):
+        tok_texts = [token.text for token in span]
+        span2wp, wp2span = tokenizations.get_alignments(tok_text, wp_texts)
+        for token, wp_js in zip(span2wp, span):
+            key = (id(span.doc), token.start_char)
+            position = token_positions[key]
+            A2B[position].extend(wp_js)
+
+
+
     for i, (a, b) in enumerate(zip(A, B)):
         a2b, b2a = tokenizations.get_alignments(a, b)
         for b_js in a2b:
