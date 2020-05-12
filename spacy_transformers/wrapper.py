@@ -17,7 +17,6 @@ def TransformerModelByName(
 ) -> Model[List[Doc], TransformerData]:
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=fast_tokenizer)
-    transformer = transformer.cuda()
     model = TransformerModel(transformer, tokenizer, get_spans=get_spans)
     return model
 
