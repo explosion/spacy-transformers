@@ -1,5 +1,13 @@
 import pytest
-from .._align import BatchAlignment
+from spacy.tokens import Doc
+from spacy.vocab import Vocab
+from .._align import get_alignment
+
+
+def get_spans(word_seqs):
+    vocab = Vocab()
+    docs = [Doc(vocab, words=words) for words in word_seqs]
+    return [doc[:] for doc in docs]
 
 
 def flatten_strings(words1, words2):
@@ -25,12 +33,16 @@ def flatten_strings(words1, words2):
     ],
 )
 def test_alignments_match(words1, words2):
-    align = BatchAlignment.from_strings(words1, words2)
+    spans = get_spans(words1)
+    align = get_alignment(spans, words2)
+    unique_tokens = set() 
+    for span in spans:
+        for token in span:
+            unique_tokens.add((id(token.doc), token.idx))
+    assert len(unique_tokens) == align.lengths.shape[0]
     flat_words1, flat_words2 = flatten_strings(words1, words2)
-    print("Flat words1", flat_words1)
-    print("Flat words2", flat_words2)
     for i, word in enumerate(flat_words1):
-        wp_word = "".join([flat_words2[int(j)] for j in align.wp2tok[i].data])
+        wp_word = "".join([flat_words2[int(j)] for j in align[i].data])
         if len(word) < len(wp_word):
             assert word in wp_word
         elif len(word) > len(wp_word):

@@ -8,6 +8,7 @@ from spacy.util import registry
 from .pipeline import TransformerListener
 from .wrapper import TransformerModelByName
 from .util import find_last_hidden, TransformerData, FullTransformerBatch
+from ._align import apply_alignment
 
 
 @registry.architectures.register("spacy.Tok2VecTransformerListener.v1")
@@ -91,15 +92,8 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         t_i = find_last_hidden(trf_data.tensors)
         orig_shape = trf_data.tensors[t_i].shape
         src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
-        dst, get_d_src = trf_data.align_to_tokens(model.ops, src)
+        dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
         output, get_d_dst = pooling(dst, is_train)
-        # TODO: Things are going wrong if there's no aligned tokens, either in
-        # aligned_to_tokens or pooling. Need to figure it out and fix it where
-        # it occurs.
-        if output.size == 0:
-            output = model.ops.alloc2f(trf_data.n_tok, trf_data.width)
-            get_d_dst = None
-        assert output.shape[0] == trf_data.n_tok, (output.shape[0], trf_data.n_tok)
         outputs.append(output)
         backprops.append((get_d_dst, get_d_src))
 
@@ -110,19 +104,17 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_tensors: List[FloatsXd] = [
                 model.ops.alloc(x.shape, dtype=x.dtype) for x in trf_data.tensors
             ]
-            if d_output.size != 0 and get_d_dst is not None:
-                d_dst = get_d_dst(d_output)
-                d_src = get_d_src(d_dst)
-                d_src *= grad_factor
-                t_i = find_last_hidden(trf_data.tensors)
-                d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
+            d_dst = get_d_dst(d_output)
+            d_src = get_d_src(d_dst)
+            d_src *= grad_factor
+            t_i = find_last_hidden(trf_data.tensors)
+            d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
                     spans=trf_data.spans,
                     tokens=trf_data.tokens,
-                    tok2trf=trf_data.tok2trf,
-                    trf2tok=trf_data.trf2tok,
+                    align=trf_data.align
                 )
             )
         return d_trf_datas

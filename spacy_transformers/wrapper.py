@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Tuple, Callable
 import torch
 from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc
@@ -8,7 +8,7 @@ from spacy.util import registry
 
 from .util import huggingface_tokenize
 from .util import BatchEncoding, FullTransformerBatch, TransformerData
-from ._align import BatchAlignment
+from ._align import get_alignment
 
 
 @registry.architectures.register("spacy.TransformerByName.v2")
@@ -36,7 +36,7 @@ def TransformerModel(
     )
 
 
-def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBatch:
+def forward(model: Model, docs: List[Doc], is_train: bool) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]
@@ -48,15 +48,10 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> FullTransformerBat
         spans=spans,
         tokens=token_data,
         tensors=tensors,
-        # TODO: This isn't right: we can have the same token in multiple
-        # spans, and we want to fix the alignment for that. So we should
-        # pass the Span objects in directly, and let it sort out the alignment.
-        align=BatchAlignment.from_strings(
-            [[tok.text for tok in span] for span in spans], token_data["input_texts"]
-        ),
+        align=get_alignment(spans, token_data["input_texts"])
     )
 
-    def backprop_transformer(d_output: FullTransformerBatch):
+    def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
         _ = bp_tensors(d_output.tensors)
         return docs
 

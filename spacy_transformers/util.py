@@ -10,7 +10,7 @@ from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
 from thinc.api import get_array_module, registry
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
-from ._align import BatchAlignment
+from ._align import get_alignment, slice_alignment
 
 
 
@@ -24,14 +24,15 @@ class TransformerData:
     spans: List[Tuple[int, int]]
     tokens: BatchEncoding
     tensors: List[FloatsXd]
-    tok2trf: Ragged
-    trf2tok: Ragged
+    align: Ragged
 
     @classmethod
     def empty(cls) -> "TransformerData":
-        a2b = numpy.zeros((0,), dtype="i")
-        b2a = numpy.zeros((0,), dtype="i")
-        return cls([], {}, [], a2b, b2a)
+        align = Ragged(
+            numpy.zeros((0,), dtype="i"),
+            numpy.zeros((0,), dtype="i")
+        )
+        return cls([], {}, [], align)
 
     @property
     def width(self) -> int:
@@ -41,44 +42,13 @@ class TransformerData:
         else:
             raise ValueError("Cannot find last hidden layer")
 
-    @property
-    def n_tok(self) -> int:
-        return self.tok2trf.lengths.shape[0]
-
-    @property
-    def n_trf(self) -> int:
-        return self.trf2tok.lengths.shape[0]
-
-    def align_to_tokens(self, ops, wp: Floats2d) -> Tuple[Ragged, Callable]:
-        tok2trf = self.tok2trf.data.ravel()
-        aligned = Ragged(wp[tok2trf], ops.asarray(self.tok2trf.lengths))
-
-        def backprop_tok_alignment(d_aligned: Ragged) -> Floats2d:
-            d_wp = ops.alloc2f(self.trf2tok.lengths.shape[0], d_aligned.data.shape[1])
-            ops.scatter_add(d_wp, tok2trf, d_aligned.data)
-            return d_wp
-
-        return aligned, backprop_tok_alignment
-
-    def align_to_transformer(self, ops, tok: Floats2d) -> Tuple[Ragged, Callable]:
-        shape = tok2.shape
-        tok2trf = self.tok2trf.data.ravel()
-        aligned = Ragged(tok[self.tok2trf.data], ops.asarray(self.tok2trf.lengths))
-
-        def backprop_wp_alignment(d_aligned: Ragged) -> Floats2d:
-            d_tok = ops.alloc2f(*shape)
-            ops.scatter_add(d_tok, tok2trf.data, d_aligned.data)
-            return d_tok
-
-        return aligned, backprop_wp_alignment
-
 
 @dataclass
 class FullTransformerBatch:
     spans: List[Span]
     tokens: BatchEncoding
     tensors: List[torch.Tensor]
-    align: BatchAlignment
+    align: Ragged
     _doc_data: Optional[List[TransformerData]] = None
 
     @property
@@ -104,20 +74,18 @@ class FullTransformerBatch:
         for span in self.spans:
             key = id(span.doc)
             spans_by_doc[key].append(span)
+        sp_lens = [len(sp) for sp in self.spans]
+        wp_lens = [len(wp) for wp in self.tokens["input_ids"]]
         outputs = []
         start = 0
         for doc_spans in spans_by_doc.values():
             end = start + len(doc_spans)
-            tok2trf, trf2tok = self.align.slice(start, end)
-
-            torch_slices = [t[start:end] for t in self.tensors]
             outputs.append(
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
                     tokens=slice_tokens(self.tokens, start, end),
-                    tensors=[torch2xp(t) for t in torch_slices],  # type: ignore
-                    tok2trf=tok2trf,
-                    trf2tok=trf2tok,
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
+                    align=slice_alignment(self.align, start, end, sp_lens, wp_lens)
                 )
             )
             start += len(doc_spans)
