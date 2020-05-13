@@ -13,7 +13,6 @@ from spacy.tokens import Span
 from ._align import get_alignment, slice_alignment
 
 
-
 BatchEncoding = Dict
 
 
