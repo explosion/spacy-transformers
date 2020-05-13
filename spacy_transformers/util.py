@@ -84,7 +84,7 @@ class FullTransformerBatch:
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
                     tokens=slice_tokens(self.tokens, start, end),
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors], # type: ignore
                     align=slice_alignment(self.align, start, end, sp_lens, wp_lens)
                 )
             )
