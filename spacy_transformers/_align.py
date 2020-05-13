@@ -1,19 +1,20 @@
 import numpy
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Callable
+from typing import cast, Dict, List, Tuple, Callable
 import tokenizations
 from spacy.tokens import Span, Doc, Token
-from thinc.api import Ragged
-from thinc.types import Ragged, Floats2d
+from thinc.api import Ragged, Ops
+from thinc.types import Ragged, Floats2d, Ints1d
 
 
-def apply_alignment(ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Callable]:
+def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Callable]:
     shape = X.shape
-    Y = Ragged(X[align.dataXd], ops.asarray(align.lengths))
+    indices = cast(Ints1d, align.dataXd)
+    Y = Ragged(X[indices], cast(Ints1d, ops.asarray(align.lengths)))
 
     def backprop_apply_alignment(dY: Ragged) -> Floats2d:
-        dX = ops.alloc2f(shape)
-        ops.scatter_add(dX, align, dY.data)
+        dX = ops.alloc2f(*shape)
+        ops.scatter_add(dX, indices, cast(Floats2d, dY.data))
         return dX
 
     return Y, backprop_apply_alignment
