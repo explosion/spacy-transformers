@@ -1,6 +1,6 @@
 import numpy
 from dataclasses import dataclass
-from typing import cast, Dict, List, Tuple, Callable
+from typing import cast, Dict, List, Tuple, Callable, Set
 import tokenizations
 from spacy.tokens import Span, Doc, Token
 from thinc.api import Ragged, Ops
@@ -31,7 +31,7 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
             key = (id(span.doc), token.idx)
             if key not in token_positions:
                 token_positions[key] = len(token_positions) 
-    alignment: List[List[int]] = [[] for _ in range(len(token_positions))]
+    alignment: List[Set[int]] = [set() for _ in range(len(token_positions))]
     sp_start = 0
     wp_start = 0
     for i, (span, wp_toks) in enumerate(zip(spans, wordpieces)):
@@ -40,13 +40,13 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
         for token, wp_js in zip(span, span2wp):
             key = (id(span.doc), token.idx)
             position = token_positions[key]
-            alignment[position].extend([wp_start + j for j in wp_js])
+            alignment[position].update(wp_start + j for j in wp_js)
         wp_start += len(wp_toks)
-    lengths = []
-    flat = []
+    lengths: List[int] = []
+    flat: List[int] = []
     for a in alignment:
         lengths.append(len(a))
-        flat.extend(a)
+        flat.extend(sorted(a))
     return Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
 
 
