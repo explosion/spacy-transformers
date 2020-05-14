@@ -87,7 +87,7 @@ class FullTransformerBatch:
 
 
 def install_extensions():
-    Doc.set_extension("trf_data", default=TransformerData.empty())
+    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
 @registry.layers("spacy-transformers.strided_spans.v1")

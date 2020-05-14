@@ -7,7 +7,7 @@ from spacy.gold import Example
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
 from thinc.api import Model, set_dropout_rate
 
-from .util import null_annotation_setter
+from .util import null_annotation_setter, install_extensions
 from .util import FullTransformerBatch, TransformerData
 
 
@@ -38,6 +38,7 @@ class Transformer(Pipe):
         self.cfg = dict(cfg)
         self.cfg["max_batch_size"] = max_batch_size
         self.listeners: List[TransformerListener] = []
+        install_extensions()
 
     def create_listener(self):
         listener = TransformerListener(
