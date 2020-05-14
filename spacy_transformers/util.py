@@ -12,7 +12,6 @@ from spacy.tokens import Span
 from ._align import get_token_positions
 
 
-
 BatchEncoding = Dict
 
 
@@ -27,10 +26,7 @@ class TransformerData:
 
     @classmethod
     def empty(cls) -> "TransformerData":
-        align = Ragged(
-            numpy.zeros((0,), dtype="i"),
-            numpy.zeros((0,), dtype="i")
-        )
+        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
         return cls([], {}, [], align)
 
     @property
@@ -83,8 +79,8 @@ class FullTransformerBatch:
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
                     tokens=slice_tokens(self.tokens, start, end),
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors], # type: ignore
-                    align=self.align[start_i : end_i]
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors],  # type: ignore
+                    align=self.align[start_i:end_i],
                 )
             )
             start += len(doc_spans)
@@ -139,7 +135,7 @@ def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
         return_offsets_mapping=False,
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
-        pad_to_max_length=True
+        pad_to_max_length=True,
     )
     token_data["input_texts"] = [
         tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]

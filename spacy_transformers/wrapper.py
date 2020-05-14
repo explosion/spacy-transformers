@@ -35,7 +35,9 @@ def TransformerModel(
     )
 
 
-def forward(model: Model, docs: List[Doc], is_train: bool) -> Tuple[FullTransformerBatch, Callable]:
+def forward(
+    model: Model, docs: List[Doc], is_train: bool
+) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]
@@ -51,7 +53,7 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> Tuple[FullTransfor
         spans=spans,
         tokens=token_data,
         tensors=tensors,
-        align=get_alignment(spans, token_data["input_texts"])
+        align=get_alignment(spans, token_data["input_texts"]),
     )
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:

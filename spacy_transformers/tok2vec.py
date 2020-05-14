@@ -28,18 +28,22 @@ def transformer_tok2vec_v1(
     name: str,
     width: int,
     fast_tokenizer: bool,
-    grad_factor: float = 1.0
+    grad_factor: float = 1.0,
 ) -> Model[List[TransformerData], List[Floats2d]]:
-    return debug_print(chain(
-        TransformerModelByName(name, fast_tokenizer=fast_tokenizer, get_spans=get_spans),
-        get_trf_data(),
-        trf_data_to_tensor(pooling, width, grad_factor),
-    ))
+    return debug_print(
+        chain(
+            TransformerModelByName(
+                name, fast_tokenizer=fast_tokenizer, get_spans=get_spans
+            ),
+            get_trf_data(),
+            trf_data_to_tensor(pooling, width, grad_factor),
+        )
+    )
 
 
 def debug_print(layer):
     def debug_forward(model, docs, is_train):
-        transformer, get_trf, get_tokvecs= model.layers
+        transformer, get_trf, get_tokvecs = model.layers
         tensors, bp_tensors = transformer(docs, is_train)
         trf, bp_trf = get_trf(tensors, is_train)
         assert len(trf) == len(docs), (len(trf), len(docs))
@@ -51,15 +55,16 @@ def debug_print(layer):
 
         return tokvecs, backprop_debug
 
-    return Model("debug", debug_forward, layers=layer.layers, init=layer.init,
-        dims=layer._dims)
+    return Model(
+        "debug", debug_forward, layers=layer.layers, init=layer.init, dims=layer._dims
+    )
 
 
 def get_trf_data() -> Model[FullTransformerBatch, List[TransformerData]]:
     def _forward(model, trf_full, is_train):
         def backprop(d_trf_datas):
             return trf_full.unsplit_by_doc([x.tensors for x in d_trf_datas])
-        
+
         return trf_full.doc_data, backprop
 
     return Model("get-trf-data", _forward)
@@ -107,7 +112,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
                     tensors=d_tensors,
                     spans=trf_data.spans,
                     tokens=trf_data.tokens,
-                    align=trf_data.align
+                    align=trf_data.align,
                 )
             )
         return d_trf_datas

@@ -117,7 +117,7 @@ class Transformer(Pipe):
             nonlocal d_tensors
             for i, d_trf_data in enumerate(d_trf_datas):
                 for d_tensor in d_trf_data.tensors:
-                    losses[self.name] += float((d_tensor ** 2).sum()) # type: ignore
+                    losses[self.name] += float((d_tensor ** 2).sum())  # type: ignore
                 if i >= len(d_tensors):
                     d_tensors.append(d_trf_data.tensors)
                 else:

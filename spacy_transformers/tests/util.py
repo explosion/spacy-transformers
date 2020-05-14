@@ -56,7 +56,7 @@ class DummyTokenizer:
         return output
 
     def convert_ids_to_tokens(self, ids: Union[List[int], torch.Tensor]) -> List[str]:
-        return [self.int2str[int(id_)] for id_ in ids] # type: ignore
+        return [self.int2str[int(id_)] for id_ in ids]  # type: ignore
 
     def _pad(self, batch):
         batch = copy.deepcopy(batch)
