@@ -10,7 +10,7 @@ from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
 from thinc.api import get_array_module, registry
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
-from ._align import get_alignment, slice_alignment
+from ._align import get_alignment, get_token_positions
 
 
 
@@ -72,20 +72,20 @@ class FullTransformerBatch:
         """
         spans_by_doc = defaultdict(list)
         for span in self.spans:
-            key = id(span.doc)
-            spans_by_doc[key].append(span)
-        sp_lens = [len(sp) for sp in self.spans]
-        wp_lens = [len(wp) for wp in self.tokens["input_ids"]]
+            spans_by_doc[id(span.doc)].append(span)
+        token_positions = get_token_positions(self.spans)
         outputs = []
         start = 0
         for doc_spans in spans_by_doc.values():
+            start_i = token_positions[doc_spans[0][0]]
+            end_i = token_positions[doc_spans[-1][-1]] + 1
             end = start + len(doc_spans)
             outputs.append(
                 TransformerData(
                     spans=[(span.start, span.end) for span in doc_spans],
                     tokens=slice_tokens(self.tokens, start, end),
                     tensors=[torch2xp(t[start:end]) for t in self.tensors], # type: ignore
-                    align=slice_alignment(self.align, start, end, sp_lens, wp_lens)
+                    align=self.align[start_i : end_i]
                 )
             )
             start += len(doc_spans)
@@ -105,7 +105,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
             for i in range(len(doc) // stride):
                 spans.append(doc[start : start + window])
                 start += stride
-            if (start + window) < len(doc):
+            if start == 0 or (start + window) < len(doc):
                 spans.append(doc[start:])
         return spans
 

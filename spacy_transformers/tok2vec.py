@@ -42,15 +42,9 @@ def debug_print(layer):
         transformer, get_trf, get_tokvecs= model.layers
         tensors, bp_tensors = transformer(docs, is_train)
         trf, bp_trf = get_trf(tensors, is_train)
+        assert len(trf) == len(docs), (len(trf), len(docs))
         tokvecs, bp_tokvecs = get_tokvecs(trf, is_train)
-        #print("Tokvecs", [t2v.shape for t2v in tokvecs])
-        #for i, doc in enumerate(docs):
-        #    if tokvecs[i].size == 0:
-        #        print(doc)
-        #        print([t.shape for t in trf[i].tensors])
-        #        print(tokvecs[i].shape)
-        #        raise ValueError("Empty tok2vec")
-        #    assert len(doc) == tokvecs[i].shape[0], (i, len(doc), tokvecs[i].shape, trf[i].n_tok)
+        assert len(tokvecs) == len(docs), (len(tokvecs), len(docs))
 
         def backprop_debug(d_tokvecs):
             return bp_tensors(bp_trf(bp_tokvecs(d_tokvecs)))

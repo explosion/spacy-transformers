@@ -41,6 +41,10 @@ def forward(model: Model, docs: List[Doc], is_train: bool) -> Tuple[FullTransfor
     transformer = model.layers[0]
 
     spans = get_spans(docs)
+    span_docs = {id(span.doc) for span in spans}
+    for doc in docs:
+        if id(doc) not in span_docs:
+            raise ValueError(doc.text)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
     tensors, bp_tensors = transformer(token_data, is_train)
     output = FullTransformerBatch(
