@@ -1,9 +1,8 @@
 import numpy
-from dataclasses import dataclass
 from typing import cast, Dict, List, Tuple, Callable, Set
 import tokenizations
-from spacy.tokens import Span, Doc, Token
-from thinc.api import Ragged, Ops
+from spacy.tokens import Span, Token
+from thinc.api import Ops
 from thinc.types import Ragged, Floats2d, Ints1d
 
 
