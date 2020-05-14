@@ -28,9 +28,7 @@ def name(request):
 @pytest.fixture(scope="session")
 def trf_model(name):
     return TransformerModelByName(
-        name,
-        fast_tokenizer=True,
-        get_spans=configure_get_doc_spans()
+        name, fast_tokenizer=True, get_spans=configure_get_doc_spans()
     )
 
 

@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Dict, List, Union
 import torch
 import copy
 
@@ -34,7 +34,7 @@ class DummyTokenizer:
         return_offsets_mapping=False,
         return_lengths=False,
     ):
-        output = {
+        output: Dict = {
             "input_ids": [],
             "attention_mask": [],
             "token_type_ids": [],
@@ -56,7 +56,7 @@ class DummyTokenizer:
         return output
 
     def convert_ids_to_tokens(self, ids: Union[List[int], torch.Tensor]) -> List[str]:
-        return [self.int2str[int(id_)] for id_ in ids]
+        return [self.int2str[int(id_)] for id_ in ids]  # type: ignore
 
     def _pad(self, batch):
         batch = copy.deepcopy(batch)
