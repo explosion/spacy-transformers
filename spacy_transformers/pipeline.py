@@ -1,11 +1,20 @@
 from typing import List, Callable, Optional
 from spacy.pipeline import Pipe
 from spacy.language import component
+from spacy.pipeline.pipes import _load_cfg
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.gold import Example
+from spacy import util
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
+from spacy_transformers.wrapper import PyTorchTransformer
 from thinc.api import Model, set_dropout_rate
+
+import srsly
+import torch
+from transformers import AutoModel, AutoTokenizer
+from transformers import WEIGHTS_NAME, CONFIG_NAME
+from pathlib import Path
 
 from .util import null_annotation_setter, install_extensions
 from .util import FullTransformerBatch, TransformerData
@@ -21,6 +30,22 @@ class Transformer(Pipe):
     to set the doc.tensor attribute. When multiple word-piece tokens align to
     the same spaCy token, the spaCy token receives the sum of their values.
     """
+
+    @classmethod
+    def from_nlp(cls, nlp, model, **cfg):
+
+        # fmt: off
+        arch = nlp.config.get("transformer", {}).get("model", {}).get("@architectures", None)
+        # fmt: on
+
+        # we want to prevent downloading the model again - we can just read from file
+        if arch is not None and "TransformerByName" in arch:
+            nlp.config["transformer"]["model"] = {
+                "@architectures": "spacy.TransformerFromFile.v1",
+                "get_spans": nlp.config["transformer"]["model"]["get_spans"],
+            }
+
+        return cls(nlp.vocab, model, **cfg)
 
     def __init__(
         self,
@@ -156,6 +181,44 @@ class Transformer(Pipe):
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
         link_vectors_to_models(self.vocab)
+
+    def to_disk(self, path, exclude=tuple(), **kwargs):
+        """Serialize the pipe and its model to disk."""
+        serialize = {}
+        serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
+        serialize["vocab"] = lambda p: self.vocab.to_disk(p)
+
+        def save_model(p):
+            trf_dir = Path(p).absolute()
+            trf_dir.mkdir()
+            self.model.attrs["tokenizer"].save_pretrained(str(trf_dir))
+            transformer = self.model.layers[0].shims[0]._model
+            torch.save(transformer.state_dict(), trf_dir / WEIGHTS_NAME)
+            transformer.config.to_json_file(trf_dir / CONFIG_NAME)
+
+        serialize["model"] = lambda p: save_model(p)
+        exclude = util.get_serialization_exclude(serialize, exclude, kwargs)
+        util.to_disk(path, serialize, exclude)
+
+    def from_disk(self, path, exclude=tuple(), **kwargs):
+        """Load the pipe and its model from disk."""
+
+        def load_model(p):
+            trf_dir = Path(p).absolute()
+            transformer = AutoModel.from_pretrained(str(trf_dir))
+            wrapper = PyTorchTransformer(transformer)
+            assert len(self.model.layers) == 0
+            self.model.layers.append(wrapper)
+            tokenizer = AutoTokenizer.from_pretrained(str(trf_dir))
+            self.model.attrs["tokenizer"] = tokenizer
+
+        deserialize = {}
+        deserialize["vocab"] = lambda p: self.vocab.from_disk(p)
+        deserialize["cfg"] = lambda p: self.cfg.update(_load_cfg(p))
+        deserialize["model"] = lambda p: load_model(p)
+        exclude = util.get_serialization_exclude(deserialize, exclude, kwargs)
+        util.from_disk(path, deserialize, exclude)
+        return self
 
 
 class TransformerListener(Model):
