@@ -1,4 +1,4 @@
-from typing import List, Tuple, Callable, Union
+from typing import List, Tuple, Callable
 import torch
 from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc

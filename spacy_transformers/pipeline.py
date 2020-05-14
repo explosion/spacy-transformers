@@ -184,9 +184,6 @@ class Transformer(Pipe):
 
     def to_disk(self, path, exclude=tuple(), **kwargs):
         """Serialize the pipe and its model to disk."""
-        serialize = {}
-        serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
-        serialize["vocab"] = lambda p: self.vocab.to_disk(p)
 
         def save_model(p):
             trf_dir = Path(p).absolute()
@@ -196,6 +193,9 @@ class Transformer(Pipe):
             torch.save(transformer.state_dict(), trf_dir / WEIGHTS_NAME)
             transformer.config.to_json_file(trf_dir / CONFIG_NAME)
 
+        serialize = {}
+        serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
+        serialize["vocab"] = lambda p: self.vocab.to_disk(p)
         serialize["model"] = lambda p: save_model(p)
         exclude = util.get_serialization_exclude(serialize, exclude, kwargs)
         util.to_disk(path, serialize, exclude)
