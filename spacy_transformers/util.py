@@ -1,16 +1,15 @@
 import numpy
-import catalogue
 from typing import List, Callable, Optional, Tuple, Dict
 import torch
 from dataclasses import dataclass
 from spacy.tokens import Doc
 
 from collections import defaultdict
-from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd
+from thinc.types import Ragged, Floats3d, FloatsXd
 from thinc.api import get_array_module, registry
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
-from ._align import get_alignment, get_token_positions
+from ._align import get_token_positions
 
 
 

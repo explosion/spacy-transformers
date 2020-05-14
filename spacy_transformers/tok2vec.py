@@ -84,7 +84,6 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     backprops = []
     for trf_data in trf_datas:
         t_i = find_last_hidden(trf_data.tensors)
-        orig_shape = trf_data.tensors[t_i].shape
         src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
         dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
         output, get_d_dst = pooling(dst, is_train)
