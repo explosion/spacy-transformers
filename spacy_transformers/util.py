@@ -100,7 +100,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
             for i in range(len(doc) // stride):
                 spans.append(doc[start : start + window])
                 start += stride
-            if start == 0 or (start + window) < len(doc):
+            if start < len(doc):
                 spans.append(doc[start:])
         return spans
 
