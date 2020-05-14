@@ -35,7 +35,7 @@ def flatten_strings(words1, words2):
 def test_alignments_match(words1, words2):
     spans = get_spans(words1)
     align = get_alignment(spans, words2)
-    unique_tokens = set() 
+    unique_tokens = set()
     for span in spans:
         for token in span:
             unique_tokens.add((id(token.doc), token.idx))

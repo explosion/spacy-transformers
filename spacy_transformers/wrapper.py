@@ -35,19 +35,25 @@ def TransformerModel(
     )
 
 
-def forward(model: Model, docs: List[Doc], is_train: bool) -> Tuple[FullTransformerBatch, Callable]:
+def forward(
+    model: Model, docs: List[Doc], is_train: bool
+) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]
 
     spans = get_spans(docs)
+    span_docs = {id(span.doc) for span in spans}
+    for doc in docs:
+        if id(doc) not in span_docs:
+            raise ValueError(doc.text)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
     tensors, bp_tensors = transformer(token_data, is_train)
     output = FullTransformerBatch(
         spans=spans,
         tokens=token_data,
         tensors=tensors,
-        align=get_alignment(spans, token_data["input_texts"])
+        align=get_alignment(spans, token_data["input_texts"]),
     )
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
