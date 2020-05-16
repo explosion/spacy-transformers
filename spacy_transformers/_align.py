@@ -29,6 +29,38 @@ def get_token_positions(spans: List[Span]) -> Dict[Tuple[Token, int], int]:
 
 
 def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
+    """Compute a ragged alignment array that records, for each unique token in
+    `spans`, the corresponding indices in the flattened `wordpieces` array.
+    For instance, imagine you have two overlapping spans:
+    
+        [[I, like, walking], [walking, outdoors]]
+
+    And their wordpieces are:
+
+        [[I, like, walk, ing], [walk, ing, out, doors]]
+
+    We want to align "walking" against [walk, ing, walk, ing], which have
+    indices [2, 3, 4, 5] once the nested wordpieces list is flattened.
+
+    The nested alignment list would be:
+
+    [[0], [1], [2, 3, 4, 5], [6, 7]]
+      I   like    walking    outdoors
+
+    Which gets flattened into the ragged array:
+
+    [0, 1, 2, 3, 4, 5, 6, 7]
+    [1, 1, 4, 2]
+
+    The ragged format allows the aligned data to be computed via:
+
+    tokens = Ragged(wp_tensor[align.data], align.lengths)
+
+    This produces a ragged format, indicating which tokens need to be collapsed
+    to make the aligned array. The reduction is deferred for a later step, so
+    the user can configure it. The indexing is especially efficient in trivial
+    cases like this where the indexing array is completely continuous.
+    """
     if len(spans) != len(wordpieces):
         raise ValueError("Cannot align batches of different sizes.")
     # Tokens can occur more than once, and we need the alignment of each token
