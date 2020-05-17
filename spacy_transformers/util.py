@@ -3,6 +3,7 @@ from typing import List, Callable, Optional, Tuple, Dict
 import torch
 from dataclasses import dataclass
 from spacy.tokens import Doc
+from spacy.pipeline import Sentencizer
 
 from collections import defaultdict
 from thinc.types import Ragged, Floats3d, FloatsXd
@@ -109,9 +110,15 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
 
 @registry.layers("spacy-transformers.get_sent_spans.v1")
 def configure_get_sent_spans():
+    sentencizer = None
     def get_sent_spans(docs):
+        nonlocal sentencizer
         sents = []
         for doc in docs:
+            if not doc.is_sentenced:
+                if sentencizer is None:
+                    sentencizer = Sentencizer()
+                doc = sentencizer(doc)
             sents.extend(doc.sents)
         return sents
 
