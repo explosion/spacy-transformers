@@ -24,10 +24,7 @@ def docs(vocab):
 
 @pytest.fixture
 def component(vocab):
-    try:
-        install_extensions()
-    except ValueError:
-        pass
+    install_extensions()
     return Transformer(Vocab(), DummyTransformer())
 
 

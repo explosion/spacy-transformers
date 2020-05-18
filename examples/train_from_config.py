@@ -13,7 +13,6 @@ def main(config_path, train_path, eval_path, gpu_id):
     config_path = Path(config_path)
     train_path = Path(train_path)
     eval_path = Path(eval_path)
-    install_extensions()
     if gpu_id >= 0:
         spacy.util.use_gpu(gpu_id)
         use_pytorch_for_gpu_memory()

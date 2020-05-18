@@ -12,7 +12,6 @@ from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
 from ._align import get_token_positions
 
-
 BatchEncoding = Dict
 
 
@@ -89,7 +88,7 @@ class FullTransformerBatch:
 
 
 def install_extensions():
-    Doc.set_extension("trf_data", default=TransformerData.empty())
+    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
 @registry.layers("spacy-transformers.strided_spans.v1")

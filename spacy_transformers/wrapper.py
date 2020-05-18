@@ -35,6 +35,17 @@ def TransformerModel(
     )
 
 
+@registry.architectures.register("spacy.TransformerFromFile.v1")
+def TransformerFromFile(get_spans: Callable) -> Model[List[Doc], TransformerData]:
+    # This Model needs to be loaded further by calling from_disk on the pipeline component
+    return Model(
+        "transformer",
+        forward,
+        attrs={"get_spans": get_spans},
+        dims={"nO": None},
+    )
+
+
 def forward(
     model: Model, docs: List[Doc], is_train: bool
 ) -> Tuple[FullTransformerBatch, Callable]:
