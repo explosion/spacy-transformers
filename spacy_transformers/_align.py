@@ -7,13 +7,21 @@ from thinc.types import Ragged, Floats2d, Ints1d
 
 
 def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Callable]:
+    """Align wordpiece data (X) to match tokens."""
     shape = X.shape
     indices = cast(Ints1d, align.dataXd)
     Y = Ragged(X[indices], cast(Ints1d, ops.asarray(align.lengths)))
 
     def backprop_apply_alignment(dY: Ragged) -> Floats2d:
         dX = ops.alloc2f(*shape)
-        ops.scatter_add(dX, indices, cast(Floats2d, dY.data))
+        # TODO: We get errors here when we align against no tokens, because
+        # the 0 in the lengths means the data is misaligned.
+        try:
+            ops.scatter_add(dX, indices, dY_)
+        except:
+            print(shape)
+            print(dY.lengths)
+            raise
         return dX
 
     return Y, backprop_apply_alignment
