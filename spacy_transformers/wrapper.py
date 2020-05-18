@@ -2,7 +2,7 @@ from typing import List, Tuple, Callable
 import torch
 from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model
+from thinc.api import PyTorchWrapper, Model, CupyOps
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
@@ -18,6 +18,8 @@ def TransformerModelByName(
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=fast_tokenizer)
     model = TransformerModel(transformer, tokenizer, get_spans=get_spans)
+    if isinstance(model.ops, CupyOps):
+        transformer.cuda()
     return model
 
 
