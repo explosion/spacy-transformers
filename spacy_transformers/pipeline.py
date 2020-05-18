@@ -158,6 +158,7 @@ class Transformer(Pipe):
             d_docs = bp_trf_full(d_trf_full)
             if sgd is not None:
                 self.model.finish_update(sgd)
+            d_tensors = []
             return d_docs
 
         batch_id = TransformerListener.get_batch_id(docs)
