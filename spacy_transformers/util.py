@@ -18,8 +18,6 @@ BatchEncoding = Dict
 @dataclass
 class TransformerData:
     """Transformer tokens and outputs for one Doc object."""
-
-    spans: List[Tuple[int, int]]
     tokens: BatchEncoding
     tensors: List[FloatsXd]
     align: Ragged
@@ -27,7 +25,7 @@ class TransformerData:
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls([], {}, [], align)
+        return cls(tokens={}, tensors=[], align=align)
 
     @property
     def width(self) -> int:
@@ -77,8 +75,7 @@ class FullTransformerBatch:
             end = start + len(doc_spans)
             outputs.append(
                 TransformerData(
-                    spans=[(span.start, span.end) for span in doc_spans],
-                    tokens=slice_tokens(self.tokens, start, end),
+                    tokens=slice_hf_tokens(self.tokens, start, end),
                     tensors=[torch2xp(t[start:end]) for t in self.tensors],  # type: ignore
                     align=self.align[start_i:end_i],
                 )
@@ -170,16 +167,6 @@ def find_last_hidden(tensors) -> int:
 def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
     """Set no additional annotations on the Doc objects."""
     pass
-
-
-def slice_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncoding:
-    output = {}
-    for key, value in inputs.items():
-        if not hasattr(value, "__getitem__"):
-            output[key] = value
-        else:
-            output[key] = value[start:end]
-    return output
 
 
 def transpose_list(nested_list):
