@@ -95,6 +95,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
         dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
         output, get_d_dst = pooling(dst, is_train)
+        assert output.shape[0] == trf_data.align.lengths.shape[0]
         if model.ops.xp.isnan(output.sum()):
             raise ValueError("nan in output")
         outputs.append(output)
