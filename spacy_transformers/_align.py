@@ -7,21 +7,44 @@ from thinc.types import Ragged, Floats2d, Ints1d
 
 
 def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Callable]:
-    """Align wordpiece data (X) to match tokens."""
+    """Align wordpiece data (X) to match tokens, and provide a callback to
+    reverse it.
+   
+    This function returns a Ragged array, which represents the fact that one
+    token may be aligned against multiple wordpieces. It's a nested list,
+    concatenated with a lengths array to indicate the nested structure. 
+
+    The alignment is also a Ragged array, where the lengths indicate how many
+    wordpieces each token is aligned against. The output ragged therefore has
+    the same lengths as the alignment ragged, which means the output data
+    also has the same number of data rows as the alignment. The size of the
+    lengths array indicates the number of tokens in the batch.
+
+    The actual alignment is a simple indexing operation:
+
+        for i, index in enumerate(align.data):
+            Y[i] = X[index]
+
+    Which is vectorized via numpy advanced indexing:
+        
+        Y = X[align.data]
+
+    The inverse operation, for the backward pass, uses the 'scatter_add' op
+    because one wordpiece may be aligned against multiple tokens. So we need:
+
+        for i, index in enumerate(align.data):
+            X[index] += Y[i]
+
+    The addition wouldn't occur if we simply did `X[index] = Y`, so we use
+    the scatter_add op.
+    """
     shape = X.shape
     indices = cast(Ints1d, align.dataXd)
     Y = Ragged(X[indices], cast(Ints1d, ops.asarray(align.lengths)))
 
     def backprop_apply_alignment(dY: Ragged) -> Floats2d:
         dX = ops.alloc2f(*shape)
-        # TODO: We get errors here when we align against no tokens, because
-        # the 0 in the lengths means the data is misaligned.
-        try:
-            ops.scatter_add(dX, indices, dY_)
-        except:
-            print(shape)
-            print(dY.lengths)
-            raise
+        ops.scatter_add(dX, indices, dY.data)
         return dX
 
     return Y, backprop_apply_alignment
