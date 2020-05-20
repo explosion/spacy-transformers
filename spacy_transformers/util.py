@@ -3,6 +3,7 @@ from typing import List, Callable, Optional, Tuple, Dict
 import torch
 from dataclasses import dataclass
 from spacy.tokens import Doc
+from spacy.pipeline import Sentencizer
 
 from collections import defaultdict
 from thinc.types import Ragged, Floats3d, FloatsXd
@@ -17,8 +18,6 @@ BatchEncoding = Dict
 @dataclass
 class TransformerData:
     """Transformer tokens and outputs for one Doc object."""
-
-    spans: List[Tuple[int, int]]
     tokens: BatchEncoding
     tensors: List[FloatsXd]
     align: Ragged
@@ -26,7 +25,7 @@ class TransformerData:
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls([], {}, [], align)
+        return cls(tokens={}, tensors=[], align=align)
 
     @property
     def width(self) -> int:
@@ -76,8 +75,7 @@ class FullTransformerBatch:
             end = start + len(doc_spans)
             outputs.append(
                 TransformerData(
-                    spans=[(span.start, span.end) for span in doc_spans],
-                    tokens=slice_tokens(self.tokens, start, end),
+                    tokens=slice_hf_tokens(self.tokens, start, end),
                     tensors=[torch2xp(t[start:end]) for t in self.tensors],  # type: ignore
                     align=self.align[start_i:end_i],
                 )
@@ -87,7 +85,7 @@ class FullTransformerBatch:
 
 
 def install_extensions():
-    Doc.set_extension("trf_data", default=TransformerData.empty())
+    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
 @registry.layers("spacy-transformers.strided_spans.v1")
@@ -98,9 +96,12 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
             start = 0
             for i in range(len(doc) // stride):
                 spans.append(doc[start : start + window])
+                if (start + window) >= len(doc):
+                    break
                 start += stride
-            if start == 0 or (start + window) < len(doc):
-                spans.append(doc[start:])
+            else:
+                if start < len(doc):
+                    spans.append(doc[start:])
         return spans
 
     return get_strided_spans
@@ -108,9 +109,15 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
 
 @registry.layers("spacy-transformers.get_sent_spans.v1")
 def configure_get_sent_spans():
+    sentencizer = None
     def get_sent_spans(docs):
+        nonlocal sentencizer
         sents = []
         for doc in docs:
+            if not doc.is_sentenced:
+                if sentencizer is None:
+                    sentencizer = Sentencizer()
+                doc = sentencizer(doc)
             sents.extend(doc.sents)
         return sents
 
@@ -163,16 +170,6 @@ def find_last_hidden(tensors) -> int:
 def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
     """Set no additional annotations on the Doc objects."""
     pass
-
-
-def slice_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncoding:
-    output = {}
-    for key, value in inputs.items():
-        if not hasattr(value, "__getitem__"):
-            output[key] = value
-        else:
-            output[key] = value[start:end]
-    return output
 
 
 def transpose_list(nested_list):

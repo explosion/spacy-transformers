@@ -48,6 +48,9 @@ def debug_print(layer):
         trf, bp_trf = get_trf(tensors, is_train)
         assert len(trf) == len(docs), (len(trf), len(docs))
         tokvecs, bp_tokvecs = get_tokvecs(trf, is_train)
+        for t2v in tokvecs:
+            if model.ops.xp.isnan(t2v.sum()):
+                raise ValueError("nan value encountered")
         assert len(tokvecs) == len(docs), (len(tokvecs), len(docs))
 
         def backprop_debug(d_tokvecs):
@@ -92,6 +95,9 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
         dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
         output, get_d_dst = pooling(dst, is_train)
+        assert output.shape[0] == trf_data.align.lengths.shape[0]
+        if model.ops.xp.isnan(output.sum()):
+            raise ValueError("nan in output")
         outputs.append(output)
         backprops.append((get_d_dst, get_d_src))
 
@@ -110,7 +116,6 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
-                    spans=trf_data.spans,
                     tokens=trf_data.tokens,
                     align=trf_data.align,
                 )

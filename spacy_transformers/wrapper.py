@@ -2,7 +2,7 @@ from typing import List, Tuple, Callable
 import torch
 from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model
+from thinc.api import PyTorchWrapper, Model, CupyOps
 from thinc.types import ArgsKwargs
 from spacy.util import registry
 
@@ -18,6 +18,8 @@ def TransformerModelByName(
     transformer = AutoModel.from_pretrained(name)
     tokenizer = AutoTokenizer.from_pretrained(name, use_fast=fast_tokenizer)
     model = TransformerModel(transformer, tokenizer, get_spans=get_spans)
+    if isinstance(model.ops, CupyOps):
+        transformer.cuda()
     return model
 
 
@@ -31,6 +33,17 @@ def TransformerModel(
         forward,
         layers=[wrapper],
         attrs={"tokenizer": tokenizer, "get_spans": get_spans},
+        dims={"nO": None},
+    )
+
+
+@registry.architectures.register("spacy.TransformerFromFile.v1")
+def TransformerFromFile(get_spans: Callable) -> Model[List[Doc], TransformerData]:
+    # This Model needs to be loaded further by calling from_disk on the pipeline component
+    return Model(
+        "transformer",
+        forward,
+        attrs={"get_spans": get_spans},
         dims={"nO": None},
     )
 

@@ -24,10 +24,7 @@ def docs(vocab):
 
 @pytest.fixture
 def component(vocab):
-    try:
-        install_extensions()
-    except ValueError:
-        pass
+    install_extensions()
     return Transformer(Vocab(), DummyTransformer())
 
 
@@ -53,7 +50,6 @@ def test_set_annotations(component, docs):
     component.set_annotations(docs, trf_data)
     for doc in docs:
         assert isinstance(doc._.trf_data, TransformerData)
-        assert len(doc._.trf_data.spans) == 1
 
 
 def test_listeners(component, docs):
