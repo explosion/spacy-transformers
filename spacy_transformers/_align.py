@@ -38,16 +38,32 @@ def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Calla
     The addition wouldn't occur if we simply did `X[index] = Y`, so we use
     the scatter_add op.
     """
+    if not align.lengths.sum():
+        return _apply_empty_alignment(ops, align, X)
     shape = X.shape
     indices = cast(Ints1d, align.dataXd)
     Y = Ragged(X[indices], cast(Ints1d, ops.asarray(align.lengths)))
 
     def backprop_apply_alignment(dY: Ragged) -> Floats2d:
+        assert dY.data.shape[0] == indices.shape[0]
         dX = ops.alloc2f(*shape)
         ops.scatter_add(dX, indices, dY.data)
         return dX
 
     return Y, backprop_apply_alignment
+
+
+def _apply_empty_alignment(ops, align, X):
+    shape = X.shape
+    Y = Ragged(
+        ops.alloc2f(align.lengths.shape[0], X.shape[1]),
+        ops.alloc1i(align.lengths.shape[0]) + 1
+    )
+
+    def backprop_null_alignment(dY: Ragged) -> Floats2d:
+        return ops.alloc2f(*shape)
+
+    return Y, backprop_null_alignment
 
 
 def get_token_positions(spans: List[Span]) -> Dict[Tuple[Token, int], int]:
@@ -110,7 +126,6 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
             position = token_positions[token]
             alignment[position].update(wp_start + j for j in wp_js)
         wp_start += len(wp_toks)
-
     lengths: List[int] = []
     flat: List[int] = []
     for a in alignment:
