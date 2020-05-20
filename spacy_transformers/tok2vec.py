@@ -116,7 +116,6 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
-                    spans=trf_data.spans,
                     tokens=trf_data.tokens,
                     align=trf_data.align,
                 )
