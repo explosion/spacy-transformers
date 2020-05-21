@@ -1,18 +1,6 @@
-import numpy
-from typing import List, Callable, Optional, Tuple, Dict
-import torch
-from dataclasses import dataclass
-from spacy.tokens import Doc
-from spacy.pipeline import Sentencizer
+from transformers import BatchEncoding
 import catalogue
-
-from collections import defaultdict
-from thinc.types import Ragged, Floats3d, FloatsXd
-from thinc.api import get_array_module, registry
-from thinc.api import torch2xp, xp2torch
-from spacy.tokens import Span
 import spacy.util
-from ._align import get_token_positions
 
 
 class registry(spacy.util.registry):
@@ -20,10 +8,6 @@ class registry(spacy.util.registry):
     annotation_setters = catalogue.create(
         "spacy", "annotation_setters", entry_points=True
     )
-
-
-def install_extensions():
-    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
 def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:

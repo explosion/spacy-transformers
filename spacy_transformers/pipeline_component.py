@@ -1,4 +1,4 @@
-from typing import List, Callable, Optional
+from typing import List, Callable
 from spacy.pipeline import Pipe
 from spacy.language import component
 from spacy.pipeline.pipes import _load_cfg
@@ -7,19 +7,20 @@ from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
-from spacy_transformers.wrapper import PyTorchTransformer
 from thinc.api import Model, set_dropout_rate
 
 import srsly
 import torch
-from transformers import AutoModel, AutoTokenizer
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
-from .annotation_setters import null_annotation_setter, install_extensions
+from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
-from .util import install_extensions
+
+
+def install_extensions():
+    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
 @component("transformer", assigns=["doc._.trf_data"])
@@ -196,7 +197,7 @@ class Transformer(Pipe):
 
         def load_model(p):
             trf_dir = Path(p).absolute()
-            self.model = self.model.attrs["load"](p)
+            self.model = self.model.attrs["load"](trf_dir)
 
         deserialize = {
             "vocab": self.vocab.from_disk,

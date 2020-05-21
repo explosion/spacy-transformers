@@ -9,7 +9,7 @@ from thinc.types import Ragged, Floats2d, Ints1d
 def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Callable]:
     """Align wordpiece data (X) to match tokens, and provide a callback to
     reverse it.
-   
+ 
     This function returns a Ragged array, which represents the fact that one
     token may be aligned against multiple wordpieces. It's a nested list,
     concatenated with a lengths array to indicate the nested structure. 
