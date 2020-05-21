@@ -48,9 +48,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(
                 TransformerData(
-                    tensors=d_tensors,
-                    tokens=trf_data.tokens,
-                    align=trf_data.align,
+                    tensors=d_tensors, tokens=trf_data.tokens, align=trf_data.align,
                 )
             )
         return d_trf_datas

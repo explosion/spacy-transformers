@@ -11,6 +11,7 @@ def configure_null_annotation_setter() -> Callable:
 
     return null_annotation_setter
 
+
 null_annotation_setter = configure_null_annotation_setter()
 
 

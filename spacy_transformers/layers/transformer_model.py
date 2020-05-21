@@ -17,7 +17,7 @@ def TransformerModel(
         forward,
         layers=[
             PyTorchWrapper(
-                transformer, 
+                transformer,
                 convert_inputs=_convert_transformer_inputs,
                 convert_outputs=_convert_transformer_outputs,
             )

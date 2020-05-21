@@ -16,6 +16,7 @@ from .align import get_token_positions
 @dataclass
 class TransformerData:
     """Transformer tokens and outputs for one Doc object."""
+
     tokens: Dict
     tensors: List[FloatsXd]
     align: Ragged

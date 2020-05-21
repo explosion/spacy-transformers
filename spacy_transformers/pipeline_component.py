@@ -201,7 +201,7 @@ class Transformer(Pipe):
         deserialize = {
             "vocab": self.vocab.from_disk,
             "cfg": lambda p: self.cfg.update(_load_cfg(p)),
-            "model": load_model
+            "model": load_model,
         }
         exclude = util.get_serialization_exclude(deserialize, exclude, kwargs)
         util.from_disk(path, deserialize, exclude)

@@ -17,7 +17,9 @@ from ._align import get_token_positions
 
 class registry(spacy.util.registry):
     span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
-    annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
+    annotation_setters = catalogue.create(
+        "spacy", "annotation_setters", entry_points=True
+    )
 
 
 def install_extensions():

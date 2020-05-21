@@ -57,7 +57,7 @@ def _apply_empty_alignment(ops, align, X):
     shape = X.shape
     Y = Ragged(
         ops.alloc2f(align.lengths.shape[0], X.shape[1]),
-        ops.alloc1i(align.lengths.shape[0]) + 1
+        ops.alloc1i(align.lengths.shape[0]) + 1,
     )
 
     def backprop_null_alignment(dY: Ragged) -> Floats2d:

@@ -49,5 +49,5 @@ __all__ = [
     "get_doc_spans",
     "configure_get_doc_spans",
     "configure_get_sent_spans",
-    "configure_strided_spans"
+    "configure_strided_spans",
 ]

@@ -22,16 +22,10 @@ def transformer_listener_tok2vec_v1(
 
 @registry.architectures.register("spacy-transformers.Tok2Vec.v1")
 def transformer_tok2vec_v1(
-    transformer,
-    pooling,
-    get_spans,
-    width: int,
-    grad_factor: float = 1.0,
+    transformer, pooling, get_spans, width: int, grad_factor: float = 1.0,
 ) -> Model[List[TransformerData], List[Floats2d]]:
     return chain(
-        transformer,
-        split_trf_batch(),
-        trfs2arrays(pooling, width, grad_factor)
+        transformer, split_trf_batch(), trfs2arrays(pooling, width, grad_factor)
     )
 
 
