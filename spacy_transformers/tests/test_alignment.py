@@ -37,7 +37,7 @@ def flatten_strings(words1, words2):
         ([["ab"]], [["a", "b"]]),
         ([["a", "b"]], [["ab"]]),
         ([["ab", "c"]], [["a", "bc"]]),
-        ([["ab", "cd"]], [["a", "bc" "d"]]),
+        ([["ab", "cd"]], [["a", "bc", "d"]]),
     ],
 )
 def test_alignments_match(words1, words2):
