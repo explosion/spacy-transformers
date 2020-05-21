@@ -13,7 +13,7 @@ from .util import registry
 @registry.architectures.register("spacy-transformers.Tok2VecListener.v1")
 def transformer_listener_tok2vec_v1(
     pooling: Model[Ragged, Floats2d], grad_factor: float = 1.0
-) -> Model[List[TransformerData], List[Floats2d]]:
+) -> Model[List[Doc], List[Floats2d]]:
     return chain(
         TransformerListener("transformer"),
         trfs2arrays(pooling, grad_factor),

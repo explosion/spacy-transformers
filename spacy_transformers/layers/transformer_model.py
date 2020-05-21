@@ -14,7 +14,7 @@ def TransformerModel(
     name: str,
     get_spans: Callable,
     tokenizer_config: dict
-) -> Model[List[Doc], TransformerData]:
+) -> Model[List[Doc], FullTransformerBatch]:
     return Model(
         "transformer",
         forward,
