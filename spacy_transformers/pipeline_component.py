@@ -35,18 +35,6 @@ class Transformer(Pipe):
 
     @classmethod
     def from_nlp(cls, nlp, model, **cfg):
-
-        # fmt: off
-        arch = nlp.config.get("transformer", {}).get("model", {}).get("@architectures", None)
-        # fmt: on
-
-        # we want to prevent downloading the model again - we can just read from file
-        if arch is not None and "TransformerByName" in arch:
-            nlp.config["transformer"]["model"] = {
-                "@architectures": "spacy.TransformerFromFile.v1",
-                "get_spans": nlp.config["transformer"]["model"]["get_spans"],
-            }
-
         return cls(nlp.vocab, model, **cfg)
 
     def __init__(
@@ -208,17 +196,13 @@ class Transformer(Pipe):
 
         def load_model(p):
             trf_dir = Path(p).absolute()
-            transformer = AutoModel.from_pretrained(str(trf_dir))
-            wrapper = PyTorchTransformer(transformer)
-            assert len(self.model.layers) == 0
-            self.model.layers.append(wrapper)
-            tokenizer = AutoTokenizer.from_pretrained(str(trf_dir))
-            self.model.attrs["tokenizer"] = tokenizer
+            self.model = self.model.attrs["load"](p)
 
-        deserialize = {}
-        deserialize["vocab"] = lambda p: self.vocab.from_disk(p)
-        deserialize["cfg"] = lambda p: self.cfg.update(_load_cfg(p))
-        deserialize["model"] = load_model
+        deserialize = {
+            "vocab": self.vocab.from_disk,
+            "cfg": lambda p: self.cfg.update(_load_cfg(p)),
+            "model": load_model
+        }
         exclude = util.get_serialization_exclude(deserialize, exclude, kwargs)
         util.from_disk(path, deserialize, exclude)
         return self
