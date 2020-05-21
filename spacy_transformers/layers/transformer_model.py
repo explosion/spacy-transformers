@@ -7,6 +7,7 @@ from transformers.tokenization_utils import BatchEncoding
 
 from ..data_classes import FullTransformerBatch, TransformerData
 from ..util import huggingface_tokenize, huggingface_from_pretrained
+from ..util import find_last_hidden
 from ..align import get_alignment
 
 
@@ -53,8 +54,16 @@ def init(model: Model, X=None, Y=None):
     tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg)
     model.attrs["tokenizer"] = tokenizer
     model.attrs["set_transformer"](model, transformer)
-    for layer in model.layers:
-        layer.initialize()
+    # Call the model with a batch of inputs to infer the width
+    if X:
+        texts = [x.text for x in X]
+    else:
+        texts = ["hello world", "foo bar"]
+    token_data = huggingface_tokenize(model.attrs["tokenizer"], texts)
+    model.layers[0].initialize(X=token_data)
+    tensors = model.layers[0].predict(token_data)
+    t_i = find_last_hidden(tensors)
+    model.set_dim("nO", tensors[t_i].shape[-1])
 
 
 def forward(
@@ -65,10 +74,6 @@ def forward(
     transformer = model.layers[0]
 
     spans = get_spans(docs)
-    span_docs = {id(span.doc) for span in spans}
-    for doc in docs:
-        if id(doc) not in span_docs:
-            raise ValueError(doc.text)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
     tensors, bp_tensors = transformer(token_data, is_train)
     output = FullTransformerBatch(
