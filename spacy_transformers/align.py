@@ -47,7 +47,7 @@ def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Calla
     def backprop_apply_alignment(dY: Ragged) -> Floats2d:
         assert dY.data.shape[0] == indices.shape[0]
         dX = ops.alloc2f(*shape)
-        ops.scatter_add(dX, indices, dY.data)
+        ops.scatter_add(dX, indices, cast(Floats2d, dY.dataXd))
         return dX
 
     return Y, backprop_apply_alignment

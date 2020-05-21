@@ -1,5 +1,5 @@
 import pytest
-from ..util import configure_strided_spans
+from ..span_getters import configure_strided_spans
 
 
 @pytest.mark.parametrize(

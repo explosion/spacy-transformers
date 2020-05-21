@@ -1,8 +1,9 @@
 import pytest
 import spacy
 from thinc.api import Model
-from ..wrapper import TransformerModelByName
-from ..util import FullTransformerBatch, configure_get_doc_spans
+from ..architectures import load_transformer_v1
+from ..data_classes import FullTransformerBatch
+from ..span_getters import get_doc_spans
 
 
 MODEL_NAMES = ["distilbert-base-uncased"]
@@ -27,9 +28,7 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def trf_model(name):
-    return TransformerModelByName(
-        name, fast_tokenizer=True, get_spans=configure_get_doc_spans()
-    )
+    return load_transformer_v1(name, get_doc_spans, {"use_fast": True})
 
 
 def test_model_init(name, trf_model):
