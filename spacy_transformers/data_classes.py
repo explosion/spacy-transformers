@@ -4,7 +4,7 @@ from typing import Optional, List, Dict
 
 import torch
 import numpy
-from transformers import BatchEncoding
+from transformers.tokenization_utils import BatchEncoding
 from thinc.types import Ragged, Floats3d, FloatsXd
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span

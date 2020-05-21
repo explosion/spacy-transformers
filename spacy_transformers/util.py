@@ -1,4 +1,5 @@
-from transformers import AutoModel, AutoTokenizer, BatchEncoding
+from transformers import AutoModel, AutoTokenizer
+from transformers.tokenization_utils import BatchEncoding
 import catalogue
 import spacy.util
 from thinc.api import get_current_ops

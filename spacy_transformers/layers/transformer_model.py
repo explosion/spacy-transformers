@@ -3,10 +3,11 @@ import torch
 from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
+from transformers.tokenization_utils import BatchEncoding
 
-from .util import huggingface_tokenize, huggingface_from_pretrained
-from .util import BatchEncoding, FullTransformerBatch, TransformerData
-from ._align import get_alignment
+from ..data_classes import FullTransformerBatch, TransformerData
+from ..util import huggingface_tokenize, huggingface_from_pretrained
+from ..align import get_alignment
 
 
 def TransformerModel(source: str, get_spans: Callable, config: dict) -> Model[List[Doc], TransformerData]:
