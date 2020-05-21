@@ -79,15 +79,22 @@ class Transformer(Pipe):
         return doc
 
     def pipe(self, stream, batch_size=128, n_threads=-1, as_example=False):
-        batch_size = max(batch_size, self.cfg["max_batch_size"])
+        batch_size = min(batch_size, self.cfg["max_batch_size"])
         for batch in minibatch(stream, batch_size):
             batch = list(batch)
             if as_example:
                 docs = [eg2doc(doc) for doc in batch]
             else:
                 docs = batch
-            outputs = self.predict(docs)
-            self.set_annotations(docs, outputs)
+            # The model is currently a bit brittle if there's duplicate docs
+            seen_ids = set()
+            uniqued = []
+            for doc in docs:
+                if id(doc) not in seen_ids:
+                    uniqued.append(doc)
+                    seen_ids.add(id(doc))
+            outputs = self.predict(uniqued)
+            self.set_annotations(uniqued, outputs)
             yield from batch
 
     def predict(self, docs) -> FullTransformerBatch:
@@ -104,7 +111,9 @@ class Transformer(Pipe):
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        for doc, data in zip(docs, predictions.doc_data):
+        doc_data = list(predictions.doc_data)
+        assert len(docs) == len(doc_data), (len(docs), len(doc_data))
+        for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
         self.annotation_setter(docs, predictions)
 
