@@ -10,7 +10,11 @@ from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..align import get_alignment
 
 
-def TransformerModel(source: str, get_spans: Callable, config: dict) -> Model[List[Doc], TransformerData]:
+def TransformerModel(
+    name: str,
+    get_spans: Callable,
+    tokenizer_config: dict
+) -> Model[List[Doc], TransformerData]:
     return Model(
         "transformer",
         forward,
@@ -20,8 +24,8 @@ def TransformerModel(source: str, get_spans: Callable, config: dict) -> Model[Li
         attrs={
             "tokenizer": None,
             "get_spans": get_spans,
-            "source": source,
-            "config": config,
+            "name": name,
+            "tokenizer_config": tokenizer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False
         }
@@ -44,9 +48,9 @@ def set_pytorch_transformer(model, transformer):
 def init(model: Model, X=None, Y=None):
     if model.attrs["has_transformer"]:
         return
-    source = model.attrs["source"]
-    config = model.attrs["config"]
-    tokenizer, transformer = huggingface_from_pretrained(source, config)
+    name = model.attrs["name"]
+    tok_cfg = model.attrs["tokenizer_config"]
+    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg)
     model.attrs["tokenizer"] = tokenizer
     model.attrs["set_transformer"](model, transformer)
     for layer in model.layers:
