@@ -1,3 +1,11 @@
+from typing import List
+from thinc.api import Model
+from thinc.types import Ragged, Floats2d, FloatsXd
+from ..data_classes import TransformerData
+from ..util import find_last_hidden
+from ..align import apply_alignment
+
+
 def trfs2arrays(
     pooling: Model[Ragged, Floats2d], width: int, grad_factor: float
 ) -> Model[List[TransformerData], List[Floats2d]]:
