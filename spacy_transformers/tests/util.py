@@ -5,9 +5,9 @@ import copy
 from spacy.tokens import Doc
 from thinc.api import Model
 
-from ..util import TransformerData
-from ..util import configure_get_doc_spans
-from ..wrapper import forward as transformer_forward
+from ..data_classes import TransformerData
+from ..span_getters import get_doc_spans
+from ..layers.transformer_model import forward as transformer_forward
 
 
 class DummyTokenizer:
@@ -110,7 +110,7 @@ def DummyTransformerModel(width: int, depth: int):
 
 
 def DummyTransformer(
-    depth: int = 2, width: int = 4, get_spans=configure_get_doc_spans()
+    depth: int = 2, width: int = 4, get_spans=get_doc_spans
 ) -> Model[List[Doc], List[TransformerData]]:
     """Create a test model that produces a FullTransformerBatch object."""
     return Model(

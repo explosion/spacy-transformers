@@ -1,51 +1,60 @@
 from typing import List, Tuple, Callable
 import torch
-from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model, CupyOps
+from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
-from spacy.util import registry
+from transformers.tokenization_utils import BatchEncoding
 
-from .util import huggingface_tokenize
-from .util import BatchEncoding, FullTransformerBatch, TransformerData
-from ._align import get_alignment
-
-
-@registry.architectures.register("spacy.TransformerByName.v2")
-def TransformerModelByName(
-    name: str, get_spans: Callable, fast_tokenizer: bool
-) -> Model[List[Doc], TransformerData]:
-    transformer = AutoModel.from_pretrained(name)
-    tokenizer = AutoTokenizer.from_pretrained(name, use_fast=fast_tokenizer)
-    model = TransformerModel(transformer, tokenizer, get_spans=get_spans)
-    if isinstance(model.ops, CupyOps):
-        transformer.cuda()
-    return model
+from ..data_classes import FullTransformerBatch, TransformerData
+from ..util import huggingface_tokenize, huggingface_from_pretrained
+from ..align import get_alignment
 
 
-@registry.architectures.register("spacy.TransformerModel.v1")
 def TransformerModel(
-    transformer, tokenizer, get_spans: Callable
-) -> Model[List[Doc], TransformerData]:
-    wrapper = PyTorchTransformer(transformer)
+    name: str,
+    get_spans: Callable,
+    tokenizer_config: dict
+) -> Model[List[Doc], FullTransformerBatch]:
     return Model(
         "transformer",
         forward,
-        layers=[wrapper],
-        attrs={"tokenizer": tokenizer, "get_spans": get_spans},
+        init=init,
+        layers=[],
         dims={"nO": None},
+        attrs={
+            "tokenizer": None,
+            "get_spans": get_spans,
+            "name": name,
+            "tokenizer_config": tokenizer_config,
+            "set_transformer": set_pytorch_transformer,
+            "has_transformer": False
+        }
     )
 
 
-@registry.architectures.register("spacy.TransformerFromFile.v1")
-def TransformerFromFile(get_spans: Callable) -> Model[List[Doc], TransformerData]:
-    # This Model needs to be loaded further by calling from_disk on the pipeline component
-    return Model(
-        "transformer",
-        forward,
-        attrs={"get_spans": get_spans},
-        dims={"nO": None},
+def set_pytorch_transformer(model, transformer):
+    if model.attrs["has_transformer"]:
+        raise ValueError("Cannot set second transformer.")
+    model.layers.append(
+        PyTorchWrapper(
+            transformer,
+            convert_inputs=_convert_transformer_inputs,
+            convert_outputs=_convert_transformer_outputs,
+        )
     )
+    model.attrs["has_transformer"] = True
+
+
+def init(model: Model, X=None, Y=None):
+    if model.attrs["has_transformer"]:
+        return
+    name = model.attrs["name"]
+    tok_cfg = model.attrs["tokenizer_config"]
+    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg)
+    model.attrs["tokenizer"] = tokenizer
+    model.attrs["set_transformer"](model, transformer)
+    for layer in model.layers:
+        layer.initialize()
 
 
 def forward(
@@ -74,14 +83,6 @@ def forward(
         return docs
 
     return output, backprop_transformer
-
-
-def PyTorchTransformer(transformer):
-    return PyTorchWrapper(
-        transformer,  # e.g. via AutoModel.from_pretrained(name),
-        convert_inputs=_convert_transformer_inputs,
-        convert_outputs=_convert_transformer_outputs,
-    )
 
 
 def _convert_transformer_inputs(model, tokens: BatchEncoding, is_train):

@@ -4,11 +4,13 @@ from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from thinc.api import NumpyOps
 from thinc.types import Ragged
-from .._align import get_alignment, apply_alignment
+from ..align import get_alignment, apply_alignment
+
 
 def get_ragged(ops, nested: List[List[int]]):
     nested = [ops.asarray(x) for x in nested]
     return Ragged(ops.flatten(nested), ops.asarray([len(x) for x in nested]))
+
 
 def get_spans(word_seqs):
     vocab = Vocab()
@@ -35,7 +37,7 @@ def flatten_strings(words1, words2):
         ([["ab"]], [["a", "b"]]),
         ([["a", "b"]], [["ab"]]),
         ([["ab", "c"]], [["a", "bc"]]),
-        ([["ab", "cd"]], [["a", "bc" "d"]]),
+        ([["ab", "cd"]], [["a", "bc", "d"]]),
     ],
 )
 def test_alignments_match(words1, words2):
@@ -57,15 +59,18 @@ def test_alignments_match(words1, words2):
             assert word == wp_word
 
 
-@pytest.mark.parametrize("nested_align,X_cols", [
-    ([[0, 1, 2], [3], [4]], 4),
-    ([[], [1], [1], [2]], 2),
-    ([[0, 1], [1, 2], [], [4]], 2),
-])
+@pytest.mark.parametrize(
+    "nested_align,X_cols",
+    [
+        ([[0, 1, 2], [3], [4]], 4),
+        ([[], [1], [1], [2]], 2),
+        ([[0, 1], [1, 2], [], [4]], 2),
+    ],
+)
 def test_apply_alignment(nested_align, X_cols):
-    ops = NumpyOps() 
+    ops = NumpyOps()
     align = get_ragged(ops, nested_align)
-    X_shape = (align.data.max()+1, X_cols)
+    X_shape = (align.data.max() + 1, X_cols)
     X = ops.alloc2f(*X_shape)
     Y, get_dX = apply_alignment(ops, align, X)
     assert isinstance(Y, Ragged)
