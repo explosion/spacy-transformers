@@ -206,7 +206,7 @@ class Transformer(Pipe):
 
         def load_model(p):
             p = Path(p).absolute()
-            tokenizer, transformer = hugginface_from_pretrained(
+            tokenizer, transformer = huggingface_from_pretrained(
                 p, self.model.attrs["tokenizer_config"]
             )
             self.model.attrs["tokenizer"] = tokenizer
