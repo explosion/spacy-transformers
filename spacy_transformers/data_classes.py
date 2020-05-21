@@ -1,7 +1,16 @@
-import numpy
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import List
-from thinc.types import Ragged, FloatsXd
+from typing import Optional, List, Dict
+
+import torch
+import numpy
+from transformers import BatchEncoding
+from thinc.types import Ragged, Floats3d, FloatsXd
+from thinc.api import get_array_module, xp2torch, torch2xp
+from spacy.tokens import Span
+
+from .util import slice_hf_tokens
+from .align import get_token_positions
 
 
 @dataclass
