@@ -11,33 +11,6 @@ from .util import BatchEncoding, FullTransformerBatch, TransformerData
 from ._align import get_alignment
 
 
-@registry.architectures.register("spacy-transformers.unloaded_transformer.v1")
-def unloaded_transformer(get_spans: Callable, config) -> Model[List[Doc], TransformerData]:
-    return Model(
-        "transformer",
-        forward,
-        layers=[],
-        attrs={
-            "tokenizer": None,
-            "get_spans": get_spans,
-            "load": partial(load_transformer, get_spans=get_spans, config=config)
-        },
-        dims={"nO": None},
-    )
-
-
-@registry.architectures.register("spacy-transformers.load_transformer.v1")
-def load_transformer(
-    load_from: Union[str, Path], get_spans: Callable, config: dict
-) -> Model[List[Doc], TransformerData]:
-    transformer = AutoModel.from_pretrained(load_from)
-    tokenizer = AutoTokenizer.from_pretrained(load_from, **config)
-    if isinstance(model.ops, CupyOps):
-        transformer.cuda()
-    return TransformerModel(transformer, tokenizer, get_spans)
-
-
-@registry.architectures.register("spacy.TransformerModel.v1")
 def TransformerModel(
     transformer, tokenizer, get_spans: Callable
 ) -> Model[List[Doc], TransformerData]:
