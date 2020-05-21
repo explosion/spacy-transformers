@@ -1,10 +1,8 @@
 from typing import List, Tuple, Callable
 import torch
-from transformers import AutoModel, AutoTokenizer
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model, CupyOps
+from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
-from spacy.util import registry
 
 from .util import huggingface_tokenize
 from .util import BatchEncoding, FullTransformerBatch, TransformerData
@@ -24,7 +22,7 @@ def TransformerModel(
                 convert_outputs=_convert_transformer_outputs,
             )
         ],
-        attrs={"tokenizer": tokenizer, "get_spans": get_spans, "load": _load},
+        attrs={"tokenizer": tokenizer, "get_spans": get_spans},
         dims={"nO": None},
     )
 
