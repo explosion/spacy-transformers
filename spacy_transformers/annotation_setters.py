@@ -1,6 +1,7 @@
 from typing import Callable, List
 from spacy.tokens import Doc
-from .util import registry, FullTransformerBatch
+from .util import registry
+from .data_classes import FullTransformerBatch
 
 
 @registry.annotation_setters("spacy-transformer.null_annotation_setter.v1")
