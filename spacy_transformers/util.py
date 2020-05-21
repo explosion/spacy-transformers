@@ -1,15 +1,14 @@
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 import catalogue
-import spacy.util
+from spacy.util import registry
 from thinc.api import get_current_ops, CupyOps
 
 
-class registry(spacy.util.registry):
-    span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
-    annotation_setters = catalogue.create(
-        "spacy", "annotation_setters", entry_points=True
-    )
+registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
+registry.annotation_setters = catalogue.create(
+    "spacy", "annotation_setters", entry_points=True
+)
 
 
 def huggingface_from_pretrained(source, config):
