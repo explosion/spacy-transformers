@@ -16,8 +16,9 @@ from transformers import AutoModel, AutoTokenizer
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
-from .util import null_annotation_setter, install_extensions
-from .util import FullTransformerBatch, TransformerData
+from .annotation_setters import null_annotation_setter, install_extensions
+from .data_classes import FullTransformerBatch, TransformerData
+from .util import install_extensions
 
 
 @component("transformer", assigns=["doc._.trf_data"])

@@ -4,132 +4,24 @@ import torch
 from dataclasses import dataclass
 from spacy.tokens import Doc
 from spacy.pipeline import Sentencizer
+import catalogue
 
 from collections import defaultdict
 from thinc.types import Ragged, Floats3d, FloatsXd
 from thinc.api import get_array_module, registry
 from thinc.api import torch2xp, xp2torch
 from spacy.tokens import Span
+import spacy.util
 from ._align import get_token_positions
 
-BatchEncoding = Dict
 
-
-@dataclass
-class TransformerData:
-    """Transformer tokens and outputs for one Doc object."""
-    tokens: BatchEncoding
-    tensors: List[FloatsXd]
-    align: Ragged
-
-    @classmethod
-    def empty(cls) -> "TransformerData":
-        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(tokens={}, tensors=[], align=align)
-
-    @property
-    def width(self) -> int:
-        for tensor in reversed(self.tensors):
-            if len(tensor.shape) == 3:
-                return tensor.shape[-1]
-        else:
-            raise ValueError("Cannot find last hidden layer")
-
-
-@dataclass
-class FullTransformerBatch:
-    spans: List[Span]
-    tokens: BatchEncoding
-    tensors: List[torch.Tensor]
-    align: Ragged
-    _doc_data: Optional[List[TransformerData]] = None
-
-    @property
-    def doc_data(self) -> List[TransformerData]:
-        if self._doc_data is None:
-            self._doc_data = self.split_by_doc()
-        return self._doc_data
-
-    def unsplit_by_doc(self, arrays: List[List[Floats3d]]) -> "FullTransformerBatch":
-        xp = get_array_module(arrays[0][0])
-        return FullTransformerBatch(
-            spans=self.spans,
-            tokens=self.tokens,
-            tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)],
-            align=self.align,
-        )
-
-    def split_by_doc(self) -> List["TransformerData"]:
-        """Split a TransformerData that represents a batch into a list with
-        one TransformerData per Doc.
-        """
-        spans_by_doc = defaultdict(list)
-        for span in self.spans:
-            spans_by_doc[id(span.doc)].append(span)
-        token_positions = get_token_positions(self.spans)
-        outputs = []
-        start = 0
-        for doc_spans in spans_by_doc.values():
-            start_i = token_positions[doc_spans[0][0]]
-            end_i = token_positions[doc_spans[-1][-1]] + 1
-            end = start + len(doc_spans)
-            outputs.append(
-                TransformerData(
-                    tokens=slice_hf_tokens(self.tokens, start, end),
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors],  # type: ignore
-                    align=self.align[start_i:end_i],
-                )
-            )
-            start += len(doc_spans)
-        return outputs
+class registry(spacy.util.registry):
+    span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
+    annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
 
 
 def install_extensions():
     Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
-
-
-@registry.layers("spacy-transformers.strided_spans.v1")
-def configure_strided_spans(window: int, stride: int) -> Callable:
-    def get_strided_spans(docs):
-        spans = []
-        for doc in docs:
-            start = 0
-            for i in range(len(doc) // stride):
-                spans.append(doc[start : start + window])
-                if (start + window) >= len(doc):
-                    break
-                start += stride
-            else:
-                if start < len(doc):
-                    spans.append(doc[start:])
-        return spans
-
-    return get_strided_spans
-
-
-@registry.layers("spacy-transformers.get_sent_spans.v1")
-def configure_get_sent_spans():
-    sentencizer = None
-    def get_sent_spans(docs):
-        nonlocal sentencizer
-        sents = []
-        for doc in docs:
-            if not doc.is_sentenced:
-                if sentencizer is None:
-                    sentencizer = Sentencizer()
-                doc = sentencizer(doc)
-            sents.extend(doc.sents)
-        return sents
-
-    return get_sent_spans
-
-
-@registry.layers("spacy-transformers.get_doc_spans.v1")
-def configure_get_doc_spans():
-    def get_doc_spans(docs):
-        return [doc[:] for doc in docs]
-
-    return get_doc_spans
 
 
 def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
@@ -165,11 +57,6 @@ def find_last_hidden(tensors) -> int:
             return i
     else:
         raise ValueError("No 3d tensors")
-
-
-def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
-    """Set no additional annotations on the Doc objects."""
-    pass
 
 
 def transpose_list(nested_list):
