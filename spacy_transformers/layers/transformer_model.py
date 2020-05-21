@@ -9,22 +9,45 @@ from .util import BatchEncoding, FullTransformerBatch, TransformerData
 from ._align import get_alignment
 
 
-def TransformerModel(
-    transformer, tokenizer, get_spans: Callable
-) -> Model[List[Doc], TransformerData]:
+def TransformerModel(source: str, get_spans: Callable, config: dict) -> Model[List[Doc], TransformerData]:
     return Model(
         "transformer",
         forward,
-        layers=[
-            PyTorchWrapper(
-                transformer,
-                convert_inputs=_convert_transformer_inputs,
-                convert_outputs=_convert_transformer_outputs,
-            )
-        ],
-        attrs={"tokenizer": tokenizer, "get_spans": get_spans},
+        init=init,
+        layers=[],
         dims={"nO": None},
+        attrs={
+            "tokenizer": None,
+            "get_spans": get_spans,
+            "source": source,
+            "config": config,
+            "set_transformer": set_pytorch_transformer,
+            "has_transformer": False
+        }
     )
+
+
+def set_pytorch_transformer(model, transformer):
+    model.layers.append(
+        PyTorchWrapper(
+            transformer,
+            convert_inputs=_convert_transformer_inputs,
+            convert_outputs=_convert_transformer_outputs,
+        )
+    )
+    model.attrs["has_transformer"] = True
+
+
+def init(model, X=None, Y=None):
+    if model["has_transformer"]:
+        return
+    source = model.attrs["source"]
+    cfg = model.attrs["config"]
+    model.attrs["tokenizer"] = AutoTokenizer.from_pretrained(source, **cfg)
+    transformer = AutoModel.from_pretrained(load_from)
+    if isinstance(model.ops, CupyOps):
+        transformer.cuda()
+    model.attrs["set_transformer"](model, transformer)
 
 
 def forward(
