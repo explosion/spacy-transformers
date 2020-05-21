@@ -1,7 +1,7 @@
 import pytest
 import spacy
 from thinc.api import Model
-from ..architectures import load_transformer_v1
+from ..architectures import transformer_tok2vec_v1
 from ..data_classes import FullTransformerBatch
 from ..span_getters import get_doc_spans
 
@@ -28,7 +28,9 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def trf_model(name):
-    return load_transformer_v1(name, get_doc_spans, {"use_fast": True})
+    model = TransformerModel(name, get_doc_spans, {"use_fast": True})
+    model.initialize()
+    return model
 
 
 def test_model_init(name, trf_model):

@@ -196,8 +196,13 @@ class Transformer(Pipe):
         """Load the pipe and its model from disk."""
 
         def load_model(p):
-            trf_dir = Path(p).absolute()
-            self.model = self.model.attrs["load"](trf_dir)
+            p = Path(p).absolute()
+            self.model.attrs["source"] 
+            tokenizer, transformer = hugginface_from_pretrained(
+                p, self.model.attrs["config"]
+            )
+            self.model.attrs["tokenizer"] = tokenizer
+            self.model.attrs["set_transformer"](self.model, transformer)
 
         deserialize = {
             "vocab": self.vocab.from_disk,

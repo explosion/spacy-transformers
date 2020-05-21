@@ -1,6 +1,7 @@
-from transformers import BatchEncoding
+from transformers import AutoModel, AutoTokenizer, BatchEncoding
 import catalogue
 import spacy.util
+from thinc.api import get_current_ops
 
 
 class registry(spacy.util.registry):
@@ -8,6 +9,15 @@ class registry(spacy.util.registry):
     annotation_setters = catalogue.create(
         "spacy", "annotation_setters", entry_points=True
     )
+
+
+def huggingface_from_pretrained(source, config):
+    tokenizer = AutoTokenizer.from_pretrained(source, **cfg)
+    transformer = AutoModel.from_pretrained(load_from)
+    ops = get_current_ops()
+    if isinstance(ops, CupyOps):
+        transformer.cuda()
+    return tokenizer, transformer
 
 
 def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:

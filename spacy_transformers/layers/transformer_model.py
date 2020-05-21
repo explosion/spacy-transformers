@@ -4,7 +4,7 @@ from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 
-from .util import huggingface_tokenize
+from .util import huggingface_tokenize, huggingface_from_pretrained
 from .util import BatchEncoding, FullTransformerBatch, TransformerData
 from ._align import get_alignment
 
@@ -28,6 +28,8 @@ def TransformerModel(source: str, get_spans: Callable, config: dict) -> Model[Li
 
 
 def set_pytorch_transformer(model, transformer):
+    if model.attrs["has_transformer"]:
+        raise ValueError("Cannot set second transformer.")
     model.layers.append(
         PyTorchWrapper(
             transformer,
@@ -42,12 +44,12 @@ def init(model, X=None, Y=None):
     if model["has_transformer"]:
         return
     source = model.attrs["source"]
-    cfg = model.attrs["config"]
-    model.attrs["tokenizer"] = AutoTokenizer.from_pretrained(source, **cfg)
-    transformer = AutoModel.from_pretrained(load_from)
-    if isinstance(model.ops, CupyOps):
-        transformer.cuda()
+    config = model.attrs["config"]
+    tokenizer, transformer = huggingface_from_pretrained(source, config)
+    model.attrs["tokenizer"] = tokenizer
     model.attrs["set_transformer"](model, transformer)
+    for layer in model.layers:
+        layer.initialize()
 
 
 def forward(
