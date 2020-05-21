@@ -1,7 +1,7 @@
 import pytest
 import spacy
 from thinc.api import Model
-from ..architectures import transformer_tok2vec_v1
+from ..layers import TransformerModel
 from ..data_classes import FullTransformerBatch
 from ..span_getters import get_doc_spans
 

@@ -4,7 +4,7 @@ from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from thinc.api import NumpyOps
 from thinc.types import Ragged
-from .._align import get_alignment, apply_alignment
+from ..align import get_alignment, apply_alignment
 
 
 def get_ragged(ops, nested: List[List[int]]):

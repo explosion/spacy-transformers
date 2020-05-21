@@ -41,8 +41,8 @@ def set_pytorch_transformer(model, transformer):
     model.attrs["has_transformer"] = True
 
 
-def init(model, X=None, Y=None):
-    if model["has_transformer"]:
+def init(model: Model, X=None, Y=None):
+    if model.attrs["has_transformer"]:
         return
     source = model.attrs["source"]
     config = model.attrs["config"]
