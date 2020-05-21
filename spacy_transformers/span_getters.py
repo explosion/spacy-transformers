@@ -2,7 +2,7 @@ from typing import Callable
 from .util import registry
 
 
-@registry.annotation_setters("spacy-transformers.strided_spans.v1")
+@registry.span_getters("strided_spans.v1")
 def configure_strided_spans(window: int, stride: int) -> Callable:
     def get_strided_spans(docs):
         spans = []
@@ -21,7 +21,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
     return get_strided_spans
 
 
-@registry.annotation_setters("spacy-transformers.get_sent_spans.v1")
+@registry.span_getters("sent_spans.v1")
 def configure_get_sent_spans():
     def get_sent_spans(docs):
         sents = []
@@ -32,7 +32,7 @@ def configure_get_sent_spans():
     return get_sent_spans
 
 
-@registry.annotation_setters("spacy-transformers.get_doc_spans.v1")
+@registry.span_getters("doc_spans.v1")
 def configure_get_doc_spans():
     def get_doc_spans(docs):
         return [doc[:] for doc in docs]
