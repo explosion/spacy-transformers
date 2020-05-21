@@ -77,28 +77,28 @@ Python code.
 [nlp.pipeline.transformer]
 factory = "transformer"
 extra_annotation_setter = null
-
-[nlp.pipeline.transformer.model]
-@architectures = "spacy.TransformerByName.v1"
-name = "bert-base-cased"
-fast_tokenizer = true
 max_batch_size = 32
 
+[nlp.pipeline.transformer.model]
+@architectures = "spacy-transformers.TransformerModel.v1"
+name = "bert-base-cased"
+tokenizer_config = {"use_fast": true}
+
 [nlp.pipeline.transformer.model.get_spans]
-@preprocess = "get_doc_spans.v1"
+@span_getters = "get_doc_spans.v1"
 ```
 
 ```python
 
 trf = Transformer(
     nlp.vocab,
-    TransformerByName(
+    TransformerModel(
         "bert-base-cased",
         get_spans=get_doc_spans,
-        fast_tokenizer=True,
-        max_batch_size=32,
+        tokenizer_config={"use_fast": True},
     ),
-    annotation_setter=null_annotation_setter
+    annotation_setter=null_annotation_setter,
+    max_batch_size=32,
 )
 nlp.add_pipe("transformer", trf, first=True)
 ```
@@ -131,15 +131,14 @@ maxout_pieces = 3
 use_upper = false
 
 [nlp.pipeline.ner.model.tok2vec]
-@architectures = "spacy.Tok2VecTransformerListener.v1"
-width = 768
+@architectures = "spacy-transformers.Tok2VecListener.v1"
 grad_factor = 1.0
 
 [nlp.pipeline.ner.model.tok2vec.pooling]
 @layers = "reduce_mean.v1"
 ```
 
-The `Tok2VecTransformerListener` layer expects a `pooling` layer, which needs
+The `Tok2VecListener` layer expects a `pooling` layer, which needs
 to be of type `Model[Ragged, Floats2d]`. This layer determines how the vector
 for each spaCy token will be computed from the zero or more source rows the
 token is aligned against. Here we use the `reduce_mean` layer, which averages
