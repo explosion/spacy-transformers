@@ -10,7 +10,7 @@ from .data_classes import TransformerData
 from .util import registry
 
 
-@registry.architectures.register("spacy-transformers.listener.v1")
+@registry.architectures.register("spacy-transformers.Tok2VecListener.v1")
 def transformer_listener_tok2vec_v1(
     pooling: Model[Ragged, Floats2d], width: int, grad_factor: float = 1.0
 ) -> Model[List[TransformerData], List[Floats2d]]:
@@ -20,13 +20,18 @@ def transformer_listener_tok2vec_v1(
     )
 
 
-@registry.architectures.register("spacy-transformers.Tok2Vec.v1")
+@registry.architectures.register("spacy-transformers.Tok2VecTransformer.v1")
 def transformer_tok2vec_v1(
-    name, get_spans, pooling, width: int, grad_factor: float = 1.0,
-    use_fast_tokenizer: bool=False
+    transformer, pooling, width: int, grad_factor: float = 1.0
 ) -> Model[List[TransformerData], List[Floats2d]]:
     return chain(
-        TransformerModel(name, get_spans, {"use_fast": use_fast_tokenizer}),
+        transformer,
         split_trf_batch(),
         trfs2arrays(pooling, width, grad_factor)
     )
+
+
+registry.architectures.register(
+    "spacy-transformers.TransformerModel.v1",
+    func=TransformerModel
+)
