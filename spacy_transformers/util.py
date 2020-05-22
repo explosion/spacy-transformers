@@ -20,7 +20,7 @@ def huggingface_from_pretrained(source, config):
     return tokenizer, transformer
 
 
-def huggingface_tokenize(tokenizer, texts) -> BatchEncoding:
+def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     token_data = tokenizer.batch_encode_plus(
         texts,
         add_special_tokens=True,

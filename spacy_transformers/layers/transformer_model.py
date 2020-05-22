@@ -73,14 +73,17 @@ def forward(
     get_spans = model.attrs["get_spans"]
     transformer = model.layers[0]
 
-    spans = get_spans(docs)
-    token_data = huggingface_tokenize(tokenizer, [span.text for span in spans])
+    nested_spans = get_spans(docs)
+    flat_spans = []
+    for doc_spans in nested_spans:
+        flat_spans.extend(doc_spans)
+    token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     tensors, bp_tensors = transformer(token_data, is_train)
     output = FullTransformerBatch(
-        spans=spans,
+        spans=nested_spans,
         tokens=token_data,
         tensors=tensors,
-        align=get_alignment(spans, token_data["input_texts"]),
+        align=get_alignment(flat_spans, token_data["input_texts"]),
     )
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:

@@ -37,7 +37,7 @@ class TransformerData:
 
 @dataclass
 class FullTransformerBatch:
-    spans: List[Span]
+    spans: List[List[Span]]
     tokens: BatchEncoding
     tensors: List[torch.Tensor]
     align: Ragged
@@ -62,13 +62,13 @@ class FullTransformerBatch:
         """Split a TransformerData that represents a batch into a list with
         one TransformerData per Doc.
         """
-        spans_by_doc = defaultdict(list)
-        for span in self.spans:
-            spans_by_doc[id(span.doc)].append(span)
-        token_positions = get_token_positions(self.spans)
+        flat_spans = []
+        for doc_spans in self.spans:
+            flat_spans.extend(doc_spans)
+        token_positions = get_token_positions(flat_spans)
         outputs = []
         start = 0
-        for doc_spans in spans_by_doc.values():
+        for doc_spans in self.spans:
             start_i = token_positions[doc_spans[0][0]]
             end_i = token_positions[doc_spans[-1][-1]] + 1
             end = start + len(doc_spans)

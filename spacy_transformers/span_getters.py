@@ -8,14 +8,15 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
         spans = []
         for doc in docs:
             start = 0
+            spans.append([])
             for i in range(len(doc) // stride):
-                spans.append(doc[start : start + window])
+                spans[-1].append(doc[start : start + window])
                 if (start + window) >= len(doc):
                     break
                 start += stride
             else:
                 if start < len(doc):
-                    spans.append(doc[start:])
+                    spans[-1].append(doc[start:])
         return spans
 
     return get_strided_spans
@@ -24,10 +25,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
 @registry.span_getters("sent_spans.v1")
 def configure_get_sent_spans():
     def get_sent_spans(docs):
-        sents = []
-        for doc in docs:
-            sents.extend(doc.sents)
-        return sents
+        return [list(doc.sents) for doc in docs]
 
     return get_sent_spans
 
@@ -35,7 +33,7 @@ def configure_get_sent_spans():
 @registry.span_getters("doc_spans.v1")
 def configure_get_doc_spans():
     def get_doc_spans(docs):
-        return [doc[:] for doc in docs]
+        return [[doc[:]] for doc in docs]
 
     return get_doc_spans
 
