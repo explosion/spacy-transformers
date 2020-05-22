@@ -1,3 +1,4 @@
+from typing import List
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 import catalogue
