@@ -8,7 +8,7 @@ from transformers.tokenization_utils import BatchEncoding
 from ..data_classes import FullTransformerBatch, TransformerData
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import find_last_hidden
-from ..align import get_alignment
+from ..align import get_alignment, get_alignment_via_offset_mapping
 
 
 def TransformerModel(
@@ -79,11 +79,15 @@ def forward(
         flat_spans.extend(doc_spans)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     tensors, bp_tensors = transformer(token_data, is_train)
+    if "offset_mapping" in token_data:
+        align = get_alignment_via_offset_mapping(flat_spans, token_data)
+    else:
+        align = get_alignment(flat_spans, token_data["input_texts"])
     output = FullTransformerBatch(
         spans=nested_spans,
         tokens=token_data,
         tensors=tensors,
-        align=get_alignment(flat_spans, token_data["input_texts"]),
+        align=align
     )
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:

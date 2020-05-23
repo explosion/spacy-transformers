@@ -75,6 +75,29 @@ def get_token_positions(spans: List[Span]) -> Dict[Tuple[Token, int], int]:
     return token_positions
 
 
+def get_alignment_via_offset_mapping(spans: List[Span], token_data) -> Ragged:
+    # Tokens can occur more than once, and we need the alignment of each token
+    # to its place in the concatenated wordpieces array.
+    token_positions = get_token_positions(spans)
+    alignment: List[Set[int]] = [set() for _ in range(len(token_positions))]
+    wp_start = 0
+    for i, span in enumerate(spans):
+        for j, token in enumerate(span):
+            position = token_positions[token]
+            for char_idx in range(token.idx, token.idx + len(token)):
+                wp_j = token_data.char_to_token(i, char_idx)
+                if wp_j is not None:
+                    alignment[position].add(wp_start + wp_j)
+        wp_start += len(token_data.input_ids[i])
+    lengths: List[int] = []
+    flat: List[int] = []
+    for a in alignment:
+        lengths.append(len(a))
+        flat.extend(sorted(a))
+    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
+    return align
+
+
 def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
     """Compute a ragged alignment array that records, for each unique token in
     `spans`, the corresponding indices in the flattened `wordpieces` array.
