@@ -84,7 +84,8 @@ class TransformersLanguage(Language):
         for doc, gold in zip(docs, golds):
             if isinstance(doc, str):
                 doc = self.make_doc(doc)
-                doc = sentencizer(doc)
+            doc = sentencizer(doc)
+            if doc._.get(ATTRS.word_pieces) is None:
                 doc = wp(doc)
             if not isinstance(gold, GoldParse):
                 gold = GoldParse(doc, **gold)
