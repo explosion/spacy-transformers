@@ -1,9 +1,7 @@
 import plac
 from pathlib import Path
 from thinc.api import use_pytorch_for_gpu_memory
-from spacy_transformers import install_extensions, TransformerModelByName
-from spacy_transformers import Transformer
-import spacy_transformers.tok2vec
+import spacy_transformers
 from spacy.cli.train_from_config import train_from_config
 import spacy.util
 

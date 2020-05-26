@@ -1,4 +1,4 @@
-from typing import List, Callable, Optional
+from typing import List, Callable
 from spacy.pipeline import Pipe
 from spacy.language import component
 from spacy.pipeline.pipes import _load_cfg
@@ -7,17 +7,20 @@ from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
-from spacy_transformers.wrapper import PyTorchTransformer
 from thinc.api import Model, set_dropout_rate
 
 import srsly
 import torch
-from transformers import AutoModel, AutoTokenizer
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
-from .util import null_annotation_setter, install_extensions
-from .util import FullTransformerBatch, TransformerData
+from .annotation_setters import null_annotation_setter
+from .data_classes import FullTransformerBatch, TransformerData
+from .layers import TransformerListener
+
+
+def install_extensions():
+    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
 @component("transformer", assigns=["doc._.trf_data"])
@@ -33,18 +36,6 @@ class Transformer(Pipe):
 
     @classmethod
     def from_nlp(cls, nlp, model, **cfg):
-
-        # fmt: off
-        arch = nlp.config.get("transformer", {}).get("model", {}).get("@architectures", None)
-        # fmt: on
-
-        # we want to prevent downloading the model again - we can just read from file
-        if arch is not None and "TransformerByName" in arch:
-            nlp.config["transformer"]["model"] = {
-                "@architectures": "spacy.TransformerFromFile.v1",
-                "get_spans": nlp.config["transformer"]["model"]["get_spans"],
-            }
-
         return cls(nlp.vocab, model, **cfg)
 
     def __init__(
@@ -88,15 +79,22 @@ class Transformer(Pipe):
         return doc
 
     def pipe(self, stream, batch_size=128, n_threads=-1, as_example=False):
-        batch_size = max(batch_size, self.cfg["max_batch_size"])
+        batch_size = min(batch_size, self.cfg["max_batch_size"])
         for batch in minibatch(stream, batch_size):
             batch = list(batch)
             if as_example:
                 docs = [eg2doc(doc) for doc in batch]
             else:
                 docs = batch
-            outputs = self.predict(docs)
-            self.set_annotations(docs, outputs)
+            # The model is currently a bit brittle if there's duplicate docs
+            seen_ids = set()
+            uniqued = []
+            for doc in docs:
+                if id(doc) not in seen_ids:
+                    uniqued.append(doc)
+                    seen_ids.add(id(doc))
+            outputs = self.predict(uniqued)
+            self.set_annotations(uniqued, outputs)
             yield from batch
 
     def predict(self, docs) -> FullTransformerBatch:
@@ -113,7 +111,9 @@ class Transformer(Pipe):
         docs (iterable): A batch of `Doc` objects.
         activations (iterable): A batch of activations.
         """
-        for doc, data in zip(docs, predictions.doc_data):
+        doc_data = list(predictions.doc_data)
+        assert len(docs) == len(doc_data), (len(docs), len(doc_data))
+        for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
         self.annotation_setter(docs, predictions)
 
@@ -205,67 +205,18 @@ class Transformer(Pipe):
         """Load the pipe and its model from disk."""
 
         def load_model(p):
-            trf_dir = Path(p).absolute()
-            transformer = AutoModel.from_pretrained(str(trf_dir))
-            wrapper = PyTorchTransformer(transformer)
-            assert len(self.model.layers) == 0
-            self.model.layers.append(wrapper)
-            tokenizer = AutoTokenizer.from_pretrained(str(trf_dir))
+            p = Path(p).absolute()
+            tokenizer, transformer = huggingface_from_pretrained(
+                p, self.model.attrs["tokenizer_config"]
+            )
             self.model.attrs["tokenizer"] = tokenizer
+            self.model.attrs["set_transformer"](self.model, transformer)
 
-        deserialize = {}
-        deserialize["vocab"] = lambda p: self.vocab.from_disk(p)
-        deserialize["cfg"] = lambda p: self.cfg.update(_load_cfg(p))
-        deserialize["model"] = lambda p: load_model(p)
+        deserialize = {
+            "vocab": self.vocab.from_disk,
+            "cfg": lambda p: self.cfg.update(_load_cfg(p)),
+            "model": load_model,
+        }
         exclude = util.get_serialization_exclude(deserialize, exclude, kwargs)
         util.from_disk(path, deserialize, exclude)
         return self
-
-
-class TransformerListener(Model):
-    """A layer that gets fed its answers from an upstream connection,
-    for instance from a component earlier in the pipeline.
-    """
-
-    name = "transformer-listener"
-
-    _batch_id: Optional[int]
-    _outputs: Optional[List[TransformerData]]
-    _backprop: Optional[Callable[[List[TransformerData]], List[Doc]]]
-
-    def __init__(self, upstream_name, width):
-        Model.__init__(self, name=self.name, forward=forward, dims={"nO": width})
-        self.upstream_name = upstream_name
-        self._batch_id = None
-        self._outputs = None
-        self._backprop = None
-
-    @classmethod
-    def get_batch_id(cls, inputs: List[Doc]):
-        return sum(sum(token.orth for token in doc) for doc in inputs)
-
-    def receive(self, batch_id, outputs, backprop):
-        self._batch_id = batch_id
-        self._outputs = outputs
-        self._backprop = backprop
-
-    def verify_inputs(self, inputs):
-        if self._batch_id is None and self._outputs is None:
-            raise ValueError
-        else:
-            batch_id = self.get_batch_id(inputs)
-            if batch_id != self._batch_id:
-                raise ValueError(f"Mismatched IDs! {batch_id} vs {self._batch_id}")
-            else:
-                return True
-
-
-def forward(model: TransformerListener, docs, is_train):
-    if is_train:
-        model.verify_inputs(docs)
-        return model._outputs, model._backprop
-    else:
-        if len(docs) == 0:
-            return [TransformerData.empty()], lambda d_data: docs
-        else:
-            return [doc._.trf_data for doc in docs], lambda d_data: docs

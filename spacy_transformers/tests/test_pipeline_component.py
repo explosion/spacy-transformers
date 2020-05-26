@@ -4,9 +4,8 @@ from spacy.tokens import Doc
 from thinc.api import Model
 
 from .util import DummyTransformer
-from ..pipeline import Transformer
-from ..util import TransformerData, FullTransformerBatch
-from ..util import install_extensions
+from ..pipeline_component import Transformer
+from ..data_classes import TransformerData, FullTransformerBatch
 
 
 @pytest.fixture
@@ -24,7 +23,6 @@ def docs(vocab):
 
 @pytest.fixture
 def component(vocab):
-    install_extensions()
     return Transformer(Vocab(), DummyTransformer())
 
 
