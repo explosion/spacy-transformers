@@ -30,9 +30,8 @@ state-of-the-art transformer architectures, such as BERT, GPT-2, XLNet, etc.
 
 Installing the package from pip will automatically install all dependencies,
 including PyTorch and spaCy. Make sure you install this package **before** you
-install the models. Also note that this package requires **Python 3.6+** and the
+install the models. Also note that this package requires **Python 3.6+** and
 spaCy v3.
-[v2.2.1](https://github.com/explosion/spaCy/releases/tag/v2.2.1) or above.
 
 ```bash
 pip install spacy-transformers
@@ -170,7 +169,7 @@ attribute, which lets you access the transformers outputs at runtime via the
 `Transformer.annotation_setter` object. This callback will be called with the
 raw input and output data for the whole batch, along with the batch of `Doc`
 objects, allowing you to implement whatever you need.
-`
+
 ```python
 
 import spacy
@@ -182,4 +181,5 @@ for doc in nlp.pipe(["some text", "some other text"]):
 ```
 
 The `nlp` object in this example is just like any other spaCy pipeline, so
-see the spaCy docs for more details about what you can do.
+see the [spaCy docs](https://spacy.io/usage/processing-pipelines) for more details 
+about what you can do.
