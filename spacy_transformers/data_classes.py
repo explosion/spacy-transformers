@@ -67,17 +67,24 @@ class FullTransformerBatch:
         token_positions = get_token_positions(flat_spans)
         outputs = []
         start = 0
+        prev_tokens = 0
         for doc_spans in self.spans:
             start_i = token_positions[doc_spans[0][0]]
             end_i = token_positions[doc_spans[-1][-1]] + 1
             end = start + len(doc_spans)
+            doc_tokens = slice_hf_tokens(self.tokens, start, end)
+            doc_tensors = [torch2xp(t[start:end]) for t in self.tensors]
+            doc_align = self.align[start_i:end_i]
+            doc_align.data = doc_align.data - prev_tokens
             outputs.append(
                 TransformerData(
-                    tokens=slice_hf_tokens(self.tokens, start, end),
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors],  # type: ignore
-                    align=self.align[start_i:end_i],
+                    tokens=doc_tokens,
+                    tensors=doc_tensors,  # type: ignore
+                    align=doc_align,
                 )
             )
+            token_count = len(doc_tokens["input_texts"][0])
+            prev_tokens += token_count
             start += len(doc_spans)
         return outputs
 
