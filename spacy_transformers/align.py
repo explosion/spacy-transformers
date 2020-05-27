@@ -66,7 +66,7 @@ def _apply_empty_alignment(ops, align, X):
     return Y, backprop_null_alignment
 
 
-def get_token_positions(spans: List[Span]) -> Dict[Tuple[Token, int], int]:
+def get_token_positions(spans: List[Span]) -> Dict[Token, int]:
     token_positions: Dict[Token, int] = {}
     for span in spans:
         for token in span.doc:
