@@ -12,9 +12,7 @@ from ..align import get_alignment, get_alignment_via_offset_mapping
 
 
 def TransformerModel(
-    name: str,
-    get_spans: Callable,
-    tokenizer_config: dict
+    name: str, get_spans: Callable, tokenizer_config: dict
 ) -> Model[List[Doc], FullTransformerBatch]:
     return Model(
         "transformer",
@@ -28,8 +26,8 @@ def TransformerModel(
             "name": name,
             "tokenizer_config": tokenizer_config,
             "set_transformer": set_pytorch_transformer,
-            "has_transformer": False
-        }
+            "has_transformer": False,
+        },
     )
 
 
@@ -84,10 +82,7 @@ def forward(
     else:
         align = get_alignment(flat_spans, token_data["input_texts"])
     output = FullTransformerBatch(
-        spans=nested_spans,
-        tokens=token_data,
-        tensors=tensors,
-        align=align
+        spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:

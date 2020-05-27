@@ -14,10 +14,7 @@ from .util import registry
 def transformer_listener_tok2vec_v1(
     pooling: Model[Ragged, Floats2d], grad_factor: float = 1.0
 ) -> Model[List[Doc], List[Floats2d]]:
-    return chain(
-        TransformerListener("transformer"),
-        trfs2arrays(pooling, grad_factor),
-    )
+    return chain(TransformerListener("transformer"), trfs2arrays(pooling, grad_factor),)
 
 
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v1")
@@ -26,16 +23,15 @@ def transformer_tok2vec_v1(
     get_spans,
     tokenizer_config,
     pooling: Model[Ragged, Floats2d],
-    grad_factor: float = 1.0
+    grad_factor: float = 1.0,
 ) -> Model[List[Doc], List[Floats2d]]:
     return chain(
         TransformerModel(name, get_spans, tokenizer_config),
         split_trf_batch(),
-        trfs2arrays(pooling, grad_factor)
+        trfs2arrays(pooling, grad_factor),
     )
 
 
 registry.architectures.register(
-    "spacy-transformers.TransformerModel.v1",
-    func=TransformerModel
+    "spacy-transformers.TransformerModel.v1", func=TransformerModel
 )
