@@ -42,5 +42,5 @@ jobs:
   - script: pip install dist/*.tar.gz
     displayName: 'Install from sdist'
 
-  - script: python -m pytest spacy-transformers --cov=spacy_transformers
+  - script: python -m pytest spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
