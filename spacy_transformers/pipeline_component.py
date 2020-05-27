@@ -7,6 +7,7 @@ from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
 from spacy.util import minibatch, eg2doc, link_vectors_to_models
+from spacy_transformers.util import huggingface_from_pretrained
 from thinc.api import Model, set_dropout_rate
 
 import srsly
