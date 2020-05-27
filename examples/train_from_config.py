@@ -1,7 +1,6 @@
 import plac
 from pathlib import Path
 from thinc.api import use_pytorch_for_gpu_memory
-import spacy_transformers
 from spacy.cli.train_from_config import train_from_config
 import spacy.util
 

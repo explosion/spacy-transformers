@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils import PreTrainedTokenizerFast
@@ -39,7 +39,7 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     return token_data
 
 
-def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> BatchEncoding:
+def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> Dict:
     output = {}
     for key, value in inputs.items():
         if not hasattr(value, "__getitem__"):

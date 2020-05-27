@@ -57,9 +57,7 @@ class Transformer(Pipe):
         install_extensions()
 
     def create_listener(self):
-        listener = TransformerListener(
-            upstream_name="transformer", width=self.model.get_dim("nO")
-        )
+        listener = TransformerListener(upstream_name="transformer")
         self.listeners.append(listener)
 
     def add_listener(self, listener):

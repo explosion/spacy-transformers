@@ -1,12 +1,9 @@
-from typing import List, Callable, Union
-from pathlib import Path
-from transformers import AutoModel, AutoTokenizer
-from thinc.api import Model, chain, CupyOps
+from typing import List
+from thinc.api import Model, chain
 from thinc.types import Ragged, Floats2d
 from spacy.tokens import Doc
 from .layers import TransformerModel, TransformerListener
 from .layers import trfs2arrays, split_trf_batch
-from .data_classes import TransformerData
 from .util import registry
 
 
