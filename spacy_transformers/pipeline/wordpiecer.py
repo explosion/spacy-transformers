@@ -168,7 +168,7 @@ class TransformersWordPiecer(Pipe):
                     print(sent._.get(ATTRS.word_pieces_))
                     for w in sent:
                         print(w.text, w._.get(ATTRS.alignment))
-                print(doc._.get(ATTRS.word_pieces_))
+                self.model.max_len = max_len
                 raise ValueError(
                     f"Error calculating word pieces for sentences. Total number "
                     f"of wordpieces in the doc was {nr_word}, but adding up the "
