@@ -98,11 +98,18 @@ class TransformersWordPiecer(Pipe):
                     seg_words, seg_align = self._align(
                         segment, seg_words, offset=offset
                     )
+                    # max_seq_length per sentence is calculated relative to the
+                    # index of the first aligned segment within the sentence
+                    align_start_id = 0
+                    for align in seg_align:
+                        if len(align) >= 1:
+                            align_start_id = align[0]
+                            break
                     seg_words = seg_words[:max_seq_length]
                     for i, align in enumerate(seg_align):
-                        if len(align) >= 1 and align[-1] < max_seq_length:
+                        if len(align) >= 1 and align[-1] < align_start_id + max_seq_length:
                             continue
-                        seg_align[i] = [x for x in align if x < max_seq_length]
+                        seg_align[i] = [x for x in align if x < align_start_id + max_seq_length]
                     assert len(segment) == len(seg_align)
                     sent_words.append(seg_words)
                     sent_align.append(seg_align)
