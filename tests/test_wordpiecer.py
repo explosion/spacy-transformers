@@ -21,6 +21,37 @@ def test_wordpiecer(wp):
     assert "".join(cleaned_words) == "".join(words)
 
 
+@pytest.mark.parametrize(
+    "words,target_name,expected_align",
+    [
+        (
+            ["hello", "world", "this", "is", "a", "teest"],
+            "bert-base-uncased",
+            [[1], [2], [3], [4], [5], [6, 7]],
+        ),
+        (
+            ["hello", "world", "this", "is", "a", "teest"],
+            "xlnet-base-cased",
+            [[0], [1], [2], [3], [4], [5, 6]],
+        ),
+        (["å\taa", ".", "が\nπ"], "bert-base-uncased", [[1, 2], [3], [6, 7]]),
+        (["å\taa", ".", "が\nπ"], "xlnet-base-cased", [[0, 1, 2], [4], [7, 8, 10]]),
+        (["\u3099"], "bert-base-uncased", [[]]),
+        (["I.\n\n\n\n\n"], "bert-base-uncased", [[1, 2]]),
+        # max length of 512 minus 2 special tokens -> 510 aligned tokens,
+        # remaining truncated per sentence
+        (["x"] * 599 + ["."] + ["y"] * 600, "bert-base-uncased", [[x] for x in range(1, 511)] + [[]] * 90 + [[x] for x in range(513, 1023)] + [[]] * 90),
+    ],
+)
+def test_align(wp, sentencizer, name, words, target_name, expected_align):
+    if name != target_name:
+        pytest.skip()
+    doc = Doc(wp.vocab, words=words)
+    doc = sentencizer(doc)
+    doc = wp(doc)
+    assert doc._.get(ATTRS.alignment) == expected_align
+
+
 def test_xlnet_weird_align(name, wp):
     if "xlnet" not in name.lower():
         return True
