@@ -69,13 +69,13 @@ class SerializationMixin:
         return srsly.msgpack_dumps(msg)
 
     def from_disk(self, path, exclude=tuple(), **kwargs):
-        with (path / "transformers_tokenizer.msg").open("rb") as file_:
+        with path.open("rb") as file_:
             data = file_.read()
         return self.from_bytes(data, **kwargs)
 
     def to_disk(self, path, exclude=tuple(), **kwargs):
         data = self.to_bytes(**kwargs)
-        with (path / "transformers_tokenizer.msg").open("wb") as file_:
+        with path.open("wb") as file_:
             file_.write(data)
 
 
