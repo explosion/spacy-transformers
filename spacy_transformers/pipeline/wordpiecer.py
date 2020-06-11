@@ -107,9 +107,14 @@ class TransformersWordPiecer(Pipe):
                             break
                     seg_words = seg_words[:max_seq_length]
                     for i, align in enumerate(seg_align):
-                        if len(align) >= 1 and align[-1] < align_start_id + max_seq_length:
+                        if (
+                            len(align) >= 1
+                            and align[-1] < align_start_id + max_seq_length
+                        ):
                             continue
-                        seg_align[i] = [x for x in align if x < align_start_id + max_seq_length]
+                        seg_align[i] = [
+                            x for x in align if x < align_start_id + max_seq_length
+                        ]
                     assert len(segment) == len(seg_align)
                     sent_words.append(seg_words)
                     sent_align.append(seg_align)
