@@ -32,9 +32,9 @@ more details and background, check out
 
 Installing the package from pip will automatically install all dependencies,
 including PyTorch and spaCy. Make sure you install this package **before** you
-install the models. Also note that this package requires **Python 3.6+** and the
-latest version of spaCy,
-[v2.2.1](https://github.com/explosion/spaCy/releases/tag/v2.2.1) or above.
+install the models. Also note that this package requires **Python 3.6+** and
+spaCy [v2.2.1](https://github.com/explosion/spaCy/releases/tag/v2.2.1) or
+above.
 
 ```bash
 pip install spacy-transformers
@@ -53,13 +53,13 @@ We've also pre-packaged some of the pretrained models as spaCy model packages.
 You can either use the `spacy download` command or download the packages from
 the [model releases](https://github.com/explosion/spacy-models/releases).
 
-| Package name                      | Pretrained model          | Language | Author                                                                      |  Size |                                               Release                                               |
+| Package name                      | Pretrained model          | Language | Author                                                                      |  Size |                                               For v0.5.x | For v0.6.x |
 | --------------------------------- | ------------------------- | -------- | --------------------------------------------------------------------------- | ----: | :-------------------------------------------------------------------------------------------------: |
-| `en_trf_bertbaseuncased_lg`       | `bert-base-uncased`       | English  | [Google Research](https://github.com/google-research/bert)                  | 387MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_bertbaseuncased_lg-2.2.0)    |
-| `de_trf_bertbasecased_lg`         | `bert-base-german-cased`  | German   | [deepset](https://deepset.ai/german-bert)                                   | 386MB |     [📦️](https://github.com/explosion/spacy-models/releases/tag/de_trf_bertbasecased_lg-2.2.0)     |
-| `en_trf_xlnetbasecased_lg`        | `xlnet-base-cased`        | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 413MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_xlnetbasecased_lg-2.2.0)     |
-| `en_trf_robertabase_lg`           | `roberta-base`            | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 278MB |      [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_robertabase_lg-2.2.0)      |
-| `en_trf_distilbertbaseuncased_lg` | `distilbert-base-uncased` | English  | [Hugging Face](https://medium.com/huggingface/distilbert-8cf3380435b5)      | 233MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_distilbertbaseuncased_lg-2.2.0) |
+| `en_trf_bertbaseuncased_lg`       | `bert-base-uncased`       | English  | [Google Research](https://github.com/google-research/bert)                  | 387MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_bertbaseuncased_lg-2.2.0)    | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_bertbaseuncased_lg-2.3.0)    |
+| `de_trf_bertbasecased_lg`         | `bert-base-german-cased`  | German   | [deepset](https://deepset.ai/german-bert)                                   | 386MB |     [📦️](https://github.com/explosion/spacy-models/releases/tag/de_trf_bertbasecased_lg-2.2.0)     | [📦️](https://github.com/explosion/spacy-models/releases/tag/de_trf_bertbasecased_lg-2.3.0)     |
+| `en_trf_xlnetbasecased_lg`        | `xlnet-base-cased`        | English  | [CMU/Google Brain](https://github.com/zihangdai/xlnet/)                     | 413MB |    [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_xlnetbasecased_lg-2.2.0)     | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_xlnetbasecased_lg-2.3.0)     |
+| `en_trf_robertabase_lg`           | `roberta-base`            | English  | [Facebook](https://github.com/pytorch/fairseq/tree/master/examples/roberta) | 278MB |      [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_robertabase_lg-2.2.0)      | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_robertabase_lg-2.3.0)      |
+| `en_trf_distilbertbaseuncased_lg` | `distilbert-base-uncased` | English  | [Hugging Face](https://medium.com/huggingface/distilbert-8cf3380435b5)      | 233MB | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_distilbertbaseuncased_lg-2.2.0) | [📦️](https://github.com/explosion/spacy-models/releases/tag/en_trf_distilbertbaseuncased_lg-2.3.0) |
 
 ```bash
 python -m spacy download en_trf_bertbaseuncased_lg
@@ -85,6 +85,33 @@ print(doc._.trf_last_hidden_state.shape)
 > double-check that `spacy-transformers` is installed. It needs to be available
 > so it can register its language entry points. Also make sure that you're
 > running spaCy v2.2.1 or higher.
+
+### Initializing models from the huggingface models repo (v0.6+)
+
+You can initialize a BERT, GPT2, XLM, XLNet, or RoBERTa model directly from the
+[huggingface models repository](https://huggingface.co/models), e.g. for a
+Spanish BERT model with the name `dccuchile/bert-base-spanish-wwm-cased`:
+
+```python
+python examples/init_model.py -n "dccuchile/bert-base-spanish-wwm-cased" \
+-l es /path/to/es_bertbasespanishwwmcased_lg
+```
+
+Or for the English BERT model `scibert/scibert_scivocab_uncased`:
+
+```python
+python examples/init_model.py -n "allenai/scibert_scivocab_uncased" \
+-l en /path/to/en_scibertscivocabuncased_lg
+```
+
+You can create a python package for your model with [`spacy
+package`](https://spacy.io/api/cli#package) or load the model directly from the
+path:
+
+```python
+import spacy
+nlp = spacy.load("/path/to/en_scibertscivocabuncased_lg")
+```
 
 ## 📖 Usage
 
