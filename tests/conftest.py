@@ -2,7 +2,12 @@ import pytest
 from spacy_transformers import TransformersLanguage, TransformersWordPiecer
 from spacy_transformers import TransformersTok2Vec
 
-MODEL_NAMES = ["bert-base-uncased", "gpt2", "xlnet-base-cased"]
+MODEL_NAMES = [
+    "bert-base-uncased",
+    "gpt2",
+    "xlnet-base-cased",
+    "sshleifer/tiny-distilbert-base-cased",
+]
 
 
 @pytest.fixture(scope="session", params=MODEL_NAMES)

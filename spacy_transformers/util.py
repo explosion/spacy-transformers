@@ -280,7 +280,6 @@ def get_segment_ids(name: str, *lengths) -> List[int]:
     else:
         msg = f"Expected 1 or 2 segments. Got {len(lengths)}"
         raise ValueError(msg)
-    name = get_config_name(name)
     if name.startswith("bert"):
         return get_bert_segment_ids(length1, length2)
     elif name.startswith("distilbert"):
