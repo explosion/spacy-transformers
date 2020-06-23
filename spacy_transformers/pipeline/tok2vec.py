@@ -9,6 +9,7 @@ from ..wrapper import TransformersWrapper
 from ..model_registry import get_model_function
 from ..activations import Activations, RaggedArray
 from ..util import get_config, get_model, get_sents, PIPES, ATTRS
+from ..util import get_config_name
 
 
 class TransformersTok2Vec(Pipe):
@@ -56,6 +57,7 @@ class TransformersTok2Vec(Pipe):
         name = cfg.get("trf_name")
         if not name:
             raise ValueError(f"Need trf_name argument, e.g. 'bert-base-uncased'")
+        cfg["trf_model_type"] = get_config_name(cfg.get("trf_name"))
         if cfg.get("from_pretrained"):
             wrap = TransformersWrapper.from_pretrained(name)
         else:

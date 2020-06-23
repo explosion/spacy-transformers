@@ -43,7 +43,7 @@ def get_model_function(name: str):
 @register_model("tok2vec_per_sentence")
 def tok2vec_per_sentence(model_name, cfg):
     max_words = cfg.get("words_per_batch", 1000)
-    name = cfg["trf_name"]
+    name = cfg["trf_model_type"]
 
     model = foreach_sentence(
         chain(get_word_pieces(name), with_length_batching(model_name, max_words))
