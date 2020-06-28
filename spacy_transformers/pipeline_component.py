@@ -6,7 +6,7 @@ from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
-from spacy.util import minibatch, eg2doc, link_vectors_to_models
+from spacy.util import minibatch, link_vectors_to_models
 from spacy_transformers.util import huggingface_from_pretrained
 from thinc.api import Model, set_dropout_rate
 
@@ -81,14 +81,10 @@ class Transformer(Pipe):
         batch_size = min(batch_size, self.cfg["max_batch_size"])
         for batch in minibatch(stream, batch_size):
             batch = list(batch)
-            if as_example:
-                docs = [eg2doc(doc) for doc in batch]
-            else:
-                docs = batch
             # The model is currently a bit brittle if there's duplicate docs
             seen_ids = set()
             uniqued = []
-            for doc in docs:
+            for doc in batch:
                 if id(doc) not in seen_ids:
                     uniqued.append(doc)
                     seen_ids.add(id(doc))
@@ -125,8 +121,7 @@ class Transformer(Pipe):
         """
         if losses is None:
             losses = {}
-        examples = Example.to_example_objects(examples)
-        docs = [eg.doc for eg in examples]
+        docs = [eg.predicted for eg in examples]
         if isinstance(docs, Doc):
             docs = [docs]
         set_dropout_rate(self.model, drop)
