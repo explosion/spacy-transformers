@@ -1,6 +1,8 @@
 transformers>=2.9.0,<2.10.0
 spacy==3.0.0.dev12
 thinc==8.0.0a11
+torch>=1.0.0
+torchcontrib>=0.0.2,<0.1.0
 srsly>=2.0.0,<3.0.0
 ftfy>=5.0.0,<6.0.0
 dataclasses>=0.6,<0.7; python_version < "3.7"
