@@ -1,7 +1,7 @@
 from typing import List, Dict
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
-from transformers.tokenization_utils import PreTrainedTokenizerFast
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
 from thinc.api import get_current_ops, CupyOps
@@ -26,8 +26,8 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     token_data = tokenizer.batch_encode_plus(
         texts,
         add_special_tokens=True,
-        return_attention_masks=True,
-        return_lengths=True,
+        return_attention_mask=True,
+        return_length=True,
         return_offsets_mapping=isinstance(tokenizer, PreTrainedTokenizerFast),
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
