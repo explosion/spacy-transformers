@@ -107,7 +107,6 @@ class Transformer(Pipe):
         activations (iterable): A batch of activations.
         """
         doc_data = list(predictions.doc_data)
-        assert len(docs) == len(doc_data), (len(docs), len(doc_data))
         for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
         self.annotation_setter(docs, predictions)
