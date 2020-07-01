@@ -77,13 +77,16 @@ def forward(
         flat_spans.extend(doc_spans)
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     tensors, bp_tensors = transformer(token_data, is_train)
-    if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
-        align = get_alignment_via_offset_mapping(flat_spans, token_data)
-    else:
-        align = get_alignment(flat_spans, token_data["input_texts"])
+    # Unclear why but I'm getting problems using the Huggingface alignment on
+    # CPU?
+    #if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
+    #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
+    #else:
+    align = get_alignment(flat_spans, token_data["input_texts"])
     output = FullTransformerBatch(
         spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )
+
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
         _ = bp_tensors(d_output.tensors)
