@@ -76,6 +76,8 @@ def get_token_positions(spans: List[Span]) -> Dict[Token, int]:
 
 
 def get_alignment_via_offset_mapping(spans: List[Span], token_data) -> Ragged:
+    # This function uses the offset mapping provided by Huggingface. I'm not
+    # sure whether there's a bug here but I'm getting weird errors.
     # Tokens can occur more than once, and we need the alignment of each token
     # to its place in the concatenated wordpieces array.
     token_positions = get_token_positions(spans)
