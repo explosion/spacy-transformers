@@ -83,7 +83,7 @@ class FullTransformerBatch:
                     align=doc_align,
                 )
             )
-            token_count = len(doc_tokens["input_texts"][0])
+            token_count = sum(len(texts) for texts in doc_tokens["input_texts"])
             prev_tokens += token_count
             start += len(doc_spans)
         return outputs
