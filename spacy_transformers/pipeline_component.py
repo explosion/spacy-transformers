@@ -181,7 +181,8 @@ class Transformer(Pipe):
 
         def save_model(p):
             trf_dir = Path(p).absolute()
-            trf_dir.mkdir()
+            if not trf_dir.exists():
+                trf_dir.mkdir()
             self.model.attrs["tokenizer"].save_pretrained(str(trf_dir))
             transformer = self.model.layers[0].shims[0]._model
             torch.save(transformer.state_dict(), trf_dir / WEIGHTS_NAME)
