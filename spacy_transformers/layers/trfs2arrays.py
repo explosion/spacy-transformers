@@ -9,6 +9,7 @@ from ..align import apply_alignment
 def trfs2arrays(
     pooling: Model[Ragged, Floats2d], grad_factor: float
 ) -> Model[List[TransformerData], List[Floats2d]]:
+    """Pool transformer data into token-aligned tensors."""
     return Model(
         "trfs2arrays", forward, layers=[pooling], attrs={"grad_factor": grad_factor},
     )
