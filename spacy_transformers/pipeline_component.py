@@ -45,7 +45,7 @@ class Transformer(Pipe):
         model: Model[List[Doc], FullTransformerBatch],
         annotation_setter: Callable = null_annotation_setter,
         *,
-        max_batch_size: int = 8,
+        max_batch_items: int = 128*32, # Max size of padded batch
         **cfg,
     ):
         self.vocab = vocab
@@ -53,7 +53,7 @@ class Transformer(Pipe):
         assert isinstance(self.model, Model)
         self.annotation_setter = annotation_setter
         self.cfg = dict(cfg)
-        self.cfg["max_batch_size"] = max_batch_size
+        self.cfg["max_batch_items"] = max_batch_items
         self.listeners: List[TransformerListener] = []
         install_extensions()
 
@@ -77,20 +77,12 @@ class Transformer(Pipe):
         self.set_annotations([doc], outputs)
         return doc
 
-    def pipe(self, stream, batch_size=128, n_threads=-1, as_example=False):
-        batch_size = min(batch_size, self.cfg["max_batch_size"])
-        for batch in minibatch(stream, batch_size):
-            batch = list(batch)
-            # The model is currently a bit brittle if there's duplicate docs
-            seen_ids = set()
-            uniqued = []
-            for doc in batch:
-                if id(doc) not in seen_ids:
-                    uniqued.append(doc)
-                    seen_ids.add(id(doc))
-            outputs = self.predict(uniqued)
-            self.set_annotations(uniqued, outputs)
-            yield from batch
+    def pipe(self, stream, batch_size=128, n_threads=-1):
+        for outer_batch in minibatch(stream, batch_size):
+            outer_batch = list(outer_batch)
+            for subbatch in batch_by_length(outer_batch, self.cfg["max_batch_items"]):
+                self.set_annotations(subbatch, self.predict(subbatch))
+            yield from outer_batch
 
     def predict(self, docs) -> FullTransformerBatch:
         activations = self.model.predict(docs)
