@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Union
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
@@ -67,7 +67,7 @@ def transpose_list(nested_list):
     return output
 
 
-def batch_by_length(seqs: Union[List[Array]], max_words: int) -> List[List[int]]:
+def batch_by_length(seqs, max_words: int) -> List[List[int]]:
     """Given a list of sequences, return a batched list of indices into the 
     list, where the batches are grouped by length, in descending order.
     
@@ -79,7 +79,6 @@ def batch_by_length(seqs: Union[List[Array]], max_words: int) -> List[List[int]]
     batches: List[List[int]] = []
     batch: List[int] = []
     for length, i in lengths_indices:
-        i = -neg_i
         if not batch:
             batch.append(i)
         elif length * (len(batch) + 1) <= max_words:

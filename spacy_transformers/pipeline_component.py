@@ -7,7 +7,6 @@ from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
 from spacy.util import minibatch, link_vectors_to_models
-from spacy_transformers.util import huggingface_from_pretrained
 from thinc.api import Model, set_dropout_rate
 
 import srsly
@@ -15,6 +14,7 @@ import torch
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
+from .util import huggingface_from_pretrained, batch_by_length
 from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
@@ -80,7 +80,8 @@ class Transformer(Pipe):
     def pipe(self, stream, batch_size=128, n_threads=-1):
         for outer_batch in minibatch(stream, batch_size):
             outer_batch = list(outer_batch)
-            for subbatch in batch_by_length(outer_batch, self.cfg["max_batch_items"]):
+            for indices in batch_by_length(outer_batch, self.cfg["max_batch_items"]):
+                subbatch = [outer_batch[i] for i in indices]
                 self.set_annotations(subbatch, self.predict(subbatch))
             yield from outer_batch
 
