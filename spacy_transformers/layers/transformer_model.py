@@ -1,5 +1,6 @@
 from typing import List, Tuple, Callable
 import torch
+import random
 from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
@@ -7,7 +8,7 @@ from transformers.tokenization_utils import BatchEncoding
 
 from ..data_classes import FullTransformerBatch, TransformerData
 from ..util import huggingface_tokenize, huggingface_from_pretrained
-from ..util import find_last_hidden
+from ..util import find_last_hidden, flush_pytorch_cache
 from ..align import get_alignment, get_alignment_via_offset_mapping
 
 
@@ -27,6 +28,7 @@ def TransformerModel(
             "tokenizer_config": tokenizer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
+            "flush_cache_chance": 0.05
         },
     )
 
@@ -75,6 +77,9 @@ def forward(
     flat_spans = []
     for doc_spans in nested_spans:
         flat_spans.extend(doc_spans)
+    # Flush the PyTorch cache every so often. It seems to help with memory :(
+    # This shouldn't be necessary, I'm not sure what I'm doing wrong?
+    maybe_flush_pytorch_cache(chance=model.attrs["flush_cache_chance"])
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     tensors, bp_tensors = transformer(token_data, is_train)
     # Unclear why but I'm getting problems using the Huggingface alignment on

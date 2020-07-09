@@ -5,6 +5,7 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
 from thinc.api import get_current_ops, CupyOps
+import torch.cuda
 
 
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
@@ -37,6 +38,17 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
         tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]
     ]
     return token_data
+
+
+def maybe_flush_pytorch_cache(chance: float=1.0):
+    """Flip a coin and decide whether to flush PyTorch's cache. This allows the
+    cache to be flushed periodically without maintaining a counter.
+
+    I'm not sure why this is necessary, it shouldn't be. But it definitely does
+    help...
+    """
+    if random.random() < chance and torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> Dict:
