@@ -31,6 +31,17 @@ class TransformerListener(Model):
         self._outputs = outputs
         self._backprop = backprop
 
+    def backprop_and_clear(self, *args, **kwargs):
+        """Call the stored _backprop callback, and then
+        clears it. This saves memory, as otherwise we hold onto that callback
+        until the next batch.
+        """
+        result = self._backprop(*args, **kwargs)
+        self._batch_id = None
+        self._outputs = None
+        self._backprop = None
+        return result
+
     def verify_inputs(self, inputs):
         if self._batch_id is None and self._outputs is None:
             raise ValueError
@@ -45,7 +56,7 @@ class TransformerListener(Model):
 def forward(model: TransformerListener, docs, is_train):
     if is_train:
         model.verify_inputs(docs)
-        return model._outputs, model._backprop
+        return model._outputs, backprop_and_clear(model)
     else:
         if len(docs) == 0:
             return [TransformerData.empty()], lambda d_data: docs
