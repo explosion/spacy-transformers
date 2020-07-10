@@ -94,7 +94,7 @@ def forward(
         flat_spans.extend(doc_spans)
     # Flush the PyTorch cache every so often. It seems to help with memory :(
     # This shouldn't be necessary, I'm not sure what I'm doing wrong?
-    maybe_flush_pytorch_cache(chance=model.attrs["flush_cache_chance"])
+    maybe_flush_pytorch_cache(chance=model.attrs.get("flush_cache_chance", 0))
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "begin forward")
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
