@@ -28,11 +28,11 @@ class DummyTokenizer:
         is_pretokenized=False,
         return_tensors=None,
         return_token_type_ids=None,
-        return_attention_masks=None,
+        return_attention_mask=None,
         return_overflowing_tokens=False,
         return_special_tokens_masks=False,
         return_offsets_mapping=False,
-        return_lengths=False,
+        return_length=False,
     ):
         output: Dict = {
             "input_ids": [],
@@ -121,6 +121,7 @@ def DummyTransformer(
             "get_spans": get_spans,
             "tokenizer": DummyTokenizer(),
             "grad_factor": 1.0,
+            "flush_cache_chance": 0.0
         },
         dims={"nO": width},
     )

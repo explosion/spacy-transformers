@@ -31,7 +31,7 @@ def test_init(component):
     assert isinstance(component.model, Model)
     assert hasattr(component.annotation_setter, "__call__")
     assert component.listeners == []
-    assert component.cfg == {"max_batch_size": 8}
+    assert component.cfg == {"max_batch_items": 4096}
 
 
 def test_predict(component, docs):
