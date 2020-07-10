@@ -1,3 +1,4 @@
+import random
 from typing import List, Dict, Union
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
@@ -110,3 +111,23 @@ def batch_by_length(seqs, max_words: int) -> List[List[int]]:
     batches = [list(sorted(batch)) for batch in batches]
     batches.reverse()
     return batches
+
+
+def log_gpu_memory(logger, context):
+    mem = torch.cuda.memory_allocated() // 1024 ** 2
+    logger.info(f'{mem:.1f}: {context}')
+
+
+def log_batch_size(logger, token_data, is_train):
+    batch_size = token_data['input_ids'].shape[0]
+    seq_len = token_data['input_ids'].shape[1]
+    squared = seq_len ** 2 * batch_size
+
+    if is_train:
+        logger.info(
+            f"{batch_size} x {seq_len} ({squared}) update"
+        )
+    else:
+        logger.info(
+            f"{batch_size} x {seq_len} ({squared}) predict"
+        )

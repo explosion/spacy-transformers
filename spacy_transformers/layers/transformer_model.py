@@ -5,10 +5,12 @@ from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from transformers.tokenization_utils import BatchEncoding
+import logging
 
 from ..data_classes import FullTransformerBatch, TransformerData
 from ..util import huggingface_tokenize, huggingface_from_pretrained
-from ..util import find_last_hidden, flush_pytorch_cache
+from ..util import find_last_hidden, maybe_flush_pytorch_cache
+from ..util import log_gpu_memory, log_batch_size
 from ..align import get_alignment, get_alignment_via_offset_mapping
 
 
@@ -31,6 +33,19 @@ def TransformerModel(
             "flush_cache_chance": 0.05
         },
     )
+
+
+def set_logger(model, out_file):
+    """Add a logger that will log memory usage to the given file.
+
+    Used to debug OOM errors.
+    """
+    logging.basicConfig(
+        level="INFO",
+        format='%(asctime)s:%(levelname)s: %(message)s',
+        stream=out_file
+    )
+    model.attrs["logger"] = logging.getLogger(__name__)
 
 
 def set_pytorch_transformer(model, transformer):
@@ -80,8 +95,14 @@ def forward(
     # Flush the PyTorch cache every so often. It seems to help with memory :(
     # This shouldn't be necessary, I'm not sure what I'm doing wrong?
     maybe_flush_pytorch_cache(chance=model.attrs["flush_cache_chance"])
+    if "logger" in model.attrs:
+        log_gpu_memory(model.attrs["logger"], "begin forward")
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
+    if "logger" in model.attrs:
+        log_batch_size(modekl.attrs["logger"], token_data, is_train)
     tensors, bp_tensors = transformer(token_data, is_train)
+    if "logger" in model.attrs:
+        log_gpu_memory(model.attrs["logger"], "after forward")
     # Unclear why but I'm getting problems using the Huggingface alignment on
     # CPU?
     #if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
@@ -91,10 +112,14 @@ def forward(
     output = FullTransformerBatch(
         spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )
+    if "logger" in model.attrs:
+        log_gpu_memory(model.attrs["logger"], "return from forward")
 
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
+        log_gpu_memory("Begin backprop")
         _ = bp_tensors(d_output.tensors)
+        log_gpu_memory("After backprop")
         return docs
 
     return output, backprop_transformer
