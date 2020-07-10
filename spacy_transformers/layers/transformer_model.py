@@ -117,9 +117,11 @@ def forward(
 
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
-        log_gpu_memory("Begin backprop")
+        if "logger" in model.attrs:
+            log_gpu_memory(model.attrs["logger"], "Begin backprop")
         _ = bp_tensors(d_output.tensors)
-        log_gpu_memory("After backprop")
+        if "logger" in model.attrs:
+            log_gpu_memory(model.attrs["logger"], "After backprop")
         return docs
 
     return output, backprop_transformer
