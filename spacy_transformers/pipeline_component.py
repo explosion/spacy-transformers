@@ -1,13 +1,13 @@
 from typing import List, Callable
 from spacy.pipeline import Pipe
-from spacy.language import component
-from spacy.pipeline.pipes import _load_cfg
+from spacy.language import Language
+from spacy.pipeline.pipe import deserialize_config
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
 from spacy.util import minibatch, link_vectors_to_models
-from thinc.api import Model, set_dropout_rate
+from thinc.api import Model, Config, set_dropout_rate
 
 import srsly
 import torch
@@ -20,11 +20,46 @@ from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
 
 
+DEFAULT_CONFIG_STR = """
+[transformer]
+max_batch_items = 4096
+
+[transformer.annotation_setter]
+@annotation_setters = "spacy-transformer.null_annotation_setter.v1"
+
+[transformer.model]
+@architectures = "spacy-transformers.TransformerModel.v1"
+name = "roberta-base"
+tokenizer_config = {"use_fast": true}
+
+[transformer.model.get_spans]
+@span_getters = "strided_spans.v1"
+window = 128
+stride = 96
+"""
+
+DEFAULT_CONFIG = Config().from_str(DEFAULT_CONFIG_STR)
+
+
+@Language.factory(
+    "transformer",
+    assigns=["doc._.trf_data"],
+    default_config=DEFAULT_CONFIG["transformer"]
+)
+def make_transformer(
+    nlp: Language,
+    name: str,
+    model: Model,
+    annotation_setter: Callable,
+    max_batch_items: int
+):
+    return Transformer(nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name)
+
+
 def install_extensions():
     Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
 
 
-@component("transformer", assigns=["doc._.trf_data"])
 class Transformer(Pipe):
     """spaCy pipeline component to use transformer models.
 
@@ -35,25 +70,23 @@ class Transformer(Pipe):
     the same spaCy token, the spaCy token receives the sum of their values.
     """
 
-    @classmethod
-    def from_nlp(cls, nlp, model, **cfg):
-        return cls(nlp.vocab, model, **cfg)
-
     def __init__(
         self,
         vocab: Vocab,
         model: Model[List[Doc], FullTransformerBatch],
         annotation_setter: Callable = null_annotation_setter,
         *,
+        name: str="transformer",
         max_batch_items: int = 128*32, # Max size of padded batch
-        **cfg,
     ):
+        self.name = name
         self.vocab = vocab
         self.model = model
         assert isinstance(self.model, Model)
         self.annotation_setter = annotation_setter
-        self.cfg = dict(cfg)
-        self.cfg["max_batch_items"] = max_batch_items
+        self.cfg = {
+            "max_batch_items": max_batch_items
+        }
         self.listeners: List[TransformerListener] = []
         install_extensions()
 
@@ -201,7 +234,7 @@ class Transformer(Pipe):
 
         deserialize = {
             "vocab": self.vocab.from_disk,
-            "cfg": lambda p: self.cfg.update(_load_cfg(p)),
+            "cfg": lambda p: self.cfg.update(deserialize_config(p)),
             "model": load_model,
         }
         exclude = util.get_serialization_exclude(deserialize, exclude, kwargs)
