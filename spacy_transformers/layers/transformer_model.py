@@ -1,17 +1,16 @@
 from typing import List, Tuple, Callable
 import torch
-import random
 from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model
 from thinc.types import ArgsKwargs
 from transformers.tokenization_utils import BatchEncoding
 import logging
 
-from ..data_classes import FullTransformerBatch, TransformerData
+from ..data_classes import FullTransformerBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import find_last_hidden, maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
-from ..align import get_alignment, get_alignment_via_offset_mapping
+from ..align import get_alignment
 
 
 def TransformerModel(
@@ -30,7 +29,7 @@ def TransformerModel(
             "tokenizer_config": tokenizer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
-            "flush_cache_chance": 0.05
+            "flush_cache_chance": 0.05,
         },
     )
 
@@ -41,9 +40,7 @@ def set_logger(model, out_file):
     Used to debug OOM errors.
     """
     logging.basicConfig(
-        level="INFO",
-        format='%(asctime)s:%(levelname)s: %(message)s',
-        stream=out_file
+        level="INFO", format="%(asctime)s:%(levelname)s: %(message)s", stream=out_file
     )
     model.attrs["logger"] = logging.getLogger(__name__)
 
@@ -99,22 +96,21 @@ def forward(
         log_gpu_memory(model.attrs["logger"], "begin forward")
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     if "logger" in model.attrs:
-        log_batch_size(modekl.attrs["logger"], token_data, is_train)
+        log_batch_size(model.attrs["logger"], token_data, is_train)
     tensors, bp_tensors = transformer(token_data, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
     # Unclear why but I'm getting problems using the Huggingface alignment on
     # CPU?
-    #if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
+    # if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
     #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
-    #else:
+    # else:
     align = get_alignment(flat_spans, token_data["input_texts"])
     output = FullTransformerBatch(
         spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")
-
 
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
         if "logger" in model.attrs:

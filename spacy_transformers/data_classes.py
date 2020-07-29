@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Optional, List, Dict
-
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding

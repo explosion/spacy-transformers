@@ -1,5 +1,5 @@
+from typing import List, Dict
 import random
-from typing import List, Dict, Union
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
@@ -9,10 +9,10 @@ from thinc.api import get_current_ops, CupyOps
 import torch.cuda
 
 
+# fmt: off
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
-registry.annotation_setters = catalogue.create(
-    "spacy", "annotation_setters", entry_points=True
-)
+registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
+# fmt: on
 
 
 def huggingface_from_pretrained(source, config):
@@ -41,7 +41,7 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     return token_data
 
 
-def maybe_flush_pytorch_cache(chance: float=1.0):
+def maybe_flush_pytorch_cache(chance: float = 1.0):
     """Flip a coin and decide whether to flush PyTorch's cache. This allows the
     cache to be flushed periodically without maintaining a counter.
 
@@ -81,9 +81,9 @@ def transpose_list(nested_list):
 
 
 def batch_by_length(seqs, max_words: int) -> List[List[int]]:
-    """Given a list of sequences, return a batched list of indices into the 
+    """Given a list of sequences, return a batched list of indices into the
     list, where the batches are grouped by length, in descending order.
-    
+
     Batches may be at most max_words in size, defined as max sequence length * size.
     """
     # Use negative index so we can get sort by position ascending.
@@ -115,19 +115,15 @@ def batch_by_length(seqs, max_words: int) -> List[List[int]]:
 
 def log_gpu_memory(logger, context):
     mem = torch.cuda.memory_allocated() // 1024 ** 2
-    logger.info(f'{mem:.1f}: {context}')
+    logger.info(f"{mem:.1f}: {context}")
 
 
 def log_batch_size(logger, token_data, is_train):
-    batch_size = token_data['input_ids'].shape[0]
-    seq_len = token_data['input_ids'].shape[1]
+    batch_size = token_data["input_ids"].shape[0]
+    seq_len = token_data["input_ids"].shape[1]
     squared = seq_len ** 2 * batch_size
 
     if is_train:
-        logger.info(
-            f"{batch_size} x {seq_len} ({squared}) update"
-        )
+        logger.info(f"{batch_size} x {seq_len} ({squared}) update")
     else:
-        logger.info(
-            f"{batch_size} x {seq_len} ({squared}) predict"
-        )
+        logger.info(f"{batch_size} x {seq_len} ({squared}) predict")

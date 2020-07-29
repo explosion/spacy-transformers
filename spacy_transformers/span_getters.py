@@ -1,10 +1,12 @@
-from typing import Callable
+from typing import Callable, Iterable, List
+from spacy.tokens import Doc, Span
+
 from .util import registry
 
 
 @registry.span_getters("strided_spans.v1")
 def configure_strided_spans(window: int, stride: int) -> Callable:
-    def get_strided_spans(docs):
+    def get_strided_spans(docs: Iterable[Doc]) -> List[Span]:
         spans = []
         for doc in docs:
             start = 0
@@ -23,16 +25,16 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
 
 
 @registry.span_getters("sent_spans.v1")
-def configure_get_sent_spans():
-    def get_sent_spans(docs):
+def configure_get_sent_spans() -> Callable:
+    def get_sent_spans(docs: Iterable[Doc]) -> List[Span]:
         return [list(doc.sents) for doc in docs]
 
     return get_sent_spans
 
 
 @registry.span_getters("doc_spans.v1")
-def configure_get_doc_spans():
-    def get_doc_spans(docs):
+def configure_get_doc_spans() -> Callable:
+    def get_doc_spans(docs: Iterable[Doc]) -> List[Span]:
         return [[doc[:]] for doc in docs]
 
     return get_doc_spans

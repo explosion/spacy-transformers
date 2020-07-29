@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import List, Callable, Iterable, Iterator, Optional, Dict, Tuple, Union
 from spacy.pipeline import Pipe
 from spacy.language import Language
 from spacy.pipeline.pipe import deserialize_config
@@ -7,8 +7,7 @@ from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
 from spacy.util import minibatch, link_vectors_to_models
-from thinc.api import Model, Config, set_dropout_rate
-
+from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
 import torch
 from transformers import WEIGHTS_NAME, CONFIG_NAME
@@ -39,25 +38,29 @@ stride = 96
 """
 
 DEFAULT_CONFIG = Config().from_str(DEFAULT_CONFIG_STR)
+DOC_EXT_ATTR = "trf_data"
 
 
 @Language.factory(
     "transformer",
-    assigns=["doc._.trf_data"],
-    default_config=DEFAULT_CONFIG["transformer"]
+    assigns=[f"doc._.{DOC_EXT_ATTR}"],
+    default_config=DEFAULT_CONFIG["transformer"],
 )
 def make_transformer(
     nlp: Language,
     name: str,
     model: Model,
-    annotation_setter: Callable,
-    max_batch_items: int
+    annotation_setter: Callable[[List[Doc], FullTransformerBatch], None],
+    max_batch_items: int,
 ):
-    return Transformer(nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name)
+    return Transformer(
+        nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name
+    )
 
 
-def install_extensions():
-    Doc.set_extension("trf_data", default=TransformerData.empty(), force=True)
+def install_extensions() -> None:
+    if not Doc.has_extension(DOC_EXT_ATTR):
+        Doc.set_extension(DOC_EXT_ATTR, default=TransformerData.empty())
 
 
 class Transformer(Pipe):
@@ -76,28 +79,28 @@ class Transformer(Pipe):
         model: Model[List[Doc], FullTransformerBatch],
         annotation_setter: Callable = null_annotation_setter,
         *,
-        name: str="transformer",
-        max_batch_items: int = 128*32, # Max size of padded batch
+        name: str = "transformer",
+        max_batch_items: int = 128 * 32,  # Max size of padded batch
     ):
+        """Initialize the transformer component."""
         self.name = name
         self.vocab = vocab
         self.model = model
-        assert isinstance(self.model, Model)
+        if not isinstance(self.model, Model):
+            raise ValueError(f"Expected Thinc Model, got: {type(self.model)}")
         self.annotation_setter = annotation_setter
-        self.cfg = {
-            "max_batch_items": max_batch_items
-        }
+        self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
         install_extensions()
 
-    def create_listener(self):
+    def create_listener(self) -> None:
         listener = TransformerListener(upstream_name="transformer")
         self.listeners.append(listener)
 
-    def add_listener(self, listener):
+    def add_listener(self, listener: TransformerListener) -> None:
         self.listeners.append(listener)
 
-    def find_listeners(self, model):
+    def find_listeners(self, model: Model) -> None:
         for node in model.walk():
             if (
                 isinstance(node, TransformerListener)
@@ -105,12 +108,31 @@ class Transformer(Pipe):
             ):
                 self.add_listener(node)
 
-    def __call__(self, doc):
+    def __call__(self, doc: Doc) -> Doc:
+        """Apply the pipe to one document. The document is modified in place,
+        and returned. This usually happens under the hood when the nlp object
+        is called on a text and all components are applied to the Doc.
+
+        docs (Doc): The Doc to preocess.
+        RETURNS (Doc): The processed Doc.
+
+        DOCS: https://spacy.io/api/transformer#call
+        """
         outputs = self.predict([doc])
         self.set_annotations([doc], outputs)
         return doc
 
-    def pipe(self, stream, batch_size=128, n_threads=-1):
+    def pipe(self, stream: Iterable[Doc], *, batch_size: int = 128) -> Iterator[Doc]:
+        """Apply the pipe to a stream of documents. This usually happens under
+        the hood when the nlp object is called on a text and all components are
+        applied to the Doc.
+
+        stream (Iterable[Doc]): A stream of documents.
+        batch_size (int): The number of documents to buffer.
+        YIELDS (Doc): Processed documents in order.
+
+        DOCS: https://spacy.io/api/transformer#pipe
+        """
         for outer_batch in minibatch(stream, batch_size):
             outer_batch = list(outer_batch)
             for indices in batch_by_length(outer_batch, self.cfg["max_batch_items"]):
@@ -118,31 +140,59 @@ class Transformer(Pipe):
                 self.set_annotations(subbatch, self.predict(subbatch))
             yield from outer_batch
 
-    def predict(self, docs) -> FullTransformerBatch:
+    def predict(self, docs: Iterable[Doc]) -> FullTransformerBatch:
+        """Apply the pipeline's model to a batch of docs, without modifying them.
+        Returns the extracted features as the FullTransformerBatch dataclass.
+
+        docs (Iterable[Doc]): The documents to predict.
+        RETURNS (FullTransformerBatch): The extracted features.
+
+        DOCS: https://spacy.io/api/transformer#predict
+        """
         activations = self.model.predict(docs)
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners:
             listener.receive(batch_id, activations.doc_data, None)
         return activations
 
-    def set_annotations(self, docs: List[Doc], predictions: FullTransformerBatch):
+    def set_annotations(
+        self, docs: Iterable[Doc], predictions: FullTransformerBatch
+    ) -> None:
         """Assign the extracted features to the Doc objects and overwrite the
         vector and similarity hooks.
 
-        docs (iterable): A batch of `Doc` objects.
-        activations (iterable): A batch of activations.
+        docs (Iterable[Doc]): The documents to modify.
+        predictions: (FullTransformerBatch): A batch of activations.
+
+        DOCS: https://spacy.io/api/pipe#set_annotations
         """
         doc_data = list(predictions.doc_data)
         for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
         self.annotation_setter(docs, predictions)
 
-    def update(self, examples, drop=0.0, sgd=None, losses=None, set_annotations=False):
-        """Update the model.
-        examples (iterable): A batch of examples
-        drop (float): The droput rate.
-        sgd (callable): An optimizer.
-        RETURNS (dict): Results from the update.
+    def update(
+        self,
+        examples: Iterable[Example],
+        *,
+        drop: float = 0.0,
+        sgd: Optional[Optimizer] = None,
+        losses: Optional[Dict[str, float]] = None,
+        set_annotations: bool = False,
+    ) -> Dict[str, float]:
+        """Learn from a batch of documents and gold-standard information,
+        updating the pipe's model.
+
+        examples (Iterable[Example]): A batch of Example objects.
+        drop (float): The dropout rate.
+        set_annotations (bool): Whether or not to update the Example objects
+            with the predictions.
+        sgd (thinc.api.Optimizer): The optimizer.
+        losses (Dict[str, float]): Optional record of the loss during training.
+            Updated using the component name as the key.
+        RETURNS (Dict[str, float]): The updated losses dictionary.
+
+        DOCS: https://spacy.io/api/transformer#update
         """
         if losses is None:
             losses = {}
@@ -152,7 +202,6 @@ class Transformer(Pipe):
         set_dropout_rate(self.model, drop)
         trf_full, bp_trf_full = self.model.begin_update(docs)
         d_tensors = []
-
         losses.setdefault(self.name, 0.0)
 
         def accumulate_gradient(d_trf_datas: List[TransformerData]):
@@ -186,24 +235,45 @@ class Transformer(Pipe):
         self.listeners[-1].receive(batch_id, trf_full.doc_data, backprop)
         if set_annotations:
             self.set_annotations(docs, trf_full)
+        return losses
 
     def get_loss(self, docs, golds, scores):
         pass
 
     def begin_training(
-        self, get_examples=lambda: [], pipeline=None, sgd=None, **kwargs
+        self,
+        get_examples: Callable[[], Iterable[Example]] = lambda: [],
+        *,
+        pipeline: Optional[List[Tuple[str, Callable[[Doc], Doc]]]] = None,
+        sgd: Optional[Optimizer] = None,
     ):
-        """Allocate models and pre-process training data
+        """Initialize the pipe for training, using data examples if available.
 
-        get_examples (function): Function returning example training data.
-        pipeline (list): The pipeline the model is part of.
+        get_examples (Callable[[], Iterable[Example]]): Optional function that
+            returns gold-standard Example objects.
+        pipeline (List[Tuple[str, Callable]]): Optional list of pipeline
+            components that this component is part of. Corresponds to
+            nlp.pipeline.
+        sgd (thinc.api.Optimizer): Optional optimizer. Will be created with
+            create_optimizer if it doesn't exist.
+        RETURNS (thinc.api.Optimizer): The optimizer.
+
+        DOCS: https://spacy.io/api/transformer#begin_training
         """
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
         link_vectors_to_models(self.vocab)
 
-    def to_disk(self, path, exclude=tuple(), **kwargs):
-        """Serialize the pipe and its model to disk."""
+    def to_disk(
+        self, path: Union[str, Path], *, exclude: Iterable[str] = tuple()
+    ) -> None:
+        """Serialize the pipe to disk.
+
+        path (str / Path): Path to a directory.
+        exclude (Iterable[str]): String names of serialization fields to exclude.
+
+        DOCS: https://spacy.io/api/transformer#to_disk
+        """
 
         def save_model(p):
             trf_dir = Path(p).absolute()
@@ -218,11 +288,19 @@ class Transformer(Pipe):
         serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
         serialize["vocab"] = lambda p: self.vocab.to_disk(p)
         serialize["model"] = lambda p: save_model(p)
-        exclude = util.get_serialization_exclude(serialize, exclude, kwargs)
         util.to_disk(path, serialize, exclude)
 
-    def from_disk(self, path, exclude=tuple(), **kwargs):
-        """Load the pipe and its model from disk."""
+    def from_disk(
+        self, path: Union[str, Path], *, exclude: Iterable[str] = tuple()
+    ) -> "Transformer":
+        """Load the pipe from disk.
+
+        path (str / Path): Path to a directory.
+        exclude (Iterable[str]): String names of serialization fields to exclude.
+        RETURNS (Transformer): The loaded object.
+
+        DOCS: https://spacy.io/api/transformer#from_disk
+        """
 
         def load_model(p):
             p = Path(p).absolute()
@@ -237,6 +315,5 @@ class Transformer(Pipe):
             "cfg": lambda p: self.cfg.update(deserialize_config(p)),
             "model": load_model,
         }
-        exclude = util.get_serialization_exclude(deserialize, exclude, kwargs)
         util.from_disk(path, deserialize, exclude)
         return self
