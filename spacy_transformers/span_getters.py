@@ -6,7 +6,7 @@ from .util import registry
 
 @registry.span_getters("strided_spans.v1")
 def configure_strided_spans(window: int, stride: int) -> Callable:
-    def get_strided_spans(docs: Iterable[Doc]) -> List[Span]:
+    def get_strided_spans(docs: Iterable[Doc]) -> List[List[Span]]:
         spans = []
         for doc in docs:
             start = 0
@@ -26,7 +26,7 @@ def configure_strided_spans(window: int, stride: int) -> Callable:
 
 @registry.span_getters("sent_spans.v1")
 def configure_get_sent_spans() -> Callable:
-    def get_sent_spans(docs: Iterable[Doc]) -> List[Span]:
+    def get_sent_spans(docs: Iterable[Doc]) -> List[List[Span]]:
         return [list(doc.sents) for doc in docs]
 
     return get_sent_spans
@@ -34,7 +34,7 @@ def configure_get_sent_spans() -> Callable:
 
 @registry.span_getters("doc_spans.v1")
 def configure_get_doc_spans() -> Callable:
-    def get_doc_spans(docs: Iterable[Doc]) -> List[Span]:
+    def get_doc_spans(docs: Iterable[Doc]) -> List[List[Span]]:
         return [[doc[:]] for doc in docs]
 
     return get_doc_spans

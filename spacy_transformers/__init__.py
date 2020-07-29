@@ -4,6 +4,7 @@ from . import span_getters
 from .layers import TransformerModel
 from .pipeline_component import Transformer, install_extensions
 from .data_classes import TransformerData, FullTransformerBatch
+from .util import registry
 
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "architectures",
     "annotation_setters",
     "span_getters",
+    "registry",
 ]
