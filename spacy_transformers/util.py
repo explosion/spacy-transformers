@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Union
+from pathlib import Path
 import random
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
@@ -15,7 +16,14 @@ registry.annotation_setters = catalogue.create("spacy", "annotation_setters", en
 # fmt: on
 
 
-def huggingface_from_pretrained(source, config):
+def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
+    """Create a Huggingface transformer model from pretrained weights. Will
+    download the model if it is not already downloaded.
+
+    source (Union[str, Path]): The name of the model or a path to it, such as
+        'bert-base-cased'.
+    config (dict): Settings to pass to the tokenizer.
+    """
     tokenizer = AutoTokenizer.from_pretrained(source, **config)
     transformer = AutoModel.from_pretrained(source)
     ops = get_current_ops()
@@ -25,6 +33,7 @@ def huggingface_from_pretrained(source, config):
 
 
 def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
+    """Apply a Huggingface tokenizer to a batch of texts."""
     token_data = tokenizer.batch_encode_plus(
         texts,
         add_special_tokens=True,
@@ -53,6 +62,7 @@ def maybe_flush_pytorch_cache(chance: float = 1.0):
 
 
 def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> Dict:
+    """Get a subspan from a BatchEncoding. Internals."""
     output = {}
     for key, value in inputs.items():
         if not hasattr(value, "__getitem__"):
@@ -63,6 +73,9 @@ def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> Dict:
 
 
 def find_last_hidden(tensors) -> int:
+    """Find the index of the hidden layer in a list of activation tensors.
+    Internals.
+    """
     for i, tensor in reversed(list(enumerate(tensors))):
         if len(tensor.shape) == 3:
             return i
