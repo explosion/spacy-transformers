@@ -17,13 +17,14 @@ def TransformerModel(
     name: str, get_spans: Callable, tokenizer_config: dict
 ) -> Model[List[Doc], FullTransformerBatch]:
     """
-    get_spans (Callable[[List[Doc]], List[Span]]): 
+    get_spans (Callable[[List[Doc]], List[Span]]):
         A function to extract spans from the batch of Doc objects.
         This is used to manage long documents, by cutting them into smaller
         sequences before running the transformer. The spans are allowed to
         overlap, and you can also omit sections of the Doc if they are not
         relevant.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
+    """
 
     return Model(
         "transformer",
