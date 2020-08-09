@@ -49,10 +49,24 @@ DOC_EXT_ATTR = "trf_data"
 def make_transformer(
     nlp: Language,
     name: str,
-    model: Model,
+    model: Model[List[Doc], FullTransformerBatch],
     annotation_setter: Callable[[List[Doc], FullTransformerBatch], None],
     max_batch_items: int,
 ):
+    """Construct a Transformer component, which lets you plug a model from the
+    Huggingface transformers library into spaCy so you can use it in your
+    pipeline. One or more subsequent spaCy components can use the transformer
+    outputs as features in its model, with gradients backpropagated to the single
+    shared weights.
+
+    model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
+        the transformer. Usually you will want to use the TransformerModel
+        layer for this.
+    annotation_setter (Callble[[List[Doc], FullTransformerBatch], None]): A
+        callback to set additional information onto the batch of `Doc` objects.
+        The doc._.transformer_data attribute is set prior to calling the callback.
+        By default, no additional annotations are set.
+    """
     return Transformer(
         nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name
     )
@@ -64,15 +78,24 @@ def install_extensions() -> None:
 
 
 class Transformer(Pipe):
-    """spaCy pipeline component to use transformer models.
+    """spaCy pipeline component that provides access to a transformer model from
+    the Huggingface transformers library. Usually you will connect subsequent
+    components to the shared transformer using the TransformerListener layer.
+    This works similarly to spaCy's Tok2Vec component and Tok2VecListener
+    sublayer.
 
-    The component assigns the output of the transformer to the Doc's
-    extension attributes. We also calculate an alignment between the word-piece
-    tokens and the spaCy tokenization, so that we can use the last hidden states
-    to set the doc.tensor attribute. When multiple word-piece tokens align to
-    the same spaCy token, the spaCy token receives the sum of their values.
+    The activations from the transformer are saved in the doc._.trf_data extension
+    attribute. You can also provide a callback to set additional annotations.
+
+    vocab (Vocab): The Vocab object for the pipeline.
+    model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
+        the transformer. Usually you will want to use the TransformerModel
+        layer for this.
+    annotation_setter (Callble[[List[Doc], FullTransformerBatch], None]): A
+        callback to set additional information onto the batch of `Doc` objects.
+        The doc._.transformer_data attribute is set prior to calling the callback.
+        By default, no additional annotations are set.
     """
-
     def __init__(
         self,
         vocab: Vocab,
@@ -94,17 +117,27 @@ class Transformer(Pipe):
         install_extensions()
 
     def create_listener(self) -> None:
+        # TODO: Is this required?
         listener = TransformerListener(upstream_name="transformer")
         self.listeners.append(listener)
 
     def add_listener(self, listener: TransformerListener) -> None:
+        """Add a listener for a downstream component. Usually internals."""
         self.listeners.append(listener)
 
     def find_listeners(self, model: Model) -> None:
+        """Walk over a model, looking for layers that are TransformerListener
+        subclasses that have an upstream_name that matches this component.
+        Listeners can also set their upstream_name attribute to the wildcard
+        string '*' to match any `Transformer`.
+
+        You're unlikely to ever need multiple `Transformer` components, so it's
+        fine to leave your listeners upstream_name on '*'.
+        """
         for node in model.walk():
             if (
                 isinstance(node, TransformerListener)
-                and node.upstream_name == self.name
+                and node.upstream_name in ("*", self.name)
             ):
                 self.add_listener(node)
 
@@ -158,8 +191,9 @@ class Transformer(Pipe):
     def set_annotations(
         self, docs: Iterable[Doc], predictions: FullTransformerBatch
     ) -> None:
-        """Assign the extracted features to the Doc objects and overwrite the
-        vector and similarity hooks.
+        """Assign the extracted features to the Doc objects. By default, the
+        TransformerData object is written to the doc._.trf_data attribute. Your
+        annotation_setter callback is then called, if provided.
 
         docs (Iterable[Doc]): The documents to modify.
         predictions: (FullTransformerBatch): A batch of activations.
@@ -180,10 +214,25 @@ class Transformer(Pipe):
         losses: Optional[Dict[str, float]] = None,
         set_annotations: bool = False,
     ) -> Dict[str, float]:
-        """Learn from a batch of documents and gold-standard information,
-        updating the pipe's model.
+        """Prepare for an update to the transformer.
+        
+        Like the `Tok2Vec` component, the `Transformer` component is unusual
+        in that it does not receive "gold standard" annotations to calculate
+        a weight update. The optimal output of the transformer data is unknown;
+        it's a hidden layer inside the network that is updated by backpropagating
+        from output layers.
 
-        examples (Iterable[Example]): A batch of Example objects.
+        The `Transformer` component therefore does not perform a weight update
+        during its own `update` method. Instead, it runs its transformer model
+        and communicates the output and the backpropagation callback to any
+        downstream components that have been connected to it via the
+        TransformerListener sublayer. If there are multiple listeners, the last
+        layer will actually backprop to the transformer and call the optimizer,
+        while the others simply increment the gradients.
+
+        examples (Iterable[Example]):
+            A batch of Example objects. Only the `predicted` doc object is used,
+            the reference doc is ignored.
         drop (float): The dropout rate.
         set_annotations (bool): Whether or not to update the Example objects
             with the predictions.
@@ -238,6 +287,9 @@ class Transformer(Pipe):
         return losses
 
     def get_loss(self, docs, golds, scores):
+        """A noop function, for compatibility with the Pipe API. See the `update`
+        method for an explanation of the loss mechanics of the component.
+        """
         pass
 
     def begin_training(
