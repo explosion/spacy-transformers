@@ -96,6 +96,7 @@ class Transformer(Pipe):
         The doc._.transformer_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
     """
+
     def __init__(
         self,
         vocab: Vocab,
@@ -134,11 +135,9 @@ class Transformer(Pipe):
         You're unlikely to ever need multiple `Transformer` components, so it's
         fine to leave your listeners upstream_name on '*'.
         """
+        names = ("*", self.name)
         for node in model.walk():
-            if (
-                isinstance(node, TransformerListener)
-                and node.upstream_name in ("*", self.name)
-            ):
+            if isinstance(node, TransformerListener) and node.upstream_name in names:
                 self.add_listener(node)
 
     def __call__(self, doc: Doc) -> Doc:
@@ -215,7 +214,7 @@ class Transformer(Pipe):
         set_annotations: bool = False,
     ) -> Dict[str, float]:
         """Prepare for an update to the transformer.
-        
+
         Like the `Tok2Vec` component, the `Transformer` component is unusual
         in that it does not receive "gold standard" annotations to calculate
         a weight update. The optimal output of the transformer data is unknown;
