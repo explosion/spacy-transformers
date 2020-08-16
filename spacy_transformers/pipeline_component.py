@@ -6,7 +6,7 @@ from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.gold import Example
 from spacy import util
-from spacy.util import minibatch, link_vectors_to_models
+from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
 import torch
@@ -313,7 +313,6 @@ class Transformer(Pipe):
         """
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
-        link_vectors_to_models(self.vocab)
 
     def to_disk(
         self, path: Union[str, Path], *, exclude: Iterable[str] = tuple()
