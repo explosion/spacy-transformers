@@ -7,14 +7,36 @@ from thinc.types import Ragged, Floats3d, FloatsXd
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 
-from .util import slice_hf_tokens
+from .util import slice_hf_tokens, transpose_list
 from .align import get_token_positions
 
 
 @dataclass
 class TransformerData:
-    """Transformer tokens and outputs for one Doc object."""
+    """Transformer tokens and outputs for one Doc object.
+    
+    The transformer models return tensors that refer to a whole padded batch
+    of documents. These tensors are wrapped into the FullTransformerBatch object.
+    The FullTransformerBatch then splits out the per-document data, which is
+    handled by this class. Instances of this class are` typically assigned to
+    the doc._.trf_data extension attribute.
 
+    Attributes
+    ----------
+    tokens (Dict): A slice of the tokens data produced by the Huggingface
+        tokenizer. This may have several fields, including the token IDs, the
+        texts, and the attention mask. See the Huggingface BatchEncoding object
+        for details.
+    tensors (List[FloatsXd]): The activations for the Doc from the transformer.
+        Usually the last tensor that is 3-dimensional will be the most important,
+        as that will provide the final hidden state. Generally activations that
+        are 2-dimensional will be attention weights. Details of this variable
+        will differ depending on the underlying transformer model.
+    align (Ragged): Alignment from the Doc's tokenization to the wordpieces.
+        This is a ragged array, where align.lengths[i] indicates the number of
+        wordpiece tokens that token i aligns against. The actual indices are
+        provided at align[i].dataXd.
+    """
     tokens: Dict
     tensors: List[FloatsXd]
     align: Ragged
@@ -35,6 +57,26 @@ class TransformerData:
 
 @dataclass
 class FullTransformerBatch:
+    """Holds a batch of input and output objects for a transformer model. The
+    data can then be split to a list of `TransformerData` objects to associate
+    the outputs to each `Doc` in the batch.
+
+    Attributes
+    ----------
+    spans (List[List[Span]]): The batch of input spans. The outer list refers
+        to the Doc objects in the batch, and the inner list are the spans for
+        that `Doc`. Note that spans are allowed to overlap or exclude tokens,
+        but each Span can only refer to one Doc (by definition). This means that
+        within a Doc, the regions of the output tensors that correspond to each
+        Span may overlap or have gaps, but for each Doc, there is a non-overlapping
+        contiguous slice of the outputs.
+    tokens (BatchEncoding): The output of the Huggingface tokenizer.
+    tensors (List[torch.Tensor]): The output of the transformer model.
+    align (Ragged): Alignment from the spaCy tokenization to the wordpieces.
+        This is a ragged array, where align.lengths[i] indicates the number of
+        wordpiece tokens that token i aligns against. The actual indices are
+        provided at align[i].dataXd.
+    """
     spans: List[List[Span]]
     tokens: BatchEncoding
     tensors: List[torch.Tensor]
@@ -43,11 +85,18 @@ class FullTransformerBatch:
 
     @property
     def doc_data(self) -> List[TransformerData]:
+        """The outputs, split per spaCy Doc object."""
         if self._doc_data is None:
             self._doc_data = self.split_by_doc()
         return self._doc_data
 
     def unsplit_by_doc(self, arrays: List[List[Floats3d]]) -> "FullTransformerBatch":
+        """Return a new FullTransformerBatch from a split batch of activations,
+        using the current object's spans, tokens and alignment.
+
+        This is used during the backward pass, in order to construct the gradients
+        to pass back into the transformer model.
+        """
         xp = get_array_module(arrays[0][0])
         return FullTransformerBatch(
             spans=self.spans,
@@ -56,7 +105,7 @@ class FullTransformerBatch:
             align=self.align,
         )
 
-    def split_by_doc(self) -> List["TransformerData"]:
+    def split_by_doc(self) -> List[TransformerData]:
         """Split a TransformerData that represents a batch into a list with
         one TransformerData per Doc.
         """
@@ -86,13 +135,3 @@ class FullTransformerBatch:
             prev_tokens += token_count
             start += len(doc_spans)
         return outputs
-
-
-def transpose_list(nested_list):
-    output = []
-    for i, entry in enumerate(nested_list):
-        while len(output) < len(entry):
-            output.append([None] * len(nested_list))
-        for j, x in enumerate(entry):
-            output[j][i] = x
-    return output
