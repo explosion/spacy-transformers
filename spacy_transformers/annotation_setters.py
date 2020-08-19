@@ -5,7 +5,7 @@ from .util import registry
 from .data_classes import FullTransformerBatch
 
 
-@registry.annotation_setters("spacy-transformer.null_annotation_setter.v1")
+@registry.annotation_setters("spacy-transformers.null_annotation_setter.v1")
 def configure_null_annotation_setter() -> Callable[
     [List[Doc], FullTransformerBatch], None
 ]:
