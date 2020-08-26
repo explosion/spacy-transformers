@@ -9,9 +9,8 @@ from .data_classes import FullTransformerBatch, TransformerData
 def configure_trfdata_setter() -> Callable[
     [List[Doc], FullTransformerBatch], None
 ]:
-    attribute = "trf_data"
-    if not Doc.has_extension(attribute):
-        Doc.set_extension(attribute, default=TransformerData.empty())
+    if not Doc.has_extension("trf_data"):
+        Doc.set_extension("trf_data", default=TransformerData.empty())
 
     def trfdata_setter(docs: List[Doc], predictions: FullTransformerBatch) -> None:
         """Set the transforrmer data to the doc._.trf_data attribute.
@@ -23,5 +22,4 @@ def configure_trfdata_setter() -> Callable[
         for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
 
-
-__all__ = ["trfdata_setter", "configure_trfdata_setter"]
+    return trfdata_setter
