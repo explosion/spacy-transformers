@@ -54,7 +54,10 @@ class TransformerListener(Model):
 
 
 def forward(model: TransformerListener, docs, is_train):
+    bp = model.backprop_and_clear
+    if not is_train:
+        bp = lambda dX: []
     if len(docs) == 0:
         return [TransformerData.empty()], lambda d_data: docs
     model.verify_inputs(docs)
-    return model._outputs, model.backprop_and_clear
+    return model._outputs, bp
