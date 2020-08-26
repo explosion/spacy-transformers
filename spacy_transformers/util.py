@@ -12,7 +12,6 @@ import torch.cuda
 
 # fmt: off
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
-registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
 # fmt: on
 
 

@@ -62,9 +62,9 @@ def make_transformer(
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
         the transformer. Usually you will want to use the TransformerModel
         layer for this.
-    annotation_setter (Callble[[List[Doc], FullTransformerBatch], None]): A
+    annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        The doc._.transformer_data attribute is set prior to calling the callback.
+        The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
     """
     return Transformer(
@@ -91,9 +91,9 @@ class Transformer(Pipe):
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
         the transformer. Usually you will want to use the TransformerModel
         layer for this.
-    annotation_setter (Callble[[List[Doc], FullTransformerBatch], None]): A
+    annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        The doc._.transformer_data attribute is set prior to calling the callback.
+        The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
     """
 
@@ -101,7 +101,7 @@ class Transformer(Pipe):
         self,
         vocab: Vocab,
         model: Model[List[Doc], FullTransformerBatch],
-        annotation_setter: Callable = null_annotation_setter,
+        annotation_setter: Callable,
         *,
         name: str = "transformer",
         max_batch_items: int = 128 * 32,  # Max size of padded batch
