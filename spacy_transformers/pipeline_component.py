@@ -14,7 +14,6 @@ from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
 from .util import huggingface_from_pretrained, batch_by_length
-from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
 
@@ -24,7 +23,7 @@ DEFAULT_CONFIG_STR = """
 max_batch_items = 4096
 
 [transformer.annotation_setter]
-@annotation_setters = "spacy-transformers.null_annotation_setter.v1"
+@annotation_setters = "spacy-transformers.trfdata_setter.v1"
 
 [transformer.model]
 @architectures = "spacy-transformers.TransformerModel.v1"
@@ -38,12 +37,10 @@ stride = 96
 """
 
 DEFAULT_CONFIG = Config().from_str(DEFAULT_CONFIG_STR)
-DOC_EXT_ATTR = "trf_data"
 
 
 @Language.factory(
     "transformer",
-    assigns=[f"doc._.{DOC_EXT_ATTR}"],
     default_config=DEFAULT_CONFIG["transformer"],
 )
 def make_transformer(
@@ -72,11 +69,6 @@ def make_transformer(
     )
 
 
-def install_extensions() -> None:
-    if not Doc.has_extension(DOC_EXT_ATTR):
-        Doc.set_extension(DOC_EXT_ATTR, default=TransformerData.empty())
-
-
 class Transformer(Pipe):
     """spaCy pipeline component that provides access to a transformer model from
     the Huggingface transformers library. Usually you will connect subsequent
@@ -84,8 +76,8 @@ class Transformer(Pipe):
     This works similarly to spaCy's Tok2Vec component and Tok2VecListener
     sublayer.
 
-    The activations from the transformer are saved in the doc._.trf_data extension
-    attribute. You can also provide a callback to set additional annotations.
+    The activations from the transformer are saved by the annotation_setter -
+    by default it will store them in the doc._.trf_data extension attribute.
 
     vocab (Vocab): The Vocab object for the pipeline.
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
@@ -115,7 +107,6 @@ class Transformer(Pipe):
         self.annotation_setter = annotation_setter
         self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
-        install_extensions()
 
     def create_listener(self) -> None:
         # TODO: Is this required?
@@ -190,18 +181,15 @@ class Transformer(Pipe):
     def set_annotations(
         self, docs: Iterable[Doc], predictions: FullTransformerBatch
     ) -> None:
-        """Assign the extracted features to the Doc objects. By default, the
-        TransformerData object is written to the doc._.trf_data attribute. Your
-        annotation_setter callback is then called, if provided.
+        """Assign the extracted features to the Doc objects by calling the
+        annotation_setter. By default, this would write to the doc._.trf_data
+        attribute.
 
         docs (Iterable[Doc]): The documents to modify.
         predictions: (FullTransformerBatch): A batch of activations.
 
         DOCS: https://spacy.io/api/pipe#set_annotations
         """
-        doc_data = list(predictions.doc_data)
-        for doc, data in zip(docs, doc_data):
-            doc._.trf_data = data
         self.annotation_setter(docs, predictions)
 
     def update(

@@ -2,21 +2,26 @@ from typing import Callable, List
 from spacy.tokens import Doc
 
 from .util import registry
-from .data_classes import FullTransformerBatch
+from .data_classes import FullTransformerBatch, TransformerData
 
 
-@registry.annotation_setters("spacy-transformers.null_annotation_setter.v1")
-def configure_null_annotation_setter() -> Callable[
+@registry.annotation_setters("spacy-transformers.trfdata_setter.v1")
+def configure_trfdata_setter() -> Callable[
     [List[Doc], FullTransformerBatch], None
 ]:
-    def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
-        """Set no additional annotations on the Doc objects."""
-        pass
+    attribute = "trf_data"
+    if not Doc.has_extension(attribute):
+        Doc.set_extension(attribute, default=TransformerData.empty())
 
-    return null_annotation_setter
+    def trfdata_setter(docs: List[Doc], predictions: FullTransformerBatch) -> None:
+        """Set the transforrmer data to the doc._.trf_data attribute.
+
+        docs (Iterable[Doc]): The documents to modify.
+        predictions (FullTransformerBatch): The data to set, produced by Transformer.predict.
+        """
+        doc_data = list(predictions.doc_data)
+        for doc, data in zip(docs, doc_data):
+            doc._.trf_data = data
 
 
-null_annotation_setter = configure_null_annotation_setter()
-
-
-__all__ = ["null_annotation_setter", "configure_null_annotation_setter"]
+__all__ = ["trfdata_setter", "configure_trfdata_setter"]
