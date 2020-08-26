@@ -61,8 +61,7 @@ def make_transformer(
         layer for this.
     annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        The doc._.trf_data attribute is set prior to calling the callback.
-        By default, no additional annotations are set.
+        By default, the annotations are set on the doc._.trf_data attribute.
     """
     return Transformer(
         nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name
@@ -85,8 +84,7 @@ class Transformer(Pipe):
         layer for this.
     annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        The doc._.trf_data attribute is set prior to calling the callback.
-        By default, no additional annotations are set.
+        By default, the annotations are set on the doc._.trf_data attribute.
     """
 
     def __init__(
