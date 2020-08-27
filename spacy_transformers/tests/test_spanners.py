@@ -33,7 +33,6 @@ def test_get_sent_spans():
 
 
 def test_get_custom_spans():
-    @registry.span_getters("custom_sent_spans")
     def configure_custom_sent_spans(max_length: int):
         def get_custom_sent_spans(docs):
             spans = []
@@ -47,7 +46,7 @@ def test_get_custom_spans():
                         start += max_length
                         end += max_length
                     if start < len(sent):
-                        spans[-1].append(sent[start : len(sent)])
+                        spans[-1].append(sent[start:len(sent)])
             return spans
 
         return get_custom_sent_spans
