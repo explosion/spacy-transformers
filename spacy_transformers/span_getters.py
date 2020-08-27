@@ -16,6 +16,7 @@ def configure_strided_spans(window: int, stride: int) -> SpannerT:
     overlap, so that some tokens are counted twice. This can be desirable, 
     because it allows all tokens to have both a left and right context.
     """
+
     def get_strided_spans(docs: Iterable[Doc]) -> List[List[Span]]:
         spans = []
         for doc in docs:
@@ -42,7 +43,7 @@ def configure_get_sent_spans() -> Callable:
     in somewhat uneven batches, depending on the sentence lengths. However,
     it does provide the transformer with more meaningful windows to attend over.
     """
- 
+
     def get_sent_spans(docs: Iterable[Doc]) -> List[List[Span]]:
         return [list(doc.sents) for doc in docs]
 
@@ -56,7 +57,7 @@ def configure_get_doc_spans() -> Callable:
     the best approach if your `Doc` objects already refer to relatively short
     texts.
     """
- 
+
     def get_doc_spans(docs: Iterable[Doc]) -> List[List[Span]]:
         return [[doc[:]] for doc in docs]
 
