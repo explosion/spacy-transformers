@@ -1,10 +1,13 @@
 import pytest
+from spacy.gold import Example
+from spacy.lang.en import English
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from thinc.api import Model
 
 from .util import DummyTransformer
 from ..annotation_setters import configure_trfdata_setter
+from ..layers import TransformerListener
 from ..pipeline_component import Transformer
 from ..data_classes import TransformerData, FullTransformerBatch
 
@@ -55,3 +58,24 @@ def test_listeners(component, docs):
     docs = list(component.pipe(docs))
     for listener in component.listeners:
         assert listener.verify_inputs(docs)
+
+
+def test_pipeline(vocab, docs):
+    nlp = English(vocab)
+    nlp.add_pipe("transformer")
+    nlp.add_pipe(
+        "tagger",
+        config={
+            "model": {
+                "tok2vec": {
+                    "@architectures": "spacy-transformers.TransformerListener.v1",
+                    "pooling": {"@layers": "reduce_mean.v1"},
+                }
+            }
+        },
+    )
+    assert nlp.pipe_names == ['transformer', 'tagger']
+    tagger = nlp.get_pipe("tagger")
+    assert isinstance(tagger.model.get_ref("tok2vec").layers[0], TransformerListener)
+    examples = [Example.from_dict(d, {}) for d in docs]
+    nlp.begin_training(lambda: examples)
