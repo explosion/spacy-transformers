@@ -79,3 +79,7 @@ def test_pipeline(vocab, docs):
     assert isinstance(tagger.model.get_ref("tok2vec").layers[0], TransformerListener)
     examples = [Example.from_dict(d, {}) for d in docs]
     nlp.begin_training(lambda: examples)
+
+    nlp.disable_pipes("transformer")
+    with pytest.raises(AssertionError):
+        nlp("This is bound to go wrong")
