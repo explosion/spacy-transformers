@@ -24,7 +24,7 @@ DEFAULT_CONFIG_STR = """
 max_batch_items = 4096
 
 [transformer.annotation_setter]
-@annotation_setters = "spacy-transformer.null_annotation_setter.v1"
+@annotation_setters = "spacy-transformers.null_annotation_setter.v1"
 
 [transformer.model]
 @architectures = "spacy-transformers.TransformerModel.v1"
