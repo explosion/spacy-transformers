@@ -46,6 +46,16 @@ class TransformerData:
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
         return cls(tokens={}, tensors=[], align=align)
 
+    @classmethod
+    def zeros(cls, length: int, width: int, *, xp=numpy) -> "TransformerData":
+        """Create a valid TransformerData container for a given shape, filled
+        with zeros."""
+        return cls(
+            tokens={"input_ids": numpy.zeros((length,), dtype="i")},
+            tensors=[xp.zeros((1, length, width), dtype="f")],
+            align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i"))
+        )
+
     @property
     def width(self) -> int:
         for tensor in reversed(self.tensors):

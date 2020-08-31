@@ -74,7 +74,7 @@ def make_transformer(
 
 def install_extensions() -> None:
     if not Doc.has_extension(DOC_EXT_ATTR):
-        Doc.set_extension(DOC_EXT_ATTR, default=TransformerData.empty())
+        Doc.set_extension(DOC_EXT_ATTR, default=None)
 
 
 class Transformer(Pipe):
@@ -119,6 +119,7 @@ class Transformer(Pipe):
 
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""
+        listener.set_dim("nO", self.model.get_dim("nO"))
         self.listeners.append(listener)
 
     def find_listeners(self, model: Model) -> None:
@@ -308,6 +309,14 @@ class Transformer(Pipe):
         """
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
+        if pipeline is not None:
+            for i, (name1, proc1) in enumerate(pipeline):
+                if proc1 is self:
+                    for name2, proc2 in pipeline[i:]:
+                        if hasattr(proc2, "model"):
+                            self.find_listeners(proc2.model)
+                    break
+
 
     def to_disk(
         self, path: Union[str, Path], *, exclude: Iterable[str] = tuple()

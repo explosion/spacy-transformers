@@ -59,7 +59,13 @@ def forward(model: TransformerListener, docs, is_train):
         return model._outputs, model.backprop_and_clear
     else:
         if len(docs) == 0:
-            outputs = [TransformerData.empty()]
+            outputs = []
+        elif any(doc._.trf_data is None for doc in docs):
+            width = model.get_dim("nO")
+            outputs = [
+                TransformerData.zeros(len(doc), width, xp=model.ops.xp)
+                for doc in docs
+            ]
         else:
             outputs = [doc._.trf_data for doc in docs]
-        return outputs, lambda d_data: docs
+        return outputs, lambda d_data: []
