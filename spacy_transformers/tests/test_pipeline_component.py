@@ -57,28 +57,3 @@ def test_listeners(component, docs):
     docs = list(component.pipe(docs))
     for listener in component.listeners:
         assert listener.verify_inputs(docs)
-
-
-def test_pipeline(vocab, docs):
-    nlp = English(vocab)
-    nlp.add_pipe("transformer")
-    nlp.add_pipe(
-        "tagger",
-        config={
-            "model": {
-                "tok2vec": {
-                    "@architectures": "spacy-transformers.TransformerListener.v1",
-                    "pooling": {"@layers": "reduce_mean.v1"},
-                }
-            }
-        },
-    )
-    assert nlp.pipe_names == ['transformer', 'tagger']
-    tagger = nlp.get_pipe("tagger")
-    assert isinstance(tagger.model.get_ref("tok2vec").layers[0], TransformerListener)
-    examples = [Example.from_dict(d, {}) for d in docs]
-    nlp.begin_training(lambda: examples)
-
-    nlp.disable_pipes("transformer")
-    with pytest.raises(AssertionError):
-        nlp("This is bound to go wrong")
