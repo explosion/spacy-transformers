@@ -2,9 +2,9 @@ spacy-nightly>=3.0.0a0,<3.0.0a20
 transformers>=3.0.0,<3.1.0
 torch>=1.0.0
 torchcontrib>=0.0.2,<0.1.0
-srsly>=2.0.0,<3.0.0
+srsly>=2.0.1,<3.0.0
 ftfy>=5.0.0,<6.0.0
-dataclasses>=0.6,<0.7; python_version < "3.7"
+dataclasses>=0.6; python_version < "3.7"
 importlib_metadata>=0.20; python_version < "3.8"
 pytokenizations>=0.2.0
 # Testing
