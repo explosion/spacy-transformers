@@ -62,9 +62,9 @@ def make_transformer(
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
         the transformer. Usually you will want to use the TransformerModel
         layer for this.
-    annotation_setter (Callble[[List[Doc], FullTransformerBatch], None]): A
+    annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        The doc._.transformer_data attribute is set prior to calling the callback.
+        The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
     """
     return Transformer(
@@ -91,9 +91,9 @@ class Transformer(Pipe):
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
         the transformer. Usually you will want to use the TransformerModel
         layer for this.
-    annotation_setter (Callble[[List[Doc], FullTransformerBatch], None]): A
+    annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        The doc._.transformer_data attribute is set prior to calling the callback.
+        The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
     """
 
@@ -116,11 +116,6 @@ class Transformer(Pipe):
         self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
         install_extensions()
-
-    def create_listener(self) -> None:
-        # TODO: Is this required?
-        listener = TransformerListener(upstream_name="transformer")
-        self.listeners.append(listener)
 
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""

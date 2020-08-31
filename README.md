@@ -130,14 +130,14 @@ maxout_pieces = 3
 use_upper = false
 
 [nlp.pipeline.ner.model.tok2vec]
-@architectures = "spacy-transformers.Tok2VecListener.v1"
+@architectures = "spacy-transformers.TransformerListener.v1"
 grad_factor = 1.0
 
 [nlp.pipeline.ner.model.tok2vec.pooling]
 @layers = "reduce_mean.v1"
 ```
 
-The `Tok2VecListener` layer expects a `pooling` layer, which needs
+The `TransformerListener` layer expects a `pooling` layer, which needs
 to be of type `Model[Ragged, Floats2d]`. This layer determines how the vector
 for each spaCy token will be computed from the zero or more source rows the
 token is aligned against. Here we use the `reduce_mean` layer, which averages
