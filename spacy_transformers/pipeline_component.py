@@ -14,6 +14,7 @@ from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
 from .util import huggingface_from_pretrained, batch_by_length
+from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
 
@@ -23,7 +24,7 @@ DEFAULT_CONFIG_STR = """
 max_batch_items = 4096
 
 [transformer.annotation_setter]
-@annotation_setters = "spacy-transformers.trfdata_setter.v1"
+@annotation_setters = "spacy-transformers.null_annotation_setter.v1"
 
 [transformer.model]
 @architectures = "spacy-transformers.TransformerModel.v1"
@@ -37,10 +38,12 @@ stride = 96
 """
 
 DEFAULT_CONFIG = Config().from_str(DEFAULT_CONFIG_STR)
+DOC_EXT_ATTR = "trf_data"
 
 
 @Language.factory(
     "transformer",
+    assigns=[f"doc._.{DOC_EXT_ATTR}"],
     default_config=DEFAULT_CONFIG["transformer"],
 )
 def make_transformer(
@@ -61,11 +64,16 @@ def make_transformer(
         layer for this.
     annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        By default, the annotations are set on the doc._.trf_data attribute.
+        The doc._.trf_data attribute is set prior to calling the callback.
+        By default, no additional annotations are set.
     """
     return Transformer(
         nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name
     )
+
+def install_extensions() -> None:
+    if not Doc.has_extension(DOC_EXT_ATTR):
+        Doc.set_extension(DOC_EXT_ATTR, default=TransformerData.empty())
 
 
 class Transformer(Pipe):
@@ -75,8 +83,8 @@ class Transformer(Pipe):
     This works similarly to spaCy's Tok2Vec component and Tok2VecListener
     sublayer.
 
-    The activations from the transformer are saved by the annotation_setter -
-    by default it will store them in the doc._.trf_data extension attribute.
+    The activations from the transformer are saved in the doc._.trf_data extension
+    attribute. You can also provide a callback to set additional annotations.
 
     vocab (Vocab): The Vocab object for the pipeline.
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
@@ -84,14 +92,15 @@ class Transformer(Pipe):
         layer for this.
     annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
-        By default, the annotations are set on the doc._.trf_data attribute.
+        The doc._.trf_data attribute is set prior to calling the callback.
+        By default, no additional annotations are set.
     """
 
     def __init__(
         self,
         vocab: Vocab,
         model: Model[List[Doc], FullTransformerBatch],
-        annotation_setter: Callable,
+        annotation_setter: Callable = null_annotation_setter,
         *,
         name: str = "transformer",
         max_batch_items: int = 128 * 32,  # Max size of padded batch
@@ -105,11 +114,7 @@ class Transformer(Pipe):
         self.annotation_setter = annotation_setter
         self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
-
-    def create_listener(self) -> None:
-        # TODO: Is this required?
-        listener = TransformerListener(upstream_name="transformer")
-        self.listeners.append(listener)
+        install_extensions()
 
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""
@@ -179,15 +184,18 @@ class Transformer(Pipe):
     def set_annotations(
         self, docs: Iterable[Doc], predictions: FullTransformerBatch
     ) -> None:
-        """Assign the extracted features to the Doc objects by calling the
-        annotation_setter. By default, this would write to the doc._.trf_data
-        attribute.
+        """Assign the extracted features to the Doc objects. By default, the
+        TransformerData object is written to the doc._.trf_data attribute. Your
+        annotation_setter callback is then called, if provided.
 
         docs (Iterable[Doc]): The documents to modify.
         predictions: (FullTransformerBatch): A batch of activations.
 
         DOCS: https://spacy.io/api/pipe#set_annotations
         """
+        doc_data = list(predictions.doc_data)
+        for doc, data in zip(docs, doc_data):
+            doc._.trf_data = data
         self.annotation_setter(docs, predictions)
 
     def update(

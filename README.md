@@ -96,7 +96,7 @@ trf = Transformer(
         get_spans=get_doc_spans,
         tokenizer_config={"use_fast": True},
     ),
-    annotation_setter=trfdata_setter,
+    annotation_setter=null_annotation_setter,
     max_batch_size=32,
 )
 nlp.add_pipe("transformer", trf, first=True)

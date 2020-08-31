@@ -6,7 +6,6 @@ from spacy.tokens import Doc
 from thinc.api import Model
 
 from .util import DummyTransformer
-from ..annotation_setters import configure_trfdata_setter
 from ..layers import TransformerListener
 from ..pipeline_component import Transformer
 from ..data_classes import TransformerData, FullTransformerBatch
@@ -27,7 +26,7 @@ def docs(vocab):
 
 @pytest.fixture
 def component(vocab):
-    return Transformer(Vocab(), DummyTransformer(), configure_trfdata_setter())
+    return Transformer(Vocab(), DummyTransformer())
 
 
 def test_init(component):
