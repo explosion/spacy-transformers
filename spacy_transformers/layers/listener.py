@@ -58,5 +58,8 @@ def forward(model: TransformerListener, docs, is_train):
         model.verify_inputs(docs)
         return model._outputs, model.backprop_and_clear
     else:
-        outputs = [doc._.trf_data for doc in docs]
+        if len(docs) == 0:
+            outputs = [TransformerData.empty()]
+        else:
+            outputs = [doc._.trf_data for doc in docs]
         return outputs, lambda d_data: docs
