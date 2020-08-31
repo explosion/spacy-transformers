@@ -1,12 +1,9 @@
 import pytest
-from spacy.gold import Example
-from spacy.lang.en import English
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from thinc.api import Model
 
 from .util import DummyTransformer
-from ..layers import TransformerListener
 from ..pipeline_component import Transformer
 from ..data_classes import TransformerData, FullTransformerBatch
 
