@@ -58,8 +58,5 @@ def forward(model: TransformerListener, docs, is_train):
         model.verify_inputs(docs)
         return model._outputs, model.backprop_and_clear
     else:
-        if model._batch_id is None:
-            outputs = [TransformerData.empty()]
-        else:
-            outputs = [doc._.trf_data for doc in docs]
+        outputs = [doc._.trf_data for doc in docs]
         return outputs, lambda d_data: docs

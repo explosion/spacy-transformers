@@ -71,6 +71,7 @@ def make_transformer(
         nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name
     )
 
+
 def install_extensions() -> None:
     if not Doc.has_extension(DOC_EXT_ATTR):
         Doc.set_extension(DOC_EXT_ATTR, default=TransformerData.empty())
