@@ -6,7 +6,7 @@ from .util import registry
 SpannerT = Callable[[List[Doc]], List[List[Span]]]
 
 
-@registry.span_getters("strided_spans.v1")
+@registry.span_getters("spacy-transformers.strided_spans.v1")
 def configure_strided_spans(window: int, stride: int) -> SpannerT:
     """
     Set the 'window' and 'stride' options for getting strided spans.
@@ -34,7 +34,7 @@ def configure_strided_spans(window: int, stride: int) -> SpannerT:
     return get_strided_spans
 
 
-@registry.span_getters("sent_spans.v1")
+@registry.span_getters("spacy-transformers.sent_spans.v1")
 def configure_get_sent_spans() -> Callable:
     """
     Create a `span_getter` that uses sentence boundary markers to extract
@@ -49,7 +49,7 @@ def configure_get_sent_spans() -> Callable:
     return get_sent_spans
 
 
-@registry.span_getters("doc_spans.v1")
+@registry.span_getters("spacy-transformers.doc_spans.v1")
 def configure_get_doc_spans() -> Callable:
     """
     Create a `span_getter` that uses the whole document as its spans. This is
