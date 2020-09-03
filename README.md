@@ -84,7 +84,7 @@ name = "bert-base-cased"
 tokenizer_config = {"use_fast": true}
 
 [nlp.pipeline.transformer.model.get_spans]
-@span_getters = "get_doc_spans.v1"
+@span_getters = "spacy-transformers.get_doc_spans.v1"
 ```
 
 ```python
