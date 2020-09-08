@@ -29,7 +29,7 @@ def component(vocab):
 def test_init(component):
     assert isinstance(component.vocab, Vocab)
     assert isinstance(component.model, Model)
-    assert hasattr(component.annotation_setter, "__call__")
+    assert hasattr(component.set_extra_annotations, "__call__")
     assert component.listeners == []
     assert component.cfg == {"max_batch_items": 4096}
 
