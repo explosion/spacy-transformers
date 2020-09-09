@@ -29,7 +29,7 @@ def component(vocab):
 def test_init(component):
     assert isinstance(component.vocab, Vocab)
     assert isinstance(component.model, Model)
-    assert hasattr(component.annotation_setter, "__call__")
+    assert hasattr(component.set_extra_annotations, "__call__")
     assert component.listeners == []
     assert component.cfg == {"max_batch_items": 4096}
 
@@ -48,6 +48,21 @@ def test_set_annotations(component, docs):
     component.set_annotations(docs, trf_data)
     for doc in docs:
         assert isinstance(doc._.trf_data, TransformerData)
+
+
+def test_set_extra_annotations(component, docs):
+    Doc.set_extension("custom_attr", default="")
+
+    def custom_annotation_setter(docs, trf_data):
+        doc_data = list(trf_data.doc_data)
+        for doc, data in zip(docs, doc_data):
+            doc._.custom_attr = data
+
+    component.set_extra_annotations = custom_annotation_setter
+    trf_data = component.predict(docs)
+    component.set_annotations(docs, trf_data)
+    for doc in docs:
+        assert isinstance(doc._.custom_attr, TransformerData)
 
 
 def test_listeners(component, docs):

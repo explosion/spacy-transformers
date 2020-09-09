@@ -75,7 +75,7 @@ Python code.
 ```
 [nlp.pipeline.transformer]
 factory = "transformer"
-extra_annotation_setter = null
+set_extra_annotations = null
 max_batch_size = 32
 
 [nlp.pipeline.transformer.model]
@@ -96,7 +96,7 @@ trf = Transformer(
         get_spans=get_doc_spans,
         tokenizer_config={"use_fast": True},
     ),
-    annotation_setter=null_annotation_setter,
+    set_extra_annotations=null_annotation_setter,
     max_batch_size=32,
 )
 nlp.add_pipe("transformer", trf, first=True)
@@ -166,7 +166,7 @@ via the `Transformer` pipeline component. This sets the `doc._.trf_data` extensi
 attribute, which lets you access the transformers outputs at runtime via the
 `doc._.trf_data` extension attribute. You can also customize how the
 `Transformer` object sets annotations onto the `Doc`, by customizing the 
-`Transformer.annotation_setter` object. This callback will be called with the
+`Transformer.set_extra_annotations` function. This callback will be called with the
 raw input and output data for the whole batch, along with the batch of `Doc`
 objects, allowing you to implement whatever you need.
 

@@ -23,7 +23,7 @@ DEFAULT_CONFIG_STR = """
 [transformer]
 max_batch_items = 4096
 
-[transformer.annotation_setter]
+[transformer.set_extra_annotations]
 @annotation_setters = "spacy-transformers.null_annotation_setter.v1"
 
 [transformer.model]
@@ -50,7 +50,7 @@ def make_transformer(
     nlp: Language,
     name: str,
     model: Model[List[Doc], FullTransformerBatch],
-    annotation_setter: Callable[[List[Doc], FullTransformerBatch], None],
+    set_extra_annotations: Callable[[List[Doc], FullTransformerBatch], None],
     max_batch_items: int,
 ):
     """Construct a Transformer component, which lets you plug a model from the
@@ -62,13 +62,13 @@ def make_transformer(
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
         the transformer. Usually you will want to use the TransformerModel
         layer for this.
-    annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
+    set_extra_annotations (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
         The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
     """
     return Transformer(
-        nlp.vocab, model, annotation_setter, max_batch_items=max_batch_items, name=name
+        nlp.vocab, model, set_extra_annotations, max_batch_items=max_batch_items, name=name
     )
 
 
@@ -91,7 +91,7 @@ class Transformer(Pipe):
     model (Model[List[Doc], FullTransformerBatch]): A thinc Model object wrapping
         the transformer. Usually you will want to use the TransformerModel
         layer for this.
-    annotation_setter (Callable[[List[Doc], FullTransformerBatch], None]): A
+    set_extra_annotations (Callable[[List[Doc], FullTransformerBatch], None]): A
         callback to set additional information onto the batch of `Doc` objects.
         The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
@@ -101,7 +101,7 @@ class Transformer(Pipe):
         self,
         vocab: Vocab,
         model: Model[List[Doc], FullTransformerBatch],
-        annotation_setter: Callable = null_annotation_setter,
+        set_extra_annotations: Callable = null_annotation_setter,
         *,
         name: str = "transformer",
         max_batch_items: int = 128 * 32,  # Max size of padded batch
@@ -112,7 +112,7 @@ class Transformer(Pipe):
         self.model = model
         if not isinstance(self.model, Model):
             raise ValueError(f"Expected Thinc Model, got: {type(self.model)}")
-        self.annotation_setter = annotation_setter
+        self.set_extra_annotations = set_extra_annotations
         self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
         install_extensions()
@@ -188,7 +188,7 @@ class Transformer(Pipe):
     ) -> None:
         """Assign the extracted features to the Doc objects. By default, the
         TransformerData object is written to the doc._.trf_data attribute. Your
-        annotation_setter callback is then called, if provided.
+        set_extra_annotations callback is then called, if provided.
 
         docs (Iterable[Doc]): The documents to modify.
         predictions: (FullTransformerBatch): A batch of activations.
@@ -198,7 +198,7 @@ class Transformer(Pipe):
         doc_data = list(predictions.doc_data)
         for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
-        self.annotation_setter(docs, predictions)
+        self.set_extra_annotations(docs, predictions)
 
     def update(
         self,
