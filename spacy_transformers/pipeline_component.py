@@ -4,7 +4,7 @@ from spacy.language import Language
 from spacy.pipeline.pipe import deserialize_config
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
-from spacy.gold import Example
+from spacy.training import Example
 from spacy import util
 from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
