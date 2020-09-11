@@ -24,8 +24,9 @@ def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
         'bert-base-cased'.
     config (dict): Settings to pass to the tokenizer.
     """
-    tokenizer = AutoTokenizer.from_pretrained(source, **config)
-    transformer = AutoModel.from_pretrained(source)
+    str_path = str(source.absolute())
+    tokenizer = AutoTokenizer.from_pretrained(str_path, **config)
+    transformer = AutoModel.from_pretrained(str_path)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
