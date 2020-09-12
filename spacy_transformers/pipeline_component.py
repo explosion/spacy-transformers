@@ -313,7 +313,7 @@ class Transformer(Pipe):
             for i, (name1, proc1) in enumerate(pipeline):
                 if proc1 is self:
                     for name2, proc2 in pipeline[i:]:
-                        if hasattr(proc2, "model"):
+                        if isinstance(getattr(proc2, "model", None), Model):
                             self.find_listeners(proc2.model)
                     break
 
