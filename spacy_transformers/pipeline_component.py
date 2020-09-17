@@ -309,14 +309,6 @@ class Transformer(Pipe):
         """
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
-        if pipeline is not None:
-            for i, (name1, proc1) in enumerate(pipeline):
-                if proc1 is self:
-                    for name2, proc2 in pipeline[i:]:
-                        if isinstance(getattr(proc2, "model", None), Model):
-                            self.find_listeners(proc2.model)
-                    break
-
 
     def to_disk(
         self, path: Union[str, Path], *, exclude: Iterable[str] = tuple()
