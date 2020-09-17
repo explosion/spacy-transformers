@@ -66,6 +66,7 @@ def set_pytorch_transformer(model, transformer):
         )
     )
     model.attrs["has_transformer"] = True
+    model.set_dim("nO", transformer.config.hidden_size)
 
 
 def init(model: Model, X=None, Y=None):
