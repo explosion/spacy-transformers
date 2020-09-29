@@ -1,4 +1,4 @@
-spacy-nightly>=3.0.0a16,<3.0.0a20
+spacy-nightly>=3.0.0a26,<3.0.0a30
 transformers>=3.0.0,<3.1.0
 torch>=1.0.0
 torchcontrib>=0.0.2,<0.1.0
