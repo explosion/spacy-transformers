@@ -1,4 +1,4 @@
-from typing import List, Callable, Iterable, Iterator, Optional, Dict, Tuple, Union
+from typing import List, Callable, Iterable, Iterator, Optional, Dict, Union
 from spacy.pipeline import Pipe
 from spacy.language import Language
 from spacy.pipeline.pipe import deserialize_config
@@ -68,7 +68,11 @@ def make_transformer(
         By default, no additional annotations are set.
     """
     return Transformer(
-        nlp.vocab, model, set_extra_annotations, max_batch_items=max_batch_items, name=name
+        nlp.vocab,
+        model,
+        set_extra_annotations,
+        max_batch_items=max_batch_items,
+        name=name,
     )
 
 
@@ -144,7 +148,7 @@ class Transformer(Pipe):
         docs (Doc): The Doc to preocess.
         RETURNS (Doc): The processed Doc.
 
-        DOCS: https://spacy.io/api/transformer#call
+        DOCS: https://nightly.spacy.io/api/transformer#call
         """
         outputs = self.predict([doc])
         self.set_annotations([doc], outputs)
@@ -159,7 +163,7 @@ class Transformer(Pipe):
         batch_size (int): The number of documents to buffer.
         YIELDS (Doc): Processed documents in order.
 
-        DOCS: https://spacy.io/api/transformer#pipe
+        DOCS: https://nightly.spacy.io/api/transformer#pipe
         """
         for outer_batch in minibatch(stream, batch_size):
             outer_batch = list(outer_batch)
@@ -175,7 +179,7 @@ class Transformer(Pipe):
         docs (Iterable[Doc]): The documents to predict.
         RETURNS (FullTransformerBatch): The extracted features.
 
-        DOCS: https://spacy.io/api/transformer#predict
+        DOCS: https://nightly.spacy.io/api/transformer#predict
         """
         activations = self.model.predict(docs)
         batch_id = TransformerListener.get_batch_id(docs)
@@ -193,7 +197,7 @@ class Transformer(Pipe):
         docs (Iterable[Doc]): The documents to modify.
         predictions: (FullTransformerBatch): A batch of activations.
 
-        DOCS: https://spacy.io/api/pipe#set_annotations
+        DOCS: https://nightly.spacy.io/api/pipe#set_annotations
         """
         doc_data = list(predictions.doc_data)
         for doc, data in zip(docs, doc_data):
@@ -236,7 +240,7 @@ class Transformer(Pipe):
             Updated using the component name as the key.
         RETURNS (Dict[str, float]): The updated losses dictionary.
 
-        DOCS: https://spacy.io/api/transformer#update
+        DOCS: https://nightly.spacy.io/api/transformer#update
         """
         if losses is None:
             losses = {}
@@ -287,36 +291,26 @@ class Transformer(Pipe):
         """
         pass
 
-    def begin_training(
-        self,
-        get_examples: Callable[[], Iterable[Example]],
-        *,
-        pipeline: Optional[List[Tuple[str, Callable[[Doc], Doc]]]] = None,
-        sgd: Optional[Optimizer] = None,
+    def initialize(
+        self, get_examples: Callable[[], Iterable[Example]], *, nlp: Optional[Language]
     ):
         """Initialize the pipe for training, using data examples if available.
 
         get_examples (Callable[[], Iterable[Example]]): Optional function that
             returns gold-standard Example objects.
-        pipeline (List[Tuple[str, Callable]]): Optional list of pipeline
-            components that this component is part of. Corresponds to
-            nlp.pipeline.
-        sgd (thinc.api.Optimizer): Optional optimizer. Will be created with
-            create_optimizer if it doesn't exist.
-        RETURNS (thinc.api.Optimizer): The optimizer.
+        nlp (Language): The current nlp object.
 
-        DOCS: https://spacy.io/api/transformer#begin_training
+        DOCS: https://nightly.spacy.io/api/transformer#initialize
         """
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
-        if pipeline is not None:
-            for i, (name1, proc1) in enumerate(pipeline):
+        if nlp is not None:
+            for i, (name1, proc1) in enumerate(nlp.pipeline):
                 if proc1 is self:
-                    for name2, proc2 in pipeline[i:]:
+                    for name2, proc2 in nlp.pipeline[i:]:
                         if isinstance(getattr(proc2, "model", None), Model):
                             self.find_listeners(proc2.model)
                     break
-
 
     def to_disk(
         self, path: Union[str, Path], *, exclude: Iterable[str] = tuple()
@@ -326,7 +320,7 @@ class Transformer(Pipe):
         path (str / Path): Path to a directory.
         exclude (Iterable[str]): String names of serialization fields to exclude.
 
-        DOCS: https://spacy.io/api/transformer#to_disk
+        DOCS: https://nightly.spacy.io/api/transformer#to_disk
         """
 
         def save_model(p):
@@ -353,7 +347,7 @@ class Transformer(Pipe):
         exclude (Iterable[str]): String names of serialization fields to exclude.
         RETURNS (Transformer): The loaded object.
 
-        DOCS: https://spacy.io/api/transformer#from_disk
+        DOCS: https://nightly.spacy.io/api/transformer#from_disk
         """
 
         def load_model(p):
