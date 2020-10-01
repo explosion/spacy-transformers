@@ -90,7 +90,7 @@ def test_transformer_pipeline_simple():
     for t in TRAIN_DATA:
         train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
 
-    optimizer = nlp.begin_training()
+    optimizer = nlp.initialize()
     for i in range(2):
         losses = {}
         nlp.update(train_examples, sgd=optimizer, losses=losses)
@@ -142,7 +142,7 @@ def test_transformer_pipeline_tagger():
 
     # Check that the Transformer component finds it listeners
     assert transformer.listeners == []
-    optimizer = nlp.begin_training(lambda: train_examples)
+    optimizer = nlp.initialize(lambda: train_examples)
     assert tagger_trf in transformer.listeners
 
     for i in range(2):
