@@ -1,7 +1,12 @@
 import pytest
+from spacy.language import Language
+from spacy.training.example import Example
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
-from thinc.api import Model
+from spacy import util
+from spacy_transformers.layers import TransformerListener
+from thinc.api import Model, Config
+from numpy.testing import assert_equal
 
 from .util import DummyTransformer
 from ..pipeline_component import Transformer
@@ -69,3 +74,82 @@ def test_listeners(component, docs):
     docs = list(component.pipe(docs))
     for listener in component.listeners:
         assert listener.verify_inputs(docs)
+
+
+TRAIN_DATA = [
+    ("I like green eggs", {"tags": ["N", "V", "J", "N"]}),
+    ("Eat blue ham", {"tags": ["V", "J", "N"]}),
+]
+
+
+def test_transformer_pipeline_simple():
+    """Test that a simple pipeline with just a transformer at least runs"""
+    nlp = Language()
+    nlp.add_pipe("transformer")
+    train_examples = []
+    for t in TRAIN_DATA:
+        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
+
+    optimizer = nlp.begin_training()
+    for i in range(2):
+        losses = {}
+        nlp.update(train_examples, sgd=optimizer, losses=losses)
+    doc = nlp("We're interested at underwater basket weaving.")
+    assert doc
+
+
+cfg_string = """
+    [nlp]
+    lang = "en"
+    pipeline = ["transformer","tagger"]
+
+    [components]
+
+    [components.tagger]
+    factory = "tagger"
+    
+    [components.tagger.model]
+    @architectures = "spacy.Tagger.v1"
+    nO = null
+
+    [components.tagger.model.tok2vec]
+    @architectures = "spacy-transformers.TransformerListener.v1"
+    grad_factor = 1.0
+    
+    [components.tagger.model.tok2vec.pooling]
+    @layers = "reduce_mean.v1"
+
+    [components.transformer]
+    factory = "transformer"
+    """
+
+
+def test_transformer_pipeline_tagger():
+    """Test that a pipeline with just a transformer+tagger runs and trains properly"""
+    orig_config = Config().from_str(cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["transformer", "tagger"]
+    tagger = nlp.get_pipe("tagger")
+    transformer = nlp.get_pipe("transformer")
+    tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
+    assert isinstance(transformer, Transformer)
+    assert isinstance(tagger_trf, TransformerListener)
+    train_examples = []
+    for t in TRAIN_DATA:
+        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
+        for tag in t[1]["tags"]:
+            tagger.add_label(tag)
+
+    # Check that the Transformer component finds it listeners
+    assert transformer.listeners == []
+    optimizer = nlp.begin_training(lambda: train_examples)
+    assert tagger_trf in transformer.listeners
+
+    for i in range(2):
+        losses = {}
+        nlp.update(train_examples, sgd=optimizer, losses=losses)
+
+    doc = nlp("We're interested at underwater basket weaving.")
+    doc_tensor = tagger_trf.predict([doc])
+
+    assert_equal(doc._.trf_data.tensors, doc_tensor[0].tensors)
