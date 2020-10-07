@@ -121,6 +121,9 @@ class Transformer(Pipe):
         self.listeners: List[TransformerListener] = []
         install_extensions()
 
+    def is_trainable(self):
+        return True
+
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""
         listener.set_dim("nO", self.model.get_dim("nO"))
