@@ -126,8 +126,9 @@ class Transformer(Pipe):
 
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""
-        listener.set_dim("nO", self.model.get_dim("nO"))
-        self.listeners.append(listener)
+        if listener not in self.listeners:
+            listener.set_dim("nO", self.model.get_dim("nO"))
+            self.listeners.append(listener)
 
     def find_listeners(self, model: Model) -> None:
         """Walk over a model, looking for layers that are TransformerListener
