@@ -1,10 +1,10 @@
 from typing import List, Callable, Iterable, Iterator, Optional, Dict, Union
-from spacy.pipeline import Pipe
 from spacy.language import Language
+from spacy.pipeline.trainable_pipe import TrainablePipe
 from spacy.pipeline.pipe import deserialize_config
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
-from spacy.training import Example
+from spacy.training import Example, validate_examples, validate_get_examples
 from spacy import util
 from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
@@ -81,7 +81,7 @@ def install_extensions() -> None:
         Doc.set_extension(DOC_EXT_ATTR, default=None)
 
 
-class Transformer(Pipe):
+class Transformer(TrainablePipe):
     """spaCy pipeline component that provides access to a transformer model from
     the Huggingface transformers library. Usually you will connect subsequent
     components to the shared transformer using the TransformerListener layer.
@@ -120,9 +120,7 @@ class Transformer(Pipe):
         self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
         install_extensions()
-
-    def is_trainable(self):
-        return True
+        self._added_strings = set()
 
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""
@@ -245,6 +243,7 @@ class Transformer(Pipe):
 
         DOCS: https://nightly.spacy.io/api/transformer#update
         """
+        validate_examples(examples, "Transformer.update")
         if losses is None:
             losses = {}
         docs = [eg.predicted for eg in examples]
@@ -306,6 +305,7 @@ class Transformer(Pipe):
 
         DOCS: https://nightly.spacy.io/api/transformer#initialize
         """
+        validate_get_examples(get_examples, "Transformer.initialize")
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
         if nlp is not None:
@@ -338,7 +338,6 @@ class Transformer(Pipe):
 
         serialize = {}
         serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
-        serialize["vocab"] = lambda p: self.vocab.to_disk(p)
         serialize["model"] = lambda p: save_model(p)
         util.to_disk(path, serialize, exclude)
 
@@ -363,7 +362,6 @@ class Transformer(Pipe):
             self.model.attrs["set_transformer"](self.model, transformer)
 
         deserialize = {
-            "vocab": self.vocab.from_disk,
             "cfg": lambda p: self.cfg.update(deserialize_config(p)),
             "model": load_model,
         }
