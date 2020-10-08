@@ -1,6 +1,7 @@
 import pytest
 from spacy.language import Language
 from spacy.training.example import Example
+from spacy.util import make_tempdir
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from spacy import util
@@ -151,5 +152,15 @@ def test_transformer_pipeline_tagger():
 
     doc = nlp("We're interested at underwater basket weaving.")
     doc_tensor = tagger_trf.predict([doc])
-
     assert_equal(doc._.trf_data.tensors, doc_tensor[0].tensors)
+
+    # ensure IO goes OK
+    with make_tempdir() as d:
+        file_path = d / "trained_nlp"
+        nlp.to_disk(file_path)
+        nlp2 = util.load_model_from_path(file_path)
+        doc = nlp2("We're interested at underwater basket weaving.")
+        tagger2 = nlp2.get_pipe("tagger")
+        tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
+        doc_tensor2 = tagger_trf2.predict([doc])
+        assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
