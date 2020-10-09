@@ -39,7 +39,7 @@ def TransformerModel(
             "tokenizer_config": tokenizer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
-            "flush_cache_chance": 0.05,
+            "flush_cache_chance": 0.0,
         },
     )
 
