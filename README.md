@@ -44,7 +44,10 @@ CUDA10.0.
 
 If you are having trouble installing PyTorch, follow the 
 [instructions](https://pytorch.org/get-started/locally/) on the official website 
-for your specific operation system and requirements.
+for your specific operation system and requirements, or try the following:
+```bash
+pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.html
+```
 
 ## 📖 Usage
 
