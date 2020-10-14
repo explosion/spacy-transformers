@@ -34,8 +34,8 @@ architectures, such as BERT, GPT-2, XLNet, etc.
 
 Installing the package from pip will automatically install all dependencies,
 including PyTorch and spaCy. Make sure you install this package **before** you
-install the models. Also note that this package requires **Python 3.6+** and
-spaCy v3.
+install the models. Also note that this package requires **Python 3.6+**,
+**PyTorch v1.5+** and **spaCy v3.0+**.
 
 ```bash
 pip install spacy-nightly[transformers] --pre
