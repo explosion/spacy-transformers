@@ -93,6 +93,13 @@ class FullTransformerBatch:
     align: Ragged
     _doc_data: Optional[List[TransformerData]] = None
 
+    @classmethod
+    def empty(cls, nr_docs) -> "FullTransformerBatch":
+        spans = [[] for i in range(nr_docs)]
+        doc_data = [TransformerData.empty() for i in range(nr_docs)]
+        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
+        return cls(spans=spans, tokens={}, tensors=[], align=align, _doc_data=doc_data)
+
     @property
     def doc_data(self) -> List[TransformerData]:
         """The outputs, split per spaCy Doc object."""

@@ -183,7 +183,11 @@ class Transformer(TrainablePipe):
 
         DOCS: https://nightly.spacy.io/api/transformer#predict
         """
-        activations = self.model.predict(docs)
+        if not any(len(doc) for doc in docs):
+            # Handle cases where there are no tokens in any docs.
+            activations = FullTransformerBatch.empty(len(docs))
+        else:
+            activations = self.model.predict(docs)
         batch_id = TransformerListener.get_batch_id(docs)
         for listener in self.listeners:
             listener.receive(batch_id, activations.doc_data, None)
@@ -250,6 +254,9 @@ class Transformer(TrainablePipe):
         docs = [eg.predicted for eg in examples]
         if isinstance(docs, Doc):
             docs = [docs]
+        if not any(len(doc) for doc in docs):
+            # Handle cases where there are no tokens in any docs.
+            return losses
         set_dropout_rate(self.model, drop)
         trf_full, bp_trf_full = self.model.begin_update(docs)
         d_tensors = []

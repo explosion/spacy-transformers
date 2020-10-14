@@ -164,3 +164,32 @@ def test_transformer_pipeline_tagger():
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
         doc_tensor2 = tagger_trf2.predict([doc])
         assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
+
+
+def test_transformer_pipeline_empty():
+    """Test that the pipeline doesn't fail with empty input"""
+    orig_config = Config().from_str(cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    tagger = nlp.get_pipe("tagger")
+    for t in TRAIN_DATA:
+        for tag in t[1]["tags"]:
+            tagger.add_label(tag)
+
+    optimizer = nlp.initialize()
+    losses = {}
+    train_example = Example.from_dict(nlp.make_doc(""), {})
+    nlp.update([train_example], sgd=optimizer, losses=losses)
+
+    doc = nlp("")
+    _assert_empty(doc._.trf_data)
+    docs = nlp.pipe(["", ""])
+    for doc in docs:
+        _assert_empty(doc._.trf_data)
+    nlp.pipe([])
+
+
+def _assert_empty(trf_data):
+    empty = TransformerData.empty()
+    assert trf_data.tokens == empty.tokens
+    assert trf_data.tensors == empty.tensors
+    assert len(trf_data.align.data) == 0
