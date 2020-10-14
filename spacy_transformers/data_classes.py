@@ -93,6 +93,13 @@ class FullTransformerBatch:
     align: Ragged
     _doc_data: Optional[List[TransformerData]] = None
 
+    @classmethod
+    def empty(cls, nr_docs) -> "FullTransformerBatch":
+        spans = [[] for i in range(nr_docs)]
+        doc_data = [TransformerData.empty() for i in range(nr_docs)]
+        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
+        return cls(spans=spans, tokens={}, tensors=[], align=align, _doc_data=doc_data)
+
     @property
     def doc_data(self) -> List[TransformerData]:
         """The outputs, split per spaCy Doc object."""
@@ -127,21 +134,25 @@ class FullTransformerBatch:
         start = 0
         prev_tokens = 0
         for doc_spans in self.spans:
-            start_i = token_positions[doc_spans[0][0]]
-            end_i = token_positions[doc_spans[-1][-1]] + 1
-            end = start + len(doc_spans)
-            doc_tokens = slice_hf_tokens(self.tokens, start, end)
-            doc_tensors = [torch2xp(t[start:end]) for t in self.tensors]
-            doc_align = self.align[start_i:end_i]
-            doc_align.data = doc_align.data - prev_tokens
-            outputs.append(
-                TransformerData(
-                    tokens=doc_tokens,
-                    tensors=doc_tensors,  # type: ignore
-                    align=doc_align,
+            if len(doc_spans) == 0 or len(doc_spans[0]) == 0:
+                outputs.append(TransformerData.empty())
+                token_count = 0
+            else:
+                start_i = token_positions[doc_spans[0][0]]
+                end_i = token_positions[doc_spans[-1][-1]] + 1
+                end = start + len(doc_spans)
+                doc_tokens = slice_hf_tokens(self.tokens, start, end)
+                doc_tensors = [torch2xp(t[start:end]) for t in self.tensors]
+                doc_align = self.align[start_i:end_i]
+                doc_align.data = doc_align.data - prev_tokens
+                outputs.append(
+                    TransformerData(
+                        tokens=doc_tokens,
+                        tensors=doc_tensors,  # type: ignore
+                        align=doc_align,
+                    )
                 )
-            )
-            token_count = sum(len(texts) for texts in doc_tokens["input_texts"])
+                token_count = sum(len(texts) for texts in doc_tokens["input_texts"])
             prev_tokens += token_count
             start += len(doc_spans)
         return outputs
