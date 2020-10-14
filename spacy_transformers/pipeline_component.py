@@ -120,7 +120,6 @@ class Transformer(TrainablePipe):
         self.cfg = {"max_batch_items": max_batch_items}
         self.listeners: List[TransformerListener] = []
         install_extensions()
-        self._added_strings = set()
 
     def add_listener(self, listener: TransformerListener) -> None:
         """Add a listener for a downstream component. Usually internals."""
@@ -339,6 +338,7 @@ class Transformer(TrainablePipe):
 
         serialize = {}
         serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
+        serialize["vocab"] = lambda p: self.vocab.to_disk(p)
         serialize["model"] = lambda p: save_model(p)
         util.to_disk(path, serialize, exclude)
 
@@ -363,6 +363,7 @@ class Transformer(TrainablePipe):
             self.model.attrs["set_transformer"](self.model, transformer)
 
         deserialize = {
+            "vocab": self.vocab.from_disk,
             "cfg": lambda p: self.cfg.update(deserialize_config(p)),
             "model": load_model,
         }
