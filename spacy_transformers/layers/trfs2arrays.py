@@ -11,7 +11,7 @@ def trfs2arrays(
 ) -> Model[List[TransformerData], List[Floats2d]]:
     """Pool transformer data into token-aligned tensors."""
     return Model(
-        "trfs2arrays", forward, layers=[pooling], attrs={"grad_factor": grad_factor},
+        "trfs2arrays", forward, layers=[pooling], attrs={"grad_factor": grad_factor}
     )
 
 
@@ -28,6 +28,8 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             output, get_d_dst = pooling(dst, is_train)
             outputs.append(output)
             backprops.append((get_d_dst, get_d_src))
+        else:
+            outputs.append(model.ops.alloc2f(0, 0))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
         d_trf_datas = []
@@ -43,9 +45,10 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
             d_trf_datas.append(
                 TransformerData(
-                    tensors=d_tensors, tokens=trf_data.tokens, align=trf_data.align,
+                    tensors=d_tensors, tokens=trf_data.tokens, align=trf_data.align
                 )
             )
         return d_trf_datas
 
+    assert len(outputs) == len(trf_datas)
     return outputs, backprop_trf_to_tensor

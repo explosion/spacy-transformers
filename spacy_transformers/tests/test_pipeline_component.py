@@ -171,21 +171,39 @@ def test_transformer_pipeline_empty():
     orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     tagger = nlp.get_pipe("tagger")
+    train_examples = []
     for t in TRAIN_DATA:
+        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
         for tag in t[1]["tags"]:
             tagger.add_label(tag)
 
+    # train on empty doc
     optimizer = nlp.initialize()
     losses = {}
-    train_example = Example.from_dict(nlp.make_doc(""), {})
-    nlp.update([train_example], sgd=optimizer, losses=losses)
+    empty_train_example = Example.from_dict(nlp.make_doc(""), {})
+    nlp.update(train_examples, sgd=optimizer, losses=losses)
+    nlp.update([empty_train_example], sgd=optimizer, losses=losses)
+    train_examples.append(empty_train_example)
+    nlp.update(train_examples, sgd=optimizer, losses=losses)
 
+    # predict empty doc
     doc = nlp("")
     _assert_empty(doc._.trf_data)
     docs = nlp.pipe(["", ""])
     for doc in docs:
         _assert_empty(doc._.trf_data)
     nlp.pipe([])
+
+    # predict combination of empty and non-empty
+    doc = nlp("This is a sentence")
+    normal_tags = [t.tag_ for t in doc]
+
+    docs = list(nlp.pipe(["", "This is a sentence", "", ""]))
+    _assert_empty(docs[0]._.trf_data)
+    assert [t.tag_ for t in docs[0]] == []
+    assert [t.tag_ for t in docs[1]] == normal_tags
+    _assert_empty(docs[2]._.trf_data)
+    _assert_empty(docs[3]._.trf_data)
 
 
 def _assert_empty(trf_data):
