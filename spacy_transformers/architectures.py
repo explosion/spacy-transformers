@@ -9,7 +9,7 @@ from .util import registry
 
 @registry.architectures.register("spacy-transformers.TransformerListener.v1")
 def transformer_listener_tok2vec_v1(
-    pooling: Model[Ragged, Floats2d], grad_factor: float = 1.0
+    pooling: Model[Ragged, Floats2d], grad_factor: float = 1.0, upstream: str = "*"
 ) -> Model[List[Doc], List[Floats2d]]:
     """Create a 'TransformerListener' layer, which will connect to a Transformer
     component earlier in the pipeline.
@@ -30,8 +30,16 @@ def transformer_listener_tok2vec_v1(
         them upstream. You can set this to 0 to "freeze" the transformer weights
         with respect to the component, or use it to make some components more
         significant than others. Leaving it at 1.0 is usually fine.
+    upstream (str): A string to identify the 'upstream' Transformer
+        to communicate with. The upstream name should either be the wildcard
+        string '*', or the name of the `Transformer` component. You'll almost
+        never have multiple upstream Transformer components, so the wildcard
+        string will almost always be fine.
     """
-    return chain(TransformerListener("transformer"), trfs2arrays(pooling, grad_factor),)
+    return chain(
+        TransformerListener(upstream_name=upstream),
+        trfs2arrays(pooling, grad_factor)
+    )
 
 
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v1")
