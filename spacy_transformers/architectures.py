@@ -31,7 +31,10 @@ def transformer_listener_tok2vec_v1(
         with respect to the component, or use it to make some components more
         significant than others. Leaving it at 1.0 is usually fine.
     """
-    return chain(TransformerListener("transformer"), trfs2arrays(pooling, grad_factor),)
+    listener = TransformerListener("transformer")
+    model = chain(listener, trfs2arrays(pooling, grad_factor))
+    model.set_ref("listener", listener)
+    return model
 
 
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v1")

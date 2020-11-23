@@ -26,14 +26,12 @@ cfg_string = """
     [components.textcat.model.tok2vec]
     @architectures = "spacy-transformers.TransformerListener.v1"
     grad_factor = 1.0
-    upstream = ${components.transformer.name}
 
     [components.textcat.model.tok2vec.pooling]
     @layers = "reduce_mean.v1"
 
     [components.transformer]
     factory = "transformer"
-    name = "custom_upstream_2"
     """
 
 
