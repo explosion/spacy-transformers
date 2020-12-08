@@ -1,6 +1,6 @@
 import numpy
 from typing import cast, Dict, List, Tuple, Callable, Set
-import tokenizations
+from spacy_alignments.tokenizations import get_alignments
 from spacy.tokens import Span, Token
 from thinc.api import Ops
 from thinc.types import Ragged, Floats2d, Ints1d
@@ -142,7 +142,7 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
     wp_start = 0
     for i, (span, wp_toks) in enumerate(zip(spans, wordpieces)):
         sp_toks = [token.text for token in span]
-        span2wp, wp2span = tokenizations.get_alignments(sp_toks, wp_toks)
+        span2wp, wp2span = get_alignments(sp_toks, wp_toks)
         for token, wp_js in zip(span, span2wp):
             position = token_positions[token]
             alignment[position].update(wp_start + j for j in wp_js)
