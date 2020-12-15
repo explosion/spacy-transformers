@@ -1,5 +1,5 @@
 import numpy
-from typing import cast, Dict, List, Tuple, Callable, Set
+from typing import cast, Dict, List, Tuple, Callable, Set, Optional
 from spacy_alignments.tokenizations import get_alignments
 from spacy.tokens import Span, Token
 from thinc.api import Ops
@@ -100,7 +100,7 @@ def get_alignment_via_offset_mapping(spans: List[Span], token_data) -> Ragged:
     return align
 
 
-def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
+def get_alignment(spans: List[Span], wordpieces: List[List[str]], special_tokens: Optional[List[str]] = None) -> Ragged:
     """Compute a ragged alignment array that records, for each unique token in
     `spans`, the corresponding indices in the flattened `wordpieces` array.
     For instance, imagine you have two overlapping spans:
@@ -135,6 +135,8 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
     """
     if len(spans) != len(wordpieces):
         raise ValueError("Cannot align batches of different sizes.")
+    if special_tokens is None:
+        special_tokens = []
     # Tokens can occur more than once, and we need the alignment of each token
     # to its place in the concatenated wordpieces array.
     token_positions = get_token_positions(spans)
@@ -142,7 +144,8 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]]) -> Ragged:
     wp_start = 0
     for i, (span, wp_toks) in enumerate(zip(spans, wordpieces)):
         sp_toks = [token.text for token in span]
-        span2wp, wp2span = get_alignments(sp_toks, wp_toks)
+        wp_toks_filtered = [tok if tok not in special_tokens else "" for tok in wp_toks]
+        span2wp, wp2span = get_alignments(sp_toks, wp_toks_filtered)
         for token, wp_js in zip(span, span2wp):
             position = token_positions[token]
             alignment[position].update(wp_start + j for j in wp_js)
