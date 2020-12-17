@@ -144,7 +144,14 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]], special_tokens
     wp_start = 0
     for i, (span, wp_toks) in enumerate(zip(spans, wordpieces)):
         sp_toks = [token.text for token in span]
-        wp_toks_filtered = [tok if tok not in special_tokens else "" for tok in wp_toks]
+        wp_toks_filtered = wp_toks
+        # In the case that the special tokens do not appear in the text, filter
+        # them out for alignment purposes so that special tokens like "<s>" are
+        # not aligned to the character "s" in the text. (If the special tokens
+        # appear in the text, it's not possible to distinguish them from the
+        # added special tokens, so they may be aligned incorrectly.)
+        if not any([special in span.text for special in special_tokens]):
+            wp_toks_filtered = [tok if tok not in special_tokens else "" for tok in wp_toks]
         span2wp, wp2span = get_alignments(sp_toks, wp_toks_filtered)
         for token, wp_js in zip(span, span2wp):
             position = token_positions[token]
