@@ -21,14 +21,14 @@ class DummyTokenizer:
     def all_special_tokens(self):
         return [self.start_symbol, self.end_symbol]
 
-    def batch_encode_plus(
+    def __call__(
         self,
         texts,
         add_special_tokens=True,
         max_length=None,
         stride: int = 0,
         truncation_strategy="longest_first",
-        pad_to_max_length=False,
+        padding=False,
         is_pretokenized=False,
         return_tensors=None,
         return_token_type_ids=None,
