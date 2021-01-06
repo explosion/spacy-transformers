@@ -38,7 +38,7 @@ def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
 
 def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     """Apply a Huggingface tokenizer to a batch of texts."""
-    token_data = tokenizer.batch_encode_plus(
+    token_data = tokenizer(
         texts,
         add_special_tokens=True,
         return_attention_mask=True,
@@ -46,7 +46,7 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
         return_offsets_mapping=isinstance(tokenizer, PreTrainedTokenizerFast),
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
-        pad_to_max_length=True,
+        padding="longest",
     )
     token_data["input_texts"] = [
         tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]
