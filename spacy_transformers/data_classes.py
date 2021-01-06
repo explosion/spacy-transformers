@@ -91,21 +91,21 @@ class FullTransformerBatch:
     tokens: BatchEncoding
     tensors: List[torch.Tensor]
     align: Ragged
-    _doc_data: Optional[List[TransformerData]] = None
+    cached_doc_data: Optional[List[TransformerData]] = None
 
     @classmethod
     def empty(cls, nr_docs) -> "FullTransformerBatch":
         spans = [[] for i in range(nr_docs)]
         doc_data = [TransformerData.empty() for i in range(nr_docs)]
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(spans=spans, tokens={}, tensors=[], align=align, _doc_data=doc_data)
+        return cls(spans=spans, tokens={}, tensors=[], align=align, cached_doc_data=doc_data)
 
     @property
     def doc_data(self) -> List[TransformerData]:
         """The outputs, split per spaCy Doc object."""
-        if self._doc_data is None:
-            self._doc_data = self.split_by_doc()
-        return self._doc_data
+        if self.cached_doc_data is None:
+            self.cached_doc_data = self.split_by_doc()
+        return self.cached_doc_data
 
     def unsplit_by_doc(self, arrays: List[List[Floats3d]]) -> "FullTransformerBatch":
         """Return a new FullTransformerBatch from a split batch of activations,
