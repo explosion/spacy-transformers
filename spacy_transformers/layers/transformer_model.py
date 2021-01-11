@@ -116,7 +116,7 @@ def forward(
     # if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
     #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
     # else:
-    align = get_alignment(flat_spans, token_data["input_texts"])
+    align = get_alignment(flat_spans, token_data["input_texts"], model.attrs["tokenizer"].all_special_tokens)
     output = FullTransformerBatch(
         spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )

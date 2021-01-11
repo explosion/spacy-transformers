@@ -17,6 +17,10 @@ class DummyTokenizer:
         self.start_symbol = "<s>"
         self.end_symbol = "</s>"
 
+    @property
+    def all_special_tokens(self):
+        return [self.start_symbol, self.end_symbol]
+
     def __call__(
         self,
         texts,
