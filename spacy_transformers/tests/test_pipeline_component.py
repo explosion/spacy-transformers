@@ -32,6 +32,22 @@ def component(vocab):
     return Transformer(Vocab(), DummyTransformer())
 
 
+@pytest.fixture(scope="module")
+def simple_nlp():
+    nlp = Language()
+    nlp.add_pipe("transformer")
+    train_examples = []
+    for t in TRAIN_DATA:
+        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
+
+    optimizer = nlp.initialize()
+    for i in range(2):
+        losses = {}
+        nlp.update(train_examples, sgd=optimizer, losses=losses)
+
+    return nlp
+
+
 def test_init(component):
     assert isinstance(component.vocab, Vocab)
     assert isinstance(component.model, Model)
@@ -83,20 +99,17 @@ TRAIN_DATA = [
 ]
 
 
-def test_transformer_pipeline_simple():
+def test_transformer_pipeline_simple(simple_nlp):
     """Test that a simple pipeline with just a transformer at least runs"""
-    nlp = Language()
-    nlp.add_pipe("transformer")
-    train_examples = []
-    for t in TRAIN_DATA:
-        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
-
-    optimizer = nlp.initialize()
-    for i in range(2):
-        losses = {}
-        nlp.update(train_examples, sgd=optimizer, losses=losses)
-    doc = nlp("We're interested at underwater basket weaving.")
+    doc = simple_nlp("We're interested at underwater basket weaving.")
     assert doc
+
+
+def test_transformer_pipeline_long_token(simple_nlp):
+    """Test that a simple pipeline raises an error on a text that exceeds the
+    model max length."""
+    with pytest.raises(ValueError):
+        doc = simple_nlp("https://example.com/" + "a/" * 1000)
 
 
 cfg_string = """
