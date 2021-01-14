@@ -16,6 +16,7 @@ class DummyTokenizer:
         self.int2str = {}
         self.start_symbol = "<s>"
         self.end_symbol = "</s>"
+        self.model_max_length = 512
 
     @property
     def all_special_tokens(self):
@@ -29,6 +30,7 @@ class DummyTokenizer:
         stride: int = 0,
         truncation_strategy="longest_first",
         padding=False,
+        truncation=False,
         is_pretokenized=False,
         return_tensors=None,
         return_token_type_ids=None,
@@ -52,11 +54,14 @@ class DummyTokenizer:
             output["attention_mask"].append(mask)
             output["token_type_ids"].append(type_ids)
             output["offset_mapping"].append(offsets)
-        output = self._pad(output)
+        if padding:
+            output = self._pad(output)
         if return_tensors == "pt":
             output["input_ids"] = torch.tensor(output["input_ids"])  # type: ignore
             output["attention_mask"] = torch.tensor(output["attention_mask"])  # type: ignore
             output["token_type_ids"] = torch.tensor(output["token_type_ids"])  # type: ignore
+        if return_length:
+            output["length"] = torch.tensor([len(x) for x in output["input_ids"]])  # type: ignore
         return output
 
     def convert_ids_to_tokens(self, ids: Union[List[int], torch.Tensor]) -> List[str]:

@@ -51,6 +51,19 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     token_data["input_texts"] = [
         tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]
     ]
+    # Because of padding=longest all sequences contain the same number of
+    # tokens, so simply check whether the first sequence is too long.
+    if (
+        len(token_data["length"]) > 0
+        and token_data["length"][0] > tokenizer.model_max_length
+    ):
+        for text, tokens in zip(texts, token_data["input_texts"]):
+            # The longest text(s) in the batch will have another symbol (the end
+            # symbol) rather than the pad token as the final token in the
+            # sequence. Raise an error on the first such text found.
+            if tokens[-1] != tokenizer.pad_token:
+                msg = f"The following input span is too long for the model max length {tokenizer.model_max_length}. Preprocess the texts to break up long tokens or if you're training a new model, you may want to modify the spaCy tokenizer or the @span_getters in the model config:\n\n{text}"
+                raise ValueError(msg)
     return token_data
 
 
