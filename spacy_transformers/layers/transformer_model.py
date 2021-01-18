@@ -116,7 +116,7 @@ def forward(
     # if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
     #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
     # else:
-    align = get_alignment(flat_spans, token_data["input_texts"])
+    align = get_alignment(flat_spans, token_data["input_texts"], model.attrs["tokenizer"].all_special_tokens)
     output = FullTransformerBatch(
         spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )
@@ -147,6 +147,8 @@ def _convert_transformer_inputs(model, tokens: BatchEncoding, is_train):
 
 def _convert_transformer_outputs(model, inputs_outputs, is_train):
     _, tensors = inputs_outputs
+    if hasattr(tensors, "to_tuple"):
+        tensors = tensors.to_tuple()
 
     def backprop(d_tensors: List[torch.Tensor]) -> ArgsKwargs:
         return ArgsKwargs(args=(tensors,), kwargs={"grad_tensors": d_tensors})

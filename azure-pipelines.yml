@@ -12,15 +12,15 @@ jobs:
       Python36Linux:
         imageName: 'ubuntu-16.04'
         python.version: '3.6'
-      Python36Mac:
-        imageName: 'macos-10.14'
-        python.version: '3.6'
-      Python37Linux:
-        imageName: 'ubuntu-16.04'
-        python.version: '3.7'
       Python37Mac:
         imageName: 'macos-10.14'
         python.version: '3.7'
+      Python38Linux:
+        imageName: 'ubuntu-16.04'
+        python.version: '3.8'
+      Python38Mac:
+        imageName: 'macos-10.14'
+        python.version: '3.8'
     maxParallel: 4
   pool:
     vmImage: $(imageName)
@@ -32,15 +32,22 @@ jobs:
       architecture: 'x64'
 
   - script: |
-      python -m pip install --upgrade pip wheel
+      python -m pip install --upgrade pip setuptools
       pip install -r requirements.txt
     displayName: 'Install dependencies'
 
   - script: python setup.py sdist
     displayName: 'Build sdist'
 
+  - script: |
+      pip freeze > installed.txt
+      pip uninstall -y -r installed.txt
+    displayName: "Uninstall all packages"
+
   - script: pip install dist/*.tar.gz
     displayName: 'Install from sdist'
 
-  - script: python -m pytest spacy_transformers --cov=spacy_transformers
+  - script: |
+      pip install -r requirements.txt
+      python -m pytest spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
