@@ -55,7 +55,7 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     # tokens, so simply check whether the first sequence is too long.
     if (
         len(token_data["length"]) > 0
-        and token_data["length"][0] > tokenizer.model_max_length
+        and int(token_data["length"][0]) > tokenizer.model_max_length
     ):
         for text, tokens in zip(texts, token_data["input_texts"]):
             # The longest text(s) in the batch will have another symbol (the end
