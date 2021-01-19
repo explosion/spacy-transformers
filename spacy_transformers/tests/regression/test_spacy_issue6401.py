@@ -35,6 +35,8 @@ cfg_string = """
     """
 
 
+# Xfail this until the new spaCy rc is up.
+@pytest.mark.xfail
 def test_transformer_pipeline_textcat():
     """Test that a pipeline with just a transformer+textcat runs and trains properly.
     This used to throw an error because of shape inference issues -
