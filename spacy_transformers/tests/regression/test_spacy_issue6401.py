@@ -1,3 +1,4 @@
+import pytest
 from spacy.training.example import Example
 from spacy.util import make_tempdir
 from spacy import util
