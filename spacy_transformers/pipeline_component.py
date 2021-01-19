@@ -118,18 +118,34 @@ class Transformer(TrainablePipe):
             raise ValueError(f"Expected Thinc Model, got: {type(self.model)}")
         self.set_extra_annotations = set_extra_annotations
         self.cfg = {"max_batch_items": max_batch_items}
-        self.listeners: List[TransformerListener] = []
+        self.listener_map: Dict[str, List[TransformerListener]] = {}
         install_extensions()
 
-    def add_listener(self, listener: TransformerListener) -> None:
-        """Add a listener for a downstream component. Usually internals."""
-        if listener not in self.listeners:
-            listener.set_dim("nO", self.model.get_dim("nO"))
-            self.listeners.append(listener)
+    @property
+    def listeners(self) -> List[TransformerListener]:
+        """RETURNS (List[TransformerListener]): The listener models listening
+        to this component. Usually internals.
+        """
+        return [m for c in self.listening_components for m in self.listener_map[c]]
 
-    def find_listeners(self, model: Model) -> None:
-        """Walk over a model, looking for layers that are TransformerListener
-        subclasses that have an upstream_name that matches this component.
+    @property
+    def listening_components(self) -> List[str]:
+        """RETURNS (List[str]): The downstream components listening to this
+        component. Usually internals.
+        """
+        return list(self.listener_map.keys())
+
+    def add_listener(self, listener: TransformerListener, component_name: str) -> None:
+        """Add a listener for a downstream component. Usually internals."""
+        self.listener_map.setdefault(component_name, [])
+        if listener not in self.listener_map[component_name]:
+            listener.set_dim("nO", self.model.get_dim("nO"))
+            self.listener_map[component_name].append(listener)
+
+    def find_listeners(self, component) -> None:
+        """Walk over a model of a processing component, looking for layers that
+        are TransformerListener subclasses that have an upstream_name that
+        matches this component.
         Listeners can also set their upstream_name attribute to the wildcard
         string '*' to match any `Transformer`.
 
@@ -137,16 +153,17 @@ class Transformer(TrainablePipe):
         fine to leave your listeners upstream_name on '*'.
         """
         names = ("*", self.name)
-        for node in model.walk():
-            if isinstance(node, TransformerListener) and node.upstream_name in names:
-                self.add_listener(node)
+        if isinstance(getattr(component, "model", None), Model):
+            for node in component.model.walk():
+                if isinstance(node, TransformerListener) and node.upstream_name in names:
+                    self.add_listener(node, component.name)
 
     def __call__(self, doc: Doc) -> Doc:
         """Apply the pipe to one document. The document is modified in place,
         and returned. This usually happens under the hood when the nlp object
         is called on a text and all components are applied to the Doc.
 
-        docs (Doc): The Doc to preocess.
+        docs (Doc): The Doc to process.
         RETURNS (Doc): The processed Doc.
 
         DOCS: https://nightly.spacy.io/api/transformer#call
@@ -319,8 +336,7 @@ class Transformer(TrainablePipe):
             for i, (name1, proc1) in enumerate(nlp.pipeline):
                 if proc1 is self:
                     for name2, proc2 in nlp.pipeline[i:]:
-                        if isinstance(getattr(proc2, "model", None), Model):
-                            self.find_listeners(proc2.model)
+                        self.find_listeners(proc2)
                     break
 
     def to_disk(
