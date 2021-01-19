@@ -36,10 +36,10 @@ def transformer_listener_tok2vec_v1(
         never have multiple upstream Transformer components, so the wildcard
         string will almost always be fine.
     """
-    return chain(
-        TransformerListener(upstream_name=upstream),
-        trfs2arrays(pooling, grad_factor)
-    )
+    listener = TransformerListener(upstream_name=upstream)
+    model = chain(listener, trfs2arrays(pooling, grad_factor))
+    model.set_ref("listener", listener)
+    return model
 
 
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v1")
