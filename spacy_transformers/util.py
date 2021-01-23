@@ -42,28 +42,16 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
         texts,
         add_special_tokens=True,
         return_attention_mask=True,
-        return_length=True,
         return_offsets_mapping=isinstance(tokenizer, PreTrainedTokenizerFast),
         return_tensors="pt",
         return_token_type_ids=None,  # Sets to model default
         padding="longest",
     )
-    token_data["input_texts"] = [
-        tokenizer.convert_ids_to_tokens(list(ids)) for ids in token_data["input_ids"]
-    ]
-    # Because of padding=longest all sequences contain the same number of
-    # tokens, so simply check whether the first sequence is too long.
-    if (
-        len(token_data["length"]) > 0
-        and int(token_data["length"][0]) > tokenizer.model_max_length
-    ):
-        for text, tokens in zip(texts, token_data["input_texts"]):
-            # The longest text(s) in the batch will have another symbol (the end
-            # symbol) rather than the pad token as the final token in the
-            # sequence. Raise an error on the first such text found.
-            if tokens[-1] != tokenizer.pad_token:
-                msg = f"The following input span is too long for the model max length {tokenizer.model_max_length}. Preprocess the texts to break up long tokens or if you're training a new model, you may want to modify the spaCy tokenizer or the @span_getters in the model config:\n\n{text}"
-                raise ValueError(msg)
+    token_data["input_texts"] = []
+    for i in range(len(token_data["input_ids"])):
+        wp_texts = tokenizer.convert_ids_to_tokens(token_data["input_ids"][i])
+        token_data["input_texts"].append(wp_texts)
+    token_data["pad_token"] = tokenizer.pad_token
     return token_data
 
 
@@ -76,17 +64,6 @@ def maybe_flush_pytorch_cache(chance: float = 1.0):
     """
     if random.random() < chance and torch.cuda.is_available():
         torch.cuda.empty_cache()
-
-
-def slice_hf_tokens(inputs: BatchEncoding, start: int, end: int) -> Dict:
-    """Get a subspan from a BatchEncoding. Internals."""
-    output = {}
-    for key, value in inputs.items():
-        if not hasattr(value, "__getitem__"):
-            output[key] = value
-        else:
-            output[key] = value[start:end]
-    return output
 
 
 def find_last_hidden(tensors) -> int:
