@@ -1,15 +1,15 @@
 from typing import Tuple
 import numpy
-from transformers import BatchEncoding
 from thinc.types import Ragged, Ints1d, Floats2d, Floats3d
+from .data_classes import WordpieceBatch
 
 
 def truncate_oversize_splits(
-    token_data: BatchEncoding,
+    token_data: WordpieceBatch,
     align: Ragged,
     seq_lengths: Ints1d,
     max_length: int
-) -> Tuple[BatchEncoding, Ragged]:
+) -> Tuple[WordpieceBatch, Ragged]:
     """Drop wordpieces from inputs that are too long. This can happen because 
     the splitter is based on linguistic tokens, and the number of wordpieces
     that each token is split into is unpredictable, so we can end up with splits
@@ -58,16 +58,37 @@ def _get_truncation_mask_drop_from_end(
 
 
 def _truncate_tokens(
-    token_data: BatchEncoding,
+    tokens: WordpieceBatch,
     mask: numpy.ndarray
-) -> BatchEncoding:
-    # This is the part that will be annoying to do :(.
-    input_ids = token_data["input_ids"][mask]
-    # I don't know whether this works?
-    attention_mask = token_data["attention_mask"][mask, mask]
-    # TODO: Draw the rest of the owl.
-    ...
-    return BatchEncoding(...)
+) -> WordpieceBatch:
+    batch_size = token_data.batch_size 
+    n_wp = mask.shape[0]
+    n_keep = mask.sum()
+    
+    strings = []
+    i = 0
+    for seq in tokens.strings:
+        strings.append([])
+        for token in seq:
+            if mask[i]:
+                strings[-1].append(token)
+            i += 1
+
+    def filter_ids(data: Ints2d) -> Ints2d:
+        data1d = data.reshape((-1,))
+        return data1d[mask].reshape((n_seq,, -1))
+
+    def filter_attn(data: Floats3d) -> Floats3d:
+        attn = data.reshape((n_wp, n_wp))
+        return attn[mask, mask].reshape((n_seq, n_keep, n_keep))
+
+    return WordpieceBatch(
+        strings=strings,
+        input_ids=filter_ids(tokens.input_ids),
+        input_type_ids=filter_ids(tokens.token_type_ids),
+        attention_mask=filter_attn(tokens.attention_mask),
+        lengths=numpy.array([len(seq) for seq in strings], dtype="i")
+    )
 
 
 def _truncate_alignment(align: Ragged, mask: numpy.ndarray) -> Ragged:
