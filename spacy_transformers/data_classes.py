@@ -12,6 +12,66 @@ from .align import get_token_positions
 
 
 @dataclass
+class WordpieceBatch:
+    """Holds data from the transformers BatchEncoding class.
+
+    We would have preferred to use the BatchEncoding class directly, but
+    there's a few problems with that.
+    
+    1. Some BatchEncoding functionality requires the tokenizers.Encoding object,
+        and it's impossible for us to create or manipulate that object. This means
+        we can't really create BatchEncoding objects, which limits what we can do.
+    2. We want some semantic differences, for instance the "lengths" data in the
+        BatchEncoding is useless when the inputs are padded. We want it to tell
+        us the *unpadded* lengths.
+    3. We want typed attributes, so that we can type-check properly.
+    4. We prefer to have numpy/cupy arrays rather than torch arrays.
+    5. The API around the BatchEncoding object has been changing a lot, so we
+        want to minimize the places where we touch it.
+    """
+    strings: List[List[str]]
+    input_ids: Ints2d
+    input_type_ids: Ints2d
+    attention_mask: Floats3d
+    lengths: List[int]
+
+    def __len__(self) -> int:
+        return len(self.strings)
+
+    def __getitem__(self, index) -> "WordpieceBatch":
+        if isinstance(index, int):
+            slice_ = slice(index, index+1)
+        else:
+            slice_ = index
+        return WordpieceBatch(
+            strings=self.strings[slice_],
+            input_ids=self.input_ids[slice_],
+            attention_mask=self.attention_mask[slice_],
+            lengths=self.lengths[slice_]
+        )
+
+    @classmethod
+    def zeros(cls, lengths: List[int]) -> "WordpieceBatch":
+        # TODO
+        ...
+
+    @classmethod
+    def from_batch_encoding(cls, token_data: BatchEncoding) -> "WordpieceBatch":
+        pad_token = token_data.get("pad_token", "[PAD]")
+        lengths = [
+            len([tok for tok in tokens if tok != pad_token])
+            for tokens in token_data["input_texts"]
+        ]
+        return cls(
+            strings=token_data["input_texts"],
+            input_ids=torch2xp(token_data["input_ids"]),
+            input_type_ids=torch2xp(token_data["input_type_ids"]),
+            attention_mask=torch2xp(token_data["attention_mask"]),
+            lengths=lengths
+        )
+
+
+@dataclass
 class TransformerData:
     """Transformer tokens and outputs for one Doc object.
     
@@ -37,7 +97,7 @@ class TransformerData:
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
     """
-    tokens: Dict
+    tokens: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
 
@@ -51,7 +111,7 @@ class TransformerData:
         """Create a valid TransformerData container for a given shape, filled
         with zeros."""
         return cls(
-            tokens={"input_ids": numpy.zeros((length,), dtype="i")},
+            tokens=WordpieceBatch.zeros([length]),
             tensors=[xp.zeros((1, length, width), dtype="f")],
             align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i"))
         )
@@ -80,7 +140,7 @@ class FullTransformerBatch:
         within a Doc, the regions of the output tensors that correspond to each
         Span may overlap or have gaps, but for each Doc, there is a non-overlapping
         contiguous slice of the outputs.
-    tokens (BatchEncoding): The output of the Huggingface tokenizer.
+    tokens (WordpieceBatch): The output of the Huggingface tokenizer.
     tensors (List[torch.Tensor]): The output of the transformer model.
     align (Ragged): Alignment from the spaCy tokenization to the wordpieces.
         This is a ragged array, where align.lengths[i] indicates the number of
@@ -88,7 +148,7 @@ class FullTransformerBatch:
         provided at align[i].dataXd.
     """
     spans: List[List[Span]]
-    tokens: BatchEncoding
+    tokens: WordpieceBatch
     tensors: List[torch.Tensor]
     align: Ragged
     cached_doc_data: Optional[List[TransformerData]] = None
@@ -141,7 +201,7 @@ class FullTransformerBatch:
                 start_i = token_positions[doc_spans[0][0]]
                 end_i = token_positions[doc_spans[-1][-1]] + 1
                 end = start + len(doc_spans)
-                doc_tokens = slice_hf_tokens(self.tokens, start, end)
+                doc_tokens = self.tokens[start:end]
                 doc_tensors = [torch2xp(t[start:end]) for t in self.tensors]
                 doc_align = self.align[start_i:end_i]
                 doc_align.data = doc_align.data - prev_tokens
@@ -152,7 +212,7 @@ class FullTransformerBatch:
                         align=doc_align,
                     )
                 )
-                token_count = sum(len(texts) for texts in doc_tokens["input_texts"])
+                token_count = sum(doc_tokens.lengths)
             prev_tokens += token_count
             start += len(doc_spans)
         return outputs
