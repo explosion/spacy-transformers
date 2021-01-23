@@ -40,7 +40,7 @@ def wordpieces(sequences):
         strings=strings,
         input_ids=numpy.zeros(shape, dtype="i"),
         token_type_ids=numpy.zeros(shape, dtype="i"),
-        attention_mask=numpy.zeros((shape[0], shape[1], shape[1]), dtype="f"),
+        attention_mask=numpy.zeros((shape[0], shape[1]), dtype="bool"),
         lengths=[len(seq) for seq in strings]
     )
     return wordpieces
@@ -82,7 +82,6 @@ def test_truncate_wordpieces(wordpieces, max_length, mask_from_end):
         assert truncated.input_ids[i].shape[0] <= max_length
         assert truncated.token_type_ids[i].shape[0] <= max_length
         assert truncated.attention_mask[i].shape[0] <= max_length
-        assert truncated.attention_mask[i].shape[1] <= max_length
 
 def test_truncate_alignment_from_end(sequences, max_length, align, mask_from_end):
     # print("Max length", max_length)
@@ -110,7 +109,7 @@ def test_truncate_alignment_from_end(sequences, max_length, align, mask_from_end
         before = align[start:end]
         for length_now, length_before in zip(wp_indices.lengths, before.lengths):
             if seen_zero:
-                assert length_now == 0
+                assert length_now == 0, wp_indices.lengths
             elif length_now == 0:
                 seen_zero = True
             else:

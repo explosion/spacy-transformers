@@ -108,6 +108,6 @@ def _truncate_alignment(align: Ragged, mask: numpy.ndarray) -> Ragged:
     # Step 3: Calculate new align.lengths
     new_lengths = align.lengths.copy()
     for i in range(len(align.lengths)):
-        drops = mask[align[i].data.ravel()]
+        drops = ~mask[align[i].data.ravel()]
         new_lengths[i] -= drops.sum()
     return Ragged(new_align, new_lengths)
