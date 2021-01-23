@@ -5,10 +5,7 @@ from .data_classes import WordpieceBatch
 
 
 def truncate_oversize_splits(
-    wordpieces: WordpieceBatch,
-    align: Ragged,
-    seq_lengths: Ints1d,
-    max_length: int
+    wordpieces: WordpieceBatch, align: Ragged, seq_lengths: Ints1d, max_length: int
 ) -> Tuple[WordpieceBatch, Ragged]:
     """Drop wordpieces from inputs that are too long. This can happen because 
     the splitter is based on linguistic tokens, and the number of wordpieces
@@ -39,19 +36,13 @@ def truncate_oversize_splits(
     if wordpieces.input_ids.shape[1] < max_length:
         return wordpieces, align
     mask = _get_truncation_mask_drop_from_end(
-        wordpieces.input_ids.shape,
-        wordpieces.lengths,
-        align,
-        max_length
+        wordpieces.input_ids.shape, wordpieces.lengths, align, max_length
     )
     return _truncate_tokens(wordpieces, mask), _truncate_alignment(align, mask)
 
 
 def _get_truncation_mask_drop_from_end(
-    shape: Tuple[int, int],
-    split_lengths: List[int],
-    align: Ragged,
-    max_length: int
+    shape: Tuple[int, int], split_lengths: List[int], align: Ragged, max_length: int
 ) -> numpy.ndarray:
     """Return a two-dimensional boolean mask, indicating whether wordpieces
     are dropped from their sequences.
@@ -63,14 +54,11 @@ def _get_truncation_mask_drop_from_end(
     return mask
 
 
-def _truncate_tokens(
-    wordpieces: WordpieceBatch,
-    mask: numpy.ndarray
-) -> WordpieceBatch:
+def _truncate_tokens(wordpieces: WordpieceBatch, mask: numpy.ndarray) -> WordpieceBatch:
     n_seq = len(wordpieces)
     n_wp = mask.shape[0]
     n_keep = mask.sum()
-    
+
     strings = []
     i = 0
     for seq in wordpieces.strings:
@@ -93,7 +81,7 @@ def _truncate_tokens(
         input_ids=filter_ids(wordpieces.input_ids),
         input_type_ids=filter_ids(wordpieces.token_type_ids),
         attention_mask=filter_attn(wordpieces.attention_mask),
-        lengths=numpy.array([len(seq) for seq in strings], dtype="i")
+        lengths=numpy.array([len(seq) for seq in strings], dtype="i"),
     )
 
 
@@ -104,14 +92,14 @@ def _truncate_alignment(align: Ragged, mask: numpy.ndarray) -> Ragged:
     #
     # 1) Adjust all the indices in align.dataXd to account for the dropped data
     # 2) Remove the dropped indices from the align.dataXd
-    # 3) Calculate new align.lengths 
-    # 
+    # 3) Calculate new align.lengths
+    #
     # The wordpiece mapping is easily calculated by the cumulative sum of the
     # mask table.
     # Let's say we have [True, False, False, True]. The mapping of the dropped
     # wordpieces doesn't matter, because we can filter it with the mask. So we
     # have [0, 0, 0, 1], i.e the wordpiece that was
-    # at 0 is still at 0, and the wordpiece that was at 3 is now at 1. 
+    # at 0 is still at 0, and the wordpiece that was at 3 is now at 1.
     idx_map = mask.cumsum() - 1
     idx_map[~mask] = -1
     # Step 1: Adjust all the indices in align.dataXd.

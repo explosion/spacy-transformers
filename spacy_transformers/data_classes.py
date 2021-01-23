@@ -29,6 +29,7 @@ class WordpieceBatch:
     5. The API around the BatchEncoding object has been changing a lot, so we
         want to minimize the places where we touch it.
     """
+
     strings: List[List[str]]
     input_ids: Ints2d
     input_type_ids: Ints2d
@@ -40,14 +41,14 @@ class WordpieceBatch:
 
     def __getitem__(self, index) -> "WordpieceBatch":
         if isinstance(index, int):
-            slice_ = slice(index, index+1)
+            slice_ = slice(index, index + 1)
         else:
             slice_ = index
         return WordpieceBatch(
             strings=self.strings[slice_],
             input_ids=self.input_ids[slice_],
             attention_mask=self.attention_mask[slice_],
-            lengths=self.lengths[slice_]
+            lengths=self.lengths[slice_],
         )
 
     @classmethod
@@ -67,7 +68,7 @@ class WordpieceBatch:
             input_ids=torch2xp(token_data["input_ids"]),
             input_type_ids=torch2xp(token_data["input_type_ids"]),
             attention_mask=torch2xp(token_data["attention_mask"]),
-            lengths=lengths
+            lengths=lengths,
         )
 
 
@@ -97,6 +98,7 @@ class TransformerData:
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
     """
+
     tokens: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
@@ -113,7 +115,7 @@ class TransformerData:
         return cls(
             tokens=WordpieceBatch.zeros([length]),
             tensors=[xp.zeros((1, length, width), dtype="f")],
-            align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i"))
+            align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i")),
         )
 
     @property
@@ -147,6 +149,7 @@ class FullTransformerBatch:
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
     """
+
     spans: List[List[Span]]
     tokens: WordpieceBatch
     tensors: List[torch.Tensor]
@@ -158,7 +161,9 @@ class FullTransformerBatch:
         spans = [[] for i in range(nr_docs)]
         doc_data = [TransformerData.empty() for i in range(nr_docs)]
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(spans=spans, tokens={}, tensors=[], align=align, cached_doc_data=doc_data)
+        return cls(
+            spans=spans, tokens={}, tensors=[], align=align, cached_doc_data=doc_data
+        )
 
     @property
     def doc_data(self) -> List[TransformerData]:

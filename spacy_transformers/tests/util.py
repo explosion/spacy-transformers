@@ -130,7 +130,7 @@ def DummyTransformer(
             "get_spans": get_spans,
             "tokenizer": DummyTokenizer(),
             "grad_factor": 1.0,
-            "flush_cache_chance": 0.0
+            "flush_cache_chance": 0.0,
         },
         dims={"nO": width},
     )

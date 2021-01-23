@@ -112,14 +112,10 @@ def forward(
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], wordpieces, is_train)
     align = get_alignment(
-        flat_spans,
-        wordpieces.strings,
-        model.attrs["tokenizer"].all_special_tokens
+        flat_spans, wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
     )
     wordpieces, align = truncate_oversize_splits(
-        wordpieces,
-        align,
-        tokenizer.model_max_length
+        wordpieces, align, tokenizer.model_max_length
     )
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:

@@ -9,11 +9,12 @@ from thinc.api import NumpyOps
 def sequences():
     # Each sequence is a list of tokens, and each token is a number of wordpieces
     return [
-        [1, 3, 1],    # So 5 wordpieces this sequence
-        [3, 7, 1, 1], # 12
-        [1],          # 1
-        [20, 1],      # 21
+        [1, 3, 1],  # So 5 wordpieces this sequence
+        [3, 7, 1, 1],  # 12
+        [1],  # 1
+        [20, 1],  # 21
     ]
+
 
 @pytest.fixture
 def shape(sequences):
@@ -35,7 +36,7 @@ def align(sequences):
     for seq in sequences:
         for token_length in seq:
             lengths.append(token_length)
-            indices.extend(i+offset for i in range(token_length))
+            indices.extend(i + offset for i in range(token_length))
             offset += token_length
     return Ragged(numpy.array(indices, dtype="i"), numpy.array(lengths, dtype="i"))
 
@@ -49,21 +50,21 @@ def max_length():
 def mask_from_end(shape, max_length):
     n_seq, length = shape
     bools = [
-        numpy.array([(i+1) < max_length for i in range(length)], dtype="bool")
+        numpy.array([(i + 1) < max_length for i in range(length)], dtype="bool")
         for _ in range(n_seq)
     ]
     return numpy.concatenate(bools)
 
 
 def test_truncate_alignment_from_end(sequences, max_length, align, mask_from_end):
-    #print("Max length", max_length)
-    #print("Sequences", sequences)
-    #print("Mask", mask_from_end)
+    # print("Max length", max_length)
+    # print("Sequences", sequences)
+    # print("Mask", mask_from_end)
     ops = NumpyOps()
     truncated = _truncate_alignment(align, mask_from_end)
-    #print(truncated.dataXd.shape, truncated.lengths.sum())
-    #print("Before", list(map(list, ops.unflatten(align.dataXd, align.lengths))))
-    #print("After", list(map(list, ops.unflatten(truncated.dataXd, truncated.lengths))))
+    # print(truncated.dataXd.shape, truncated.lengths.sum())
+    # print("Before", list(map(list, ops.unflatten(align.dataXd, align.lengths))))
+    # print("After", list(map(list, ops.unflatten(truncated.dataXd, truncated.lengths))))
     # Check that the number of tokens hasn't changed. We still need to have
     # alignment for every token.
     assert truncated.lengths.shape[0] == align.lengths.shape[0]

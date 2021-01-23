@@ -100,7 +100,11 @@ def get_alignment_via_offset_mapping(spans: List[Span], token_data) -> Ragged:
     return align
 
 
-def get_alignment(spans: List[Span], wordpieces: List[List[str]], special_tokens: Optional[List[str]] = None) -> Ragged:
+def get_alignment(
+    spans: List[Span],
+    wordpieces: List[List[str]],
+    special_tokens: Optional[List[str]] = None,
+) -> Ragged:
     """Compute a ragged alignment array that records, for each unique token in
     `spans`, the corresponding indices in the flattened `wordpieces` array.
     For instance, imagine you have two overlapping spans:
@@ -151,7 +155,9 @@ def get_alignment(spans: List[Span], wordpieces: List[List[str]], special_tokens
         # appear in the text, it's not possible to distinguish them from the
         # added special tokens, so they may be aligned incorrectly.)
         if not any([special in span.text for special in special_tokens]):
-            wp_toks_filtered = [tok if tok not in special_tokens else "" for tok in wp_toks]
+            wp_toks_filtered = [
+                tok if tok not in special_tokens else "" for tok in wp_toks
+            ]
         span2wp, wp2span = get_alignments(sp_toks, wp_toks_filtered)
         for token, wp_js in zip(span, span2wp):
             position = token_positions[token]
