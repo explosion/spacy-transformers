@@ -9,6 +9,7 @@ import logging
 from ..data_classes import FullTransformerBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import find_last_hidden, maybe_flush_pytorch_cache
+from ..truncate import truncate_oversize_splits
 from ..util import log_gpu_memory, log_batch_size
 from ..align import get_alignment
 
@@ -108,6 +109,17 @@ def forward(
     token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], token_data, is_train)
+    align = get_alignment(
+        flat_spans,
+        token_data["input_texts"],
+        model.attrs["tokenizer"].all_special_tokens
+    )
+    token_data, align = truncate_oversize_splits(
+        token_data,
+        align,
+        tokenizer.pad_token,
+        tokenizer.model_max_length
+    )
     tensors, bp_tensors = transformer(token_data, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
@@ -116,7 +128,6 @@ def forward(
     # if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
     #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
     # else:
-    align = get_alignment(flat_spans, token_data["input_texts"], model.attrs["tokenizer"].all_special_tokens)
     output = FullTransformerBatch(
         spans=nested_spans, tokens=token_data, tensors=tensors, align=align
     )
