@@ -32,9 +32,9 @@ class WordpieceBatch:
 
     strings: List[List[str]]
     input_ids: Ints2d
-    token_type_ids: Ints2d
     attention_mask: Floats3d
     lengths: List[int]
+    token_type_ids: Optional[Ints2d]
 
     def __len__(self) -> int:
         return len(self.strings)
@@ -47,9 +47,13 @@ class WordpieceBatch:
         return WordpieceBatch(
             strings=self.strings[slice_],
             input_ids=self.input_ids[slice_],
-            token_type_ids=self.token_type_ids[slice_],
             attention_mask=self.attention_mask[slice_],
             lengths=self.lengths[slice_],
+            token_type_ids=(
+                self.token_type_ids[slice_]
+                if self.token_type_ids is not None
+                else None
+            ),
         )
 
     @classmethod
@@ -59,17 +63,26 @@ class WordpieceBatch:
 
     @classmethod
     def from_batch_encoding(cls, token_data: BatchEncoding) -> "WordpieceBatch":
+        assert (
+            isinstance(token_data, BatchEncoding)
+            or isinstance(token_data, dict)
+        )
         pad_token = token_data.get("pad_token", "[PAD]")
         lengths = [
             len([tok for tok in tokens if tok != pad_token])
             for tokens in token_data["input_texts"]
         ]
+        n_seq = len(lengths)
         return cls(
             strings=token_data["input_texts"],
-            input_ids=torch2xp(token_data["input_ids"]),
-            token_type_ids=torch2xp(token_data["token_type_ids"]),
-            attention_mask=torch2xp(token_data["attention_mask"]),
+            input_ids=torch2xp(token_data["input_ids"]).reshape((n_seq, -1)),
+            attention_mask=torch2xp(token_data["attention_mask"]).reshape((n_seq, -1)),
             lengths=lengths,
+            token_type_ids=(
+                torch2xp(token_data["token_type_ids"]).reshape((n_seq, -1))
+                if "token_type_ids" in token_data
+                else None
+            )
         )
 
 
