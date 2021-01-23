@@ -32,7 +32,7 @@ class WordpieceBatch:
 
     strings: List[List[str]]
     input_ids: Ints2d
-    input_type_ids: Ints2d
+    token_type_ids: Ints2d
     attention_mask: Floats3d
     lengths: List[int]
 
@@ -47,6 +47,7 @@ class WordpieceBatch:
         return WordpieceBatch(
             strings=self.strings[slice_],
             input_ids=self.input_ids[slice_],
+            token_type_ids=self.token_type_ids[slice_],
             attention_mask=self.attention_mask[slice_],
             lengths=self.lengths[slice_],
         )
@@ -66,7 +67,7 @@ class WordpieceBatch:
         return cls(
             strings=token_data["input_texts"],
             input_ids=torch2xp(token_data["input_ids"]),
-            input_type_ids=torch2xp(token_data["input_type_ids"]),
+            token_type_ids=torch2xp(token_data["token_type_ids"]),
             attention_mask=torch2xp(token_data["attention_mask"]),
             lengths=lengths,
         )

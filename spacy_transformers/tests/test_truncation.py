@@ -1,5 +1,6 @@
 import pytest
 import numpy
+from spacy_transformers.data_classes import WordpieceBatch
 from spacy_transformers.truncate import _truncate_tokens, _truncate_alignment
 from thinc.types import Ragged
 from thinc.api import NumpyOps
@@ -27,6 +28,23 @@ def shape(sequences):
 def seq_lengths(sequences):
     return numpy.array([sum(seq) for seq in sequences], dtype="i")
 
+@pytest.fixture
+def wordpieces(sequences):
+    strings = []
+    for token_lengths in sequences:
+        strings.append([])
+        for length in token_lengths:
+            strings[-1].extend(str(i) for i in range(length))
+    shape = (len(strings), max(len(seq) for seq in strings))
+    wordpieces = WordpieceBatch(
+        strings=strings,
+        input_ids=numpy.zeros(shape, dtype="i"),
+        token_type_ids=numpy.zeros(shape, dtype="i"),
+        attention_mask=numpy.zeros((shape[0], shape[1], shape[1]), dtype="f"),
+        lengths=[len(seq) for seq in strings]
+    )
+    return wordpieces
+
 
 @pytest.fixture
 def align(sequences):
@@ -50,11 +68,21 @@ def max_length():
 def mask_from_end(shape, max_length):
     n_seq, length = shape
     bools = [
-        numpy.array([(i + 1) < max_length for i in range(length)], dtype="bool")
+        numpy.array([i < max_length for i in range(length)], dtype="bool")
         for _ in range(n_seq)
     ]
     return numpy.concatenate(bools)
 
+
+def test_truncate_wordpieces(wordpieces, max_length, mask_from_end):
+    truncated = _truncate_tokens(wordpieces, mask_from_end)
+    for i, seq in enumerate(truncated.strings):
+        assert len(seq) <= max_length
+        assert seq == wordpieces.strings[i][:max_length]
+        assert truncated.input_ids[i].shape[0] <= max_length
+        assert truncated.token_type_ids[i].shape[0] <= max_length
+        assert truncated.attention_mask[i].shape[0] <= max_length
+        assert truncated.attention_mask[i].shape[1] <= max_length
 
 def test_truncate_alignment_from_end(sequences, max_length, align, mask_from_end):
     # print("Max length", max_length)
@@ -75,7 +103,7 @@ def test_truncate_alignment_from_end(sequences, max_length, align, mask_from_end
         # alignment indicates the number of wordpiece tokens, so we need to
         # check that the sum of the lengths doesn't exceed the maximum.
         wp_indices = truncated[start:end]
-        assert wp_indices.lengths.sum() < max_length
+        assert wp_indices.lengths.sum() <= max_length
         # We're truncating from the end, so we shouldn't see different values
         # except at the end of the sequence.
         seen_zero = False

@@ -56,30 +56,38 @@ def _get_truncation_mask_drop_from_end(
 
 def _truncate_tokens(wordpieces: WordpieceBatch, mask: numpy.ndarray) -> WordpieceBatch:
     n_seq = len(wordpieces)
-    n_wp = mask.shape[0]
+    mask1d = mask
+    mask = mask.reshape((n_seq, -1))
+    n_wp = mask.size
     n_keep = mask.sum()
 
     strings = []
-    i = 0
-    for seq in wordpieces.strings:
+    for i, seq in enumerate(wordpieces.strings):
         strings.append([])
-        for token in seq:
-            if mask[i]:
+        for j, token in enumerate(seq):
+            if mask[i, j]:
                 strings[-1].append(token)
-            i += 1
 
     def filter_ids(data: Ints2d) -> Ints2d:
         data1d = data.reshape((-1,))
-        return data1d[mask].reshape((n_seq, -1))
+        return data1d[mask1d].reshape((n_seq, -1))
 
     def filter_attn(data: Floats3d) -> Floats3d:
-        attn = data.reshape((n_wp, n_wp))
-        return attn[mask, mask].reshape((n_seq, n_keep, n_keep))
+        # TODO: There must be a more elegant way to do this...
+        data2d = data.reshape((data.shape[0]*data.shape[1], data.shape[2]))
+        data2d = data2d[mask1d]
+        data3d = data2d.reshape((data.shape[0], -1, data.shape[2]))
+        mask2d = mask1d.reshape((data.shape[0], -1))
+        attn = []
+        for i in range(n_seq):
+            attn.append(data3d[i, :, mask2d[i]])
+        filtered = numpy.vstack(attn)
+        return filtered.reshape((n_seq, attn[-1].shape[0], attn[-1].shape[1]))
 
     return WordpieceBatch(
         strings=strings,
         input_ids=filter_ids(wordpieces.input_ids),
-        input_type_ids=filter_ids(wordpieces.token_type_ids),
+        token_type_ids=filter_ids(wordpieces.token_type_ids),
         attention_mask=filter_attn(wordpieces.attention_mask),
         lengths=numpy.array([len(seq) for seq in strings], dtype="i"),
     )
