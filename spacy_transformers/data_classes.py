@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
-from thinc.types import Ragged, Floats3d, FloatsXd
+from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 
-from .util import slice_hf_tokens, transpose_list
+from .util import transpose_list
 from .align import get_token_positions
 
 

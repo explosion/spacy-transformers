@@ -1,11 +1,11 @@
-from typing import Tuple
+from typing import Tuple, List
 import numpy
-from thinc.types import Ragged, Ints1d, Floats2d, Floats3d
+from thinc.types import Ragged, Ints1d, Ints2d, Floats2d, Floats3d
 from .data_classes import WordpieceBatch
 
 
 def truncate_oversize_splits(
-    token_data: WordpieceBatch,
+    wordpieces: WordpieceBatch,
     align: Ragged,
     seq_lengths: Ints1d,
     max_length: int
@@ -36,14 +36,20 @@ def truncate_oversize_splits(
     I find b) most appealing, but it's also the most complicated. Let's just do
     d) for now.
     """
-    if token_data["input_ids"].shape[0] < max_length:
-        return token_data, align
-    mask = _get_truncation_mask_drop_from_end(seq_lengths, align, max_length)
-    return _truncate_tokens(token_data, mask), _truncate_align(align, mask)
+    if wordpieces.input_ids.shape[1] < max_length:
+        return wordpieces, align
+    mask = _get_truncation_mask_drop_from_end(
+        wordpieces.input_ids.shape,
+        wordpieces.lengths,
+        align,
+        max_length
+    )
+    return _truncate_tokens(wordpieces, mask), _truncate_alignment(align, mask)
 
 
 def _get_truncation_mask_drop_from_end(
-    split_lengths: Ints1d,
+    shape: Tuple[int, int],
+    split_lengths: List[int],
     align: Ragged,
     max_length: int
 ) -> numpy.ndarray:
@@ -52,22 +58,22 @@ def _get_truncation_mask_drop_from_end(
 
     Drop wordpieces from the end of the sequence.
     """
-    mask = xp.ones(token_data["input_ids"].shape, dtype="b")
+    mask = numpy.ones(shape, dtype="b")
     mask[max_length:] = 0
     return mask
 
 
 def _truncate_tokens(
-    tokens: WordpieceBatch,
+    wordpieces: WordpieceBatch,
     mask: numpy.ndarray
 ) -> WordpieceBatch:
-    batch_size = token_data.batch_size 
+    n_seq = len(wordpieces)
     n_wp = mask.shape[0]
     n_keep = mask.sum()
     
     strings = []
     i = 0
-    for seq in tokens.strings:
+    for seq in wordpieces.strings:
         strings.append([])
         for token in seq:
             if mask[i]:
@@ -76,7 +82,7 @@ def _truncate_tokens(
 
     def filter_ids(data: Ints2d) -> Ints2d:
         data1d = data.reshape((-1,))
-        return data1d[mask].reshape((n_seq,, -1))
+        return data1d[mask].reshape((n_seq, -1))
 
     def filter_attn(data: Floats3d) -> Floats3d:
         attn = data.reshape((n_wp, n_wp))
@@ -84,9 +90,9 @@ def _truncate_tokens(
 
     return WordpieceBatch(
         strings=strings,
-        input_ids=filter_ids(tokens.input_ids),
-        input_type_ids=filter_ids(tokens.token_type_ids),
-        attention_mask=filter_attn(tokens.attention_mask),
+        input_ids=filter_ids(wordpieces.input_ids),
+        input_type_ids=filter_ids(wordpieces.token_type_ids),
+        attention_mask=filter_attn(wordpieces.attention_mask),
         lengths=numpy.array([len(seq) for seq in strings], dtype="i")
     )
 

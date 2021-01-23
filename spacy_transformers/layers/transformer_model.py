@@ -106,31 +106,26 @@ def forward(
     maybe_flush_pytorch_cache(chance=model.attrs.get("flush_cache_chance", 0))
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "begin forward")
-    token_data = WordpieceBatch.from_batch_encoding(
+    wordpieces = WordpieceBatch.from_batch_encoding(
         huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     )
     if "logger" in model.attrs:
-        log_batch_size(model.attrs["logger"], token_data, is_train)
+        log_batch_size(model.attrs["logger"], wordpieces, is_train)
     align = get_alignment(
         flat_spans,
-        token_data.strings,
+        wordpieces.strings,
         model.attrs["tokenizer"].all_special_tokens
     )
-    token_data, align = truncate_oversize_splits(
-        token_data,
+    wordpieces, align = truncate_oversize_splits(
+        wordpieces,
         align,
         tokenizer.model_max_length
     )
-    tensors, bp_tensors = transformer(token_data, is_train)
+    tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    # Unclear why but I'm getting problems using the Huggingface alignment on
-    # CPU?
-    # if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
-    #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
-    # else:
     output = FullTransformerBatch(
-        spans=nested_spans, tokens=token_data, tensors=tensors, align=align
+        spans=nested_spans, tokens=wordpieces, tensors=tensors, align=align
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")
