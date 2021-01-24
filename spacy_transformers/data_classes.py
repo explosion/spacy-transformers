@@ -56,6 +56,19 @@ class WordpieceBatch:
             ),
         )
 
+    def to_hf_dict(self) -> Dict:
+        """Return a dict similar to the format produced by the Huggingface
+        tokenizer, converting arrays to pytorch tensors as well.
+        """
+        output = {
+            "input_ids": xp2torch(self.wordpieces.input_ids),
+            "attention_mask": xp2torch(self.wordpieces.attention_mask),
+            "input_texts": self.wordpieces.strings
+        }
+        if self.wordpieces.token_type_ids is not None:
+            output["token_type_ids"] = xp2torch(self.wordpieces.token_type_ids)
+        return output
+
     @classmethod
     def zeros(cls, lengths: List[int], xp=numpy) -> "WordpieceBatch":
         return cls(
@@ -102,10 +115,8 @@ class TransformerData:
 
     Attributes
     ----------
-    tokens (Dict): A slice of the tokens data produced by the Huggingface
-        tokenizer. This may have several fields, including the token IDs, the
-        texts, and the attention mask. See the Huggingface BatchEncoding object
-        for details.
+    wordpieces (WordpieceBatch): A slice of the wordpiece token data produced
+        by the Huggingface tokenizer.
     tensors (List[FloatsXd]): The activations for the Doc from the transformer.
         Usually the last tensor that is 3-dimensional will be the most important,
         as that will provide the final hidden state. Generally activations that
@@ -116,25 +127,29 @@ class TransformerData:
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
     """
-
-    tokens: WordpieceBatch
+    wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
 
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(tokens={}, tensors=[], align=align)
+        return cls(wordpieces=WordpieceBatch.empty(), tensors=[], align=align)
 
     @classmethod
     def zeros(cls, length: int, width: int, *, xp=numpy) -> "TransformerData":
         """Create a valid TransformerData container for a given shape, filled
         with zeros."""
         return cls(
-            tokens=WordpieceBatch.zeros([length]),
+            wordpieces=WordpieceBatch.zeros([length], xp=xp),
             tensors=[xp.zeros((1, length, width), dtype="f")],
             align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i")),
         )
+
+    @property
+    def tokens(self) -> Dict[str, Any]:
+        """Deprecated. A dict with the wordpiece token data."""
+        return self.wordpieces.to_hf_dict()
 
     @property
     def width(self) -> int:
@@ -160,7 +175,7 @@ class FullTransformerBatch:
         within a Doc, the regions of the output tensors that correspond to each
         Span may overlap or have gaps, but for each Doc, there is a non-overlapping
         contiguous slice of the outputs.
-    tokens (WordpieceBatch): The output of the Huggingface tokenizer.
+    wordpieces (WordpieceBatch): Token data from the Huggingface tokenizer.
     tensors (List[torch.Tensor]): The output of the transformer model.
     align (Ragged): Alignment from the spaCy tokenization to the wordpieces.
         This is a ragged array, where align.lengths[i] indicates the number of
@@ -169,7 +184,7 @@ class FullTransformerBatch:
     """
 
     spans: List[List[Span]]
-    tokens: WordpieceBatch
+    wordpieces: WordpieceBatch
     tensors: List[torch.Tensor]
     align: Ragged
     cached_doc_data: Optional[List[TransformerData]] = None
@@ -180,8 +195,15 @@ class FullTransformerBatch:
         doc_data = [TransformerData.empty() for i in range(nr_docs)]
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
         return cls(
-            spans=spans, tokens={}, tensors=[], align=align, cached_doc_data=doc_data
+            spans=spans, wordpieces=wordpieces.empty(), tensors=[], align=align, cached_doc_data=doc_data
         )
+
+    @property
+    def tokens(self) -> Dict[str, Any]:
+        """Deprecated. Dict formatted version of the self.wordpieces data,
+        with values converted to PyTorch tensors.
+        """
+        return self.wordpieces.to_hf_dict()
 
     @property
     def doc_data(self) -> List[TransformerData]:
@@ -192,7 +214,7 @@ class FullTransformerBatch:
 
     def unsplit_by_doc(self, arrays: List[List[Floats3d]]) -> "FullTransformerBatch":
         """Return a new FullTransformerBatch from a split batch of activations,
-        using the current object's spans, tokens and alignment.
+        using the current object's spans, wordpieces and alignment.
 
         This is used during the backward pass, in order to construct the gradients
         to pass back into the transformer model.
@@ -200,7 +222,7 @@ class FullTransformerBatch:
         xp = get_array_module(arrays[0][0])
         return FullTransformerBatch(
             spans=self.spans,
-            tokens=self.tokens,
+            wordpieces=self.wordpieces,
             tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)],
             align=self.align,
         )
@@ -224,14 +246,12 @@ class FullTransformerBatch:
                 start_i = token_positions[doc_spans[0][0]]
                 end_i = token_positions[doc_spans[-1][-1]] + 1
                 end = start + len(doc_spans)
-                doc_tokens = self.tokens[start:end]
-                doc_tensors = [torch2xp(t[start:end]) for t in self.tensors]
                 doc_align = self.align[start_i:end_i]
                 doc_align.data = doc_align.data - prev_tokens
                 outputs.append(
                     TransformerData(
-                        tokens=doc_tokens,
-                        tensors=doc_tensors,  # type: ignore
+                        wordpieces=self.wordpieces[start:end],
+                        tensors=[torch2xp(t[start:end]) for t in self.tensors]
                         align=doc_align,
                     )
                 )

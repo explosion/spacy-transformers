@@ -60,7 +60,7 @@ def test_predict(component, docs):
     trf_data = component.predict(docs)
     assert isinstance(trf_data, FullTransformerBatch)
     assert len(trf_data.tensors) == component.model.layers[0].attrs["depth"]
-    n_tokens = trf_data.tokens.input_ids.shape[1]
+    n_tokens = trf_data.wordpieces.input_ids.shape[1]
     width = component.model.layers[0].attrs["width"]
     assert trf_data.tensors[-1].shape == (len(docs), n_tokens, width)
 
@@ -224,6 +224,6 @@ def test_transformer_pipeline_empty():
 
 def _assert_empty(trf_data):
     empty = TransformerData.empty()
-    assert trf_data.tokens == empty.tokens
+    assert trf_data.wordpieces == empty.wordpieces
     assert trf_data.tensors == empty.tensors
     assert len(trf_data.align.data) == 0

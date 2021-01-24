@@ -143,7 +143,7 @@ def forward(
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
     output = FullTransformerBatch(
-        spans=nested_spans, tokens=wordpieces, tensors=tensors, align=align
+        spans=nested_spans, wordpieces=wordpieces, tensors=tensors, align=align
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")
@@ -159,14 +159,14 @@ def forward(
     return output, backprop_transformer
 
 
-def _convert_transformer_inputs(model, tokens: WordpieceBatch, is_train):
+def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
     # Adapter for the PyTorchWrapper. See https://thinc.ai/docs/usage-frameworks
     kwargs = {
-        "input_ids": xp2torch(tokens.input_ids),
-        "attention_mask": xp2torch(tokens.attention_mask),
+        "input_ids": xp2torch(wps.input_ids),
+        "attention_mask": xp2torch(wps.attention_mask),
     }
-    if tokens.token_type_ids:
-        kwargs["token_type_ids"] = xp2torch(tokens.token_type_ids)
+    if wps.token_type_ids:
+        kwargs["token_type_ids"] = xp2torch(wps.token_type_ids)
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
 
 
