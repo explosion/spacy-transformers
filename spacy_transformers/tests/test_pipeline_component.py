@@ -223,7 +223,8 @@ def test_transformer_pipeline_empty():
 
 
 def _assert_empty(trf_data):
-    empty = TransformerData.empty()
-    assert trf_data.wordpieces == empty.wordpieces
-    assert trf_data.tensors == empty.tensors
+    assert trf_data.wordpieces.strings == []
+    assert trf_data.wordpieces.input_ids.size == 0
+    assert trf_data.wordpieces.attention_mask.size == 0
+    assert trf_data.tensors == []
     assert len(trf_data.align.data) == 0
