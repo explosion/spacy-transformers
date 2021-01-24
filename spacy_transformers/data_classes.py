@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
@@ -61,13 +61,23 @@ class WordpieceBatch:
         tokenizer, converting arrays to pytorch tensors as well.
         """
         output = {
-            "input_ids": xp2torch(self.wordpieces.input_ids),
-            "attention_mask": xp2torch(self.wordpieces.attention_mask),
-            "input_texts": self.wordpieces.strings
+            "input_ids": xp2torch(self.input_ids),
+            "attention_mask": xp2torch(self.attention_mask),
+            "input_texts": self.strings
         }
-        if self.wordpieces.token_type_ids is not None:
-            output["token_type_ids"] = xp2torch(self.wordpieces.token_type_ids)
+        if self.token_type_ids is not None:
+            output["token_type_ids"] = xp2torch(self.token_type_ids)
         return output
+    
+    @classmethod
+    def empty(cls, *, xp=numpy) -> "WordpieceBatch":
+        return cls(
+            strings=[],
+            input_ids=xp.zeros((0, 0), dtype="i"),
+            attention_mask=xp.ones((0, 0), dtype="bool"),
+            lengths=[],
+            token_type_ids=None
+        )
 
     @classmethod
     def zeros(cls, lengths: List[int], xp=numpy) -> "WordpieceBatch":
@@ -75,7 +85,8 @@ class WordpieceBatch:
             strings=[[""] * length for length in lengths],
             input_ids=xp.array([[0] * length for length in lengths], dtype="i"),
             attention_mask=xp.ones((len(lengths), max(lengths)), dtype="bool"),
-            lengths=lengths
+            lengths=lengths,
+            token_type_ids=None
         )
 
     @classmethod
@@ -195,7 +206,11 @@ class FullTransformerBatch:
         doc_data = [TransformerData.empty() for i in range(nr_docs)]
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
         return cls(
-            spans=spans, wordpieces=wordpieces.empty(), tensors=[], align=align, cached_doc_data=doc_data
+            spans=spans,
+            wordpieces=WordpieceBatch.empty(),
+            tensors=[],
+            align=align,
+            cached_doc_data=doc_data
         )
 
     @property
@@ -246,12 +261,13 @@ class FullTransformerBatch:
                 start_i = token_positions[doc_spans[0][0]]
                 end_i = token_positions[doc_spans[-1][-1]] + 1
                 end = start + len(doc_spans)
+                doc_tokens = self.wordpieces[start:end]
                 doc_align = self.align[start_i:end_i]
                 doc_align.data = doc_align.data - prev_tokens
                 outputs.append(
                     TransformerData(
-                        wordpieces=self.wordpieces[start:end],
-                        tensors=[torch2xp(t[start:end]) for t in self.tensors]
+                        wordpieces=doc_tokens,
+                        tensors=[torch2xp(t[start:end]) for t in self.tensors],
                         align=doc_align,
                     )
                 )
