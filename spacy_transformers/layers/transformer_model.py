@@ -1,14 +1,15 @@
 from typing import List, Tuple, Callable
 import torch
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model
+from thinc.api import PyTorchWrapper, Model, xp2torch
 from thinc.types import ArgsKwargs
 from transformers.tokenization_utils import BatchEncoding
 import logging
 
-from ..data_classes import FullTransformerBatch
+from ..data_classes import FullTransformerBatch, WordpieceBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import find_last_hidden, maybe_flush_pytorch_cache
+from ..truncate import truncate_oversize_splits
 from ..util import log_gpu_memory, log_batch_size
 from ..align import get_alignment
 
@@ -79,12 +80,35 @@ def init(model: Model, X=None, Y=None):
     model.attrs["set_transformer"](model, transformer)
     # Call the model with a batch of inputs to infer the width
     if X:
-        texts = [x.text for x in X]
+        # If we're dealing with actual texts, do the work to setup the wordpieces
+        # batch properly
+        docs = X
+        get_spans = model.attrs["get_spans"]
+        nested_spans = get_spans(docs)
+        flat_spans = []
+        for doc_spans in nested_spans:
+            flat_spans.extend(doc_spans)
+        token_data = huggingface_tokenize(
+            model.attrs["tokenizer"],
+            [span.text for span in flat_spans]
+        )
+        wordpieces = WordpieceBatch.from_batch_encoding(token_data)
+        align = get_alignment(
+            flat_spans,
+            wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
+        )
+        wordpieces, align = truncate_oversize_splits(
+            wordpieces, align, tokenizer.model_max_length
+        )
     else:
         texts = ["hello world", "foo bar"]
-    token_data = huggingface_tokenize(model.attrs["tokenizer"], texts)
-    model.layers[0].initialize(X=token_data)
-    tensors = model.layers[0].predict(token_data)
+        token_data = huggingface_tokenize(
+            model.attrs["tokenizer"],
+            texts
+        )
+        wordpieces = WordpieceBatch.from_batch_encoding(token_data)
+    model.layers[0].initialize(X=wordpieces)
+    tensors = model.layers[0].predict(wordpieces)
     t_i = find_last_hidden(tensors)
     model.set_dim("nO", tensors[t_i].shape[-1])
 
@@ -105,20 +129,21 @@ def forward(
     maybe_flush_pytorch_cache(chance=model.attrs.get("flush_cache_chance", 0))
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "begin forward")
-    token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
+    batch_encoding = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
+    wordpieces = WordpieceBatch.from_batch_encoding(batch_encoding)
     if "logger" in model.attrs:
-        log_batch_size(model.attrs["logger"], token_data, is_train)
-    tensors, bp_tensors = transformer(token_data, is_train)
+        log_batch_size(model.attrs["logger"], wordpieces, is_train)
+    align = get_alignment(
+        flat_spans, wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
+    )
+    wordpieces, align = truncate_oversize_splits(
+        wordpieces, align, tokenizer.model_max_length
+    )
+    tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    # Unclear why but I'm getting problems using the Huggingface alignment on
-    # CPU?
-    # if "offset_mapping" in token_data and hasattr(token_data, "char_to_token"):
-    #    align = get_alignment_via_offset_mapping(flat_spans, token_data)
-    # else:
-    align = get_alignment(flat_spans, token_data["input_texts"], model.attrs["tokenizer"].all_special_tokens)
     output = FullTransformerBatch(
-        spans=nested_spans, tokens=token_data, tensors=tensors, align=align
+        spans=nested_spans, wordpieces=wordpieces, tensors=tensors, align=align
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")
@@ -134,14 +159,14 @@ def forward(
     return output, backprop_transformer
 
 
-def _convert_transformer_inputs(model, tokens: BatchEncoding, is_train):
+def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
     # Adapter for the PyTorchWrapper. See https://thinc.ai/docs/usage-frameworks
     kwargs = {
-        "input_ids": tokens["input_ids"],
-        "attention_mask": tokens["attention_mask"],
+        "input_ids": xp2torch(wps.input_ids),
+        "attention_mask": xp2torch(wps.attention_mask),
     }
-    if "token_type_ids" in tokens:
-        kwargs["token_type_ids"] = tokens["token_type_ids"]
+    if wps.token_type_ids:
+        kwargs["token_type_ids"] = xp2torch(wps.token_type_ids)
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
 
 

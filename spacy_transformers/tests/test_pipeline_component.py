@@ -60,7 +60,7 @@ def test_predict(component, docs):
     trf_data = component.predict(docs)
     assert isinstance(trf_data, FullTransformerBatch)
     assert len(trf_data.tensors) == component.model.layers[0].attrs["depth"]
-    n_tokens = trf_data.tokens["input_ids"].shape[1]
+    n_tokens = trf_data.wordpieces.input_ids.shape[1]
     width = component.model.layers[0].attrs["width"]
     assert trf_data.tensors[-1].shape == (len(docs), n_tokens, width)
 
@@ -106,10 +106,10 @@ def test_transformer_pipeline_simple(simple_nlp):
 
 
 def test_transformer_pipeline_long_token(simple_nlp):
-    """Test that a simple pipeline raises an error on a text that exceeds the
-    model max length."""
-    with pytest.raises(ValueError):
-        doc = simple_nlp("https://example.com/" + "a/" * 1000)
+    """Test that a simple pipeline does not raise an error on texts that exceeds
+    the model max length. We should truncate instead.
+    """
+    doc = simple_nlp("https://example.com/" + "a/" * 1000)
 
 
 cfg_string = """
@@ -223,7 +223,8 @@ def test_transformer_pipeline_empty():
 
 
 def _assert_empty(trf_data):
-    empty = TransformerData.empty()
-    assert trf_data.tokens == empty.tokens
-    assert trf_data.tensors == empty.tensors
+    assert trf_data.wordpieces.strings == []
+    assert trf_data.wordpieces.input_ids.size == 0
+    assert trf_data.wordpieces.attention_mask.size == 0
+    assert trf_data.tensors == []
     assert len(trf_data.align.data) == 0

@@ -17,6 +17,7 @@ class DummyTokenizer:
         self.start_symbol = "<s>"
         self.end_symbol = "</s>"
         self.model_max_length = 512
+        self.pad_token = "[PAD]"
 
     @property
     def all_special_tokens(self):
@@ -110,7 +111,7 @@ def DummyTransformerModel(width: int, depth: int):
         width = model.attrs["width"]
         depth = model.attrs["depth"]
         tensors = []
-        shape = (tokens["input_ids"].shape[0], tokens["input_ids"].shape[1], width)
+        shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
         for i in range(depth):
             tensors.append(torch.zeros(*shape))
         return tensors, lambda d_tensors: tokens
@@ -130,7 +131,7 @@ def DummyTransformer(
             "get_spans": get_spans,
             "tokenizer": DummyTokenizer(),
             "grad_factor": 1.0,
-            "flush_cache_chance": 0.0
+            "flush_cache_chance": 0.0,
         },
         dims={"nO": width},
     )

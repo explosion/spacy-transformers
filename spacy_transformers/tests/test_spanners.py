@@ -46,7 +46,7 @@ def test_get_custom_spans():
                         start += max_length
                         end += max_length
                     if start < len(sent):
-                        spans[-1].append(sent[start:len(sent)])
+                        spans[-1].append(sent[start : len(sent)])
             return spans
 
         return get_custom_sent_spans
