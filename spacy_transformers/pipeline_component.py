@@ -233,7 +233,6 @@ class Transformer(TrainablePipe):
         drop: float = 0.0,
         sgd: Optional[Optimizer] = None,
         losses: Optional[Dict[str, float]] = None,
-        set_annotations: bool = False,
     ) -> Dict[str, float]:
         """Prepare for an update to the transformer.
 
@@ -255,8 +254,6 @@ class Transformer(TrainablePipe):
             A batch of Example objects. Only the `predicted` doc object is used,
             the reference doc is ignored.
         drop (float): The dropout rate.
-        set_annotations (bool): Whether or not to update the Example objects
-            with the predictions.
         sgd (thinc.api.Optimizer): The optimizer.
         losses (Dict[str, float]): Optional record of the loss during training.
             Updated using the component name as the key.
@@ -308,8 +305,7 @@ class Transformer(TrainablePipe):
             listener.receive(batch_id, trf_full.doc_data, accumulate_gradient)
         if self.listeners:
             self.listeners[-1].receive(batch_id, trf_full.doc_data, backprop)
-        if set_annotations:
-            self.set_annotations(docs, trf_full)
+        self.set_annotations(docs, trf_full)
         return losses
 
     def get_loss(self, docs, golds, scores):
