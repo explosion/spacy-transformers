@@ -165,7 +165,7 @@ def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
         "input_ids": xp2torch(wps.input_ids),
         "attention_mask": xp2torch(wps.attention_mask),
     }
-    if wps.token_type_ids:
+    if wps.token_type_ids is not None:
         kwargs["token_type_ids"] = xp2torch(wps.token_type_ids)
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
 
