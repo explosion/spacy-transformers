@@ -57,9 +57,13 @@ class WordpieceBatch:
         )
 
     @classmethod
-    def zeros(cls, lengths: List[int]) -> "WordpieceBatch":
-        # TODO
-        ...
+    def zeros(cls, lengths: List[int], xp=numpy) -> "WordpieceBatch":
+        return cls(
+            strings=[[""] * length for length in lengths],
+            input_ids=xp.array([[0] * length for length in lengths], dtype="i"),
+            attention_mask=xp.ones((len(lengths), max(lengths)), dtype="bool"),
+            lengths=lengths
+        )
 
     @classmethod
     def from_batch_encoding(cls, token_data: BatchEncoding) -> "WordpieceBatch":
