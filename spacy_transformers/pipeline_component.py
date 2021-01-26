@@ -305,7 +305,6 @@ class Transformer(TrainablePipe):
             listener.receive(batch_id, trf_full.doc_data, accumulate_gradient)
         if self.listeners:
             self.listeners[-1].receive(batch_id, trf_full.doc_data, backprop)
-        self.set_annotations(docs, trf_full)
         return losses
 
     def get_loss(self, docs, golds, scores):
