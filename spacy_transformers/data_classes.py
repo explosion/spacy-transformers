@@ -256,22 +256,20 @@ class FullTransformerBatch:
         for doc_spans in self.spans:
             if len(doc_spans) == 0 or len(doc_spans[0]) == 0:
                 outputs.append(TransformerData.empty())
-                token_count = 0
-            else:
-                start_i = token_positions[doc_spans[0][0]]
-                end_i = token_positions[doc_spans[-1][-1]] + 1
-                end = start + len(doc_spans)
-                doc_tokens = self.wordpieces[start:end]
-                doc_align = self.align[start_i:end_i]
-                doc_align.data = doc_align.data - prev_tokens
-                outputs.append(
-                    TransformerData(
-                        wordpieces=doc_tokens,
-                        tensors=[torch2xp(t[start:end]) for t in self.tensors],
-                        align=doc_align,
-                    )
+                continue
+            start_i = token_positions[doc_spans[0][0]]
+            end_i = token_positions[doc_spans[-1][-1]] + 1
+            end = start + len(doc_spans)
+            doc_tokens = self.wordpieces[start:end]
+            doc_align = self.align[start_i:end_i]
+            doc_align.data = doc_align.data - prev_tokens
+            outputs.append(
+                TransformerData(
+                    wordpieces=doc_tokens,
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
+                    align=doc_align,
                 )
-                token_count = sum(doc_tokens.lengths)
-            prev_tokens += token_count
+            )
+            prev_tokens += doc_tokens.input_ids.size
             start += len(doc_spans)
         return outputs
