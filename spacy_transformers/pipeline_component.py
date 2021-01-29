@@ -142,6 +142,17 @@ class Transformer(TrainablePipe):
             listener.set_dim("nO", self.model.get_dim("nO"))
             self.listener_map[component_name].append(listener)
 
+    def remove_listener(self, listener: TransformerListener, component_name: str) -> bool:
+        """Remove a listener for a downstream component. Usually internals."""
+        if component_name in self.listener_map:
+            if listener in self.listener_map[component_name]:
+                self.listener_map[component_name].remove(listener)
+                # If no listeners are left, remove entry
+                if not self.listener_map[component_name]:
+                    del self.listener_map[component_name]
+                return True
+        return False
+
     def find_listeners(self, component) -> None:
         """Walk over a model of a processing component, looking for layers that
         are TransformerListener subclasses that have an upstream_name that
