@@ -170,6 +170,20 @@ class TransformerData:
         else:
             raise ValueError("Cannot find last hidden layer")
 
+    def to_bytes(self) -> bytes:
+        return srsly.msgpack_dumps({
+            "wordpieces": self.wordpieces.to_bytes(),
+            "tensors": srsly.msgpack_dumps(self.tensors),
+            "align": srsly.msgpack_dumps([self.align.dataXd, self.align.lengths])
+        })
+
+    def from_bytes(self, byte_string: bytes) -> "TransformerData":
+        msg = srsly.msgpack_loads(byte_string)
+        self.wordpieces = self.wordpieces.from_bytes(msg["wordpieces"])
+        self.tensors = msg["tensors"]
+        self.align = Ragged(*msg["align"])
+        return self
+
 
 @dataclass
 class FullTransformerBatch:
