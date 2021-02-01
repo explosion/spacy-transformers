@@ -4,6 +4,11 @@ trigger:
     include:
     - '*'
 
+pr:
+  paths:
+    exclude:
+      - "*.md"
+
 jobs:
 
 - job: 'Test'
