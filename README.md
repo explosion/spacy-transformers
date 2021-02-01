@@ -9,8 +9,8 @@ spaCy. The result is convenient access to state-of-the-art transformer
 architectures, such as BERT, GPT-2, XLNet, etc.
 
 > 🌙 **This release is a pre-release and requires
-> [spaCy v3](https://nightly.spacy.io/usage/v3) (nightly).** For the previous
-> version of this library, see the
+> [spaCy v3](https://nightly.spacy.io/usage/v3).** For the previous version of
+> this library, see the
 > [`v0.6.x` branch](https://github.com/explosion/spacy-transformers/tree/v0.6.x).
 
 [![Azure Pipelines](https://img.shields.io/azure-devops/build/explosion-ai/public/18/master.svg?logo=azure-pipelines&style=flat-square)](https://dev.azure.com/explosion-ai/public/_build?definitionId=18)
