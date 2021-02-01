@@ -6,6 +6,7 @@ from transformers.tokenization_utils import BatchEncoding
 from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
+import srsly
 
 from .util import transpose_list
 from .align import get_token_positions
@@ -17,7 +18,7 @@ class WordpieceBatch:
 
     We would have preferred to use the BatchEncoding class directly, but
     there's a few problems with that.
-    
+
     1. Some BatchEncoding functionality requires the tokenizers.Encoding object,
         and it's impossible for us to create or manipulate that object. This means
         we can't really create BatchEncoding objects, which limits what we can do.
@@ -50,9 +51,7 @@ class WordpieceBatch:
             attention_mask=self.attention_mask[slice_],
             lengths=self.lengths[slice_],
             token_type_ids=(
-                self.token_type_ids[slice_]
-                if self.token_type_ids is not None
-                else None
+                self.token_type_ids[slice_] if self.token_type_ids is not None else None
             ),
         )
 
@@ -63,12 +62,12 @@ class WordpieceBatch:
         output = {
             "input_ids": xp2torch(self.input_ids),
             "attention_mask": xp2torch(self.attention_mask),
-            "input_texts": self.strings
+            "input_texts": self.strings,
         }
         if self.token_type_ids is not None:
             output["token_type_ids"] = xp2torch(self.token_type_ids)
         return output
-    
+
     @classmethod
     def empty(cls, *, xp=numpy) -> "WordpieceBatch":
         return cls(
@@ -76,7 +75,7 @@ class WordpieceBatch:
             input_ids=xp.zeros((0, 0), dtype="i"),
             attention_mask=xp.ones((0, 0), dtype="bool"),
             lengths=[],
-            token_type_ids=None
+            token_type_ids=None,
         )
 
     @classmethod
@@ -86,15 +85,12 @@ class WordpieceBatch:
             input_ids=xp.array([[0] * length for length in lengths], dtype="i"),
             attention_mask=xp.ones((len(lengths), max(lengths)), dtype="bool"),
             lengths=lengths,
-            token_type_ids=None
+            token_type_ids=None,
         )
 
     @classmethod
     def from_batch_encoding(cls, token_data: BatchEncoding) -> "WordpieceBatch":
-        assert (
-            isinstance(token_data, BatchEncoding)
-            or isinstance(token_data, dict)
-        )
+        assert isinstance(token_data, BatchEncoding) or isinstance(token_data, dict)
         pad_token = token_data.get("pad_token", "[PAD]")
         lengths = [
             len([tok for tok in tokens if tok != pad_token])
@@ -110,14 +106,31 @@ class WordpieceBatch:
                 torch2xp(token_data["token_type_ids"]).reshape((n_seq, -1))
                 if "token_type_ids" in token_data
                 else None
-            )
+            ),
         )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "strings": self.strings,
+            "input_ids": self.input_ids,
+            "attention_mask": self.attention_mask,
+            "lengths": self.lengths,
+            "token_type_ids": self.token_type_ids,
+        }
+
+    def from_dict(self, msg: Dict[str, Any]) -> "WordpieceBatch":
+        self.string = msg["strings"]
+        self.input_ids = msg["input_ids"]
+        self.attention_mask = msg["attention_mask"]
+        self.lengths = msg["lengths"]
+        self.token_type_ids = msg["token_type_ids"]
+        return self
 
 
 @dataclass
 class TransformerData:
     """Transformer tokens and outputs for one Doc object.
-    
+
     The transformer models return tensors that refer to a whole padded batch
     of documents. These tensors are wrapped into the FullTransformerBatch object.
     The FullTransformerBatch then splits out the per-document data, which is
@@ -138,6 +151,7 @@ class TransformerData:
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
     """
+
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
@@ -170,19 +184,40 @@ class TransformerData:
         else:
             raise ValueError("Cannot find last hidden layer")
 
-    def to_bytes(self) -> bytes:
-        return srsly.msgpack_dumps({
-            "wordpieces": self.wordpieces.to_bytes(),
-            "tensors": srsly.msgpack_dumps(self.tensors),
-            "align": srsly.msgpack_dumps([self.align.dataXd, self.align.lengths])
-        })
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "wordpieces": self.wordpieces.to_dict(),
+            "tensors": self.tensors,
+            "align": [self.align.dataXd, self.align.lengths],
+        }
 
-    def from_bytes(self, byte_string: bytes) -> "TransformerData":
-        msg = srsly.msgpack_loads(byte_string)
-        self.wordpieces = self.wordpieces.from_bytes(msg["wordpieces"])
+    def from_dict(self, msg: Dict[str, Any]) -> "TransformerData":
+        self.wordpieces = WordpieceBatch.empty().from_dict(msg["wordpieces"])
         self.tensors = msg["tensors"]
         self.align = Ragged(*msg["align"])
         return self
+
+    def to_bytes(self) -> bytes:
+        return srsly.msgpack_dumps(self.to_dict())
+
+    def from_bytes(self, byte_string: bytes) -> "TransformerData":
+        msg = srsly.msgpack_loads(byte_string)
+        self.from_dict(msg)
+        return self
+
+
+@srsly.msgpack_encoders("transformerdata")
+def serialize_transformer_data(obj, chain=None):
+    if isinstance(obj, TransformerData):
+        return {"__transformerdata__": obj.to_dict()}
+    return obj if chain is None else chain(obj)
+
+
+@srsly.msgpack_decoders("transformerdata")
+def deserialize_transformer_data(obj, chain=None):
+    if "__transformerdata__" in obj:
+        return TransformerData.empty().from_dict(obj["__transformerdata__"])
+    return obj if chain is None else chain(obj)
 
 
 @dataclass
@@ -224,7 +259,7 @@ class FullTransformerBatch:
             wordpieces=WordpieceBatch.empty(),
             tensors=[],
             align=align,
-            cached_doc_data=doc_data
+            cached_doc_data=doc_data,
         )
 
     @property
