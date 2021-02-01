@@ -38,20 +38,20 @@ install the models. Also note that this package requires **Python 3.6+**,
 **PyTorch v1.5+** and **spaCy v3.0+**.
 
 ```bash
-pip install spacy-nightly[transformers] --pre
+pip install spacy[transformers]
 ```
 
 For GPU installation, find your CUDA version using `nvcc --version` and add the
 [version in brackets](https://spacy.io/usage/#gpu), e.g.
-`spacy-nightly[transformers,cuda92]` for CUDA9.2 or
-`spacy-nightly[transformers,cuda100]` for CUDA10.0.
+`spacy[transformers,cuda92]` for CUDA9.2 or `spacy[transformers,cuda100]` for
+CUDA10.0.
 
 If you are having trouble installing PyTorch, follow the
 [instructions](https://pytorch.org/get-started/locally/) on the official website
 for your specific operation system and requirements, or try the following:
 
 ```bash
-pip install spacy-transformers --pre -f https://download.pytorch.org/whl/torch_stable.html
+pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
 ## 📖 Documentation
