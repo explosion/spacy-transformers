@@ -139,8 +139,9 @@ class Transformer(TrainablePipe):
         """Add a listener for a downstream component. Usually internals."""
         self.listener_map.setdefault(component_name, [])
         if listener not in self.listener_map[component_name]:
-            listener.set_dim("nO", self.model.get_dim("nO"))
             self.listener_map[component_name].append(listener)
+        if self.model.has_dim("nO") and listener.has_dim("nO") is None:
+            listener.set_dim("nO", self.model.get_dim("nO"))
 
     def remove_listener(self, listener: TransformerListener, component_name: str) -> bool:
         """Remove a listener for a downstream component. Usually internals."""
