@@ -34,8 +34,8 @@ TRAIN_DATA = [
 ]
 
 
-def test_issue7029():
-    """Test that an empty document doesn't mess up an entire batch.
+def test_empty_doc():
+    """Test that an empty document gets processed correctly
     """
     nlp = English.from_config(load_config_from_str(CONFIG))
     train_examples = []
@@ -46,6 +46,15 @@ def test_issue7029():
         losses = {}
         nlp.update(train_examples, sgd=optimizer, losses=losses)
     texts = ["first", "second", "third", "fourth", "and", "then", "some", ""]
+
+    # run as normal
+    nlp.select_pipes(enable=["transformer", "tagger"])
+    docs1 = list(nlp.pipe(texts, batch_size=1))
+    docs2 = list(nlp.pipe(texts, batch_size=4))
+    assert [doc[0].tag_ for doc in docs1[:-1]] == [doc[0].tag_ for doc in docs2[:-1]]
+
+    # disable the transformer (the listener will produce random output)
+    nlp.select_pipes(enable=["tagger"])
     docs1 = list(nlp.pipe(texts, batch_size=1))
     docs2 = list(nlp.pipe(texts, batch_size=4))
     assert [doc[0].tag_ for doc in docs1[:-1]] == [doc[0].tag_ for doc in docs2[:-1]]

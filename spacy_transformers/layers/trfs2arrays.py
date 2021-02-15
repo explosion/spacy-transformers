@@ -25,7 +25,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             t_i = find_last_hidden(trf_data.tensors)
             tensor_t_i = trf_data.tensors[t_i]
             if tensor_t_i.size == 0:
-                # account for empty doc in the batch
+                # account for empty trf_data in the batch
                 outputs.append(model.ops.alloc2f(0, 0))
             else:
                 src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)
