@@ -1,12 +1,12 @@
+spacy>=3.0.0,<3.1.0
 transformers>=3.4.0,<4.3.0
 torch>=1.5.0
 torchcontrib>=0.0.2,<0.1.0
 srsly>=2.4.0,<3.0.0
 ftfy>=5.0.0,<6.0.0
-dataclasses>=0.6; python_version < "3.7"
+dataclasses>=0.6,<1.0; python_version < "3.7"
 importlib_metadata>=0.20; python_version < "3.8"
 spacy-alignments>=0.7.2,<1.0.0
 # Testing
-spacy-nightly>=3.0.0rc4,<3.1.0
 pytest>=5.2.0
 pytest-cov>=2.7.0,<2.8.0
