@@ -178,7 +178,7 @@ class Transformer(TrainablePipe):
         docs (Doc): The Doc to process.
         RETURNS (Doc): The processed Doc.
 
-        DOCS: https://nightly.spacy.io/api/transformer#call
+        DOCS: https://spacy.io/api/transformer#call
         """
         outputs = self.predict([doc])
         self.set_annotations([doc], outputs)
@@ -193,7 +193,7 @@ class Transformer(TrainablePipe):
         batch_size (int): The number of documents to buffer.
         YIELDS (Doc): Processed documents in order.
 
-        DOCS: https://nightly.spacy.io/api/transformer#pipe
+        DOCS: https://spacy.io/api/transformer#pipe
         """
         for outer_batch in minibatch(stream, batch_size):
             outer_batch = list(outer_batch)
@@ -209,7 +209,7 @@ class Transformer(TrainablePipe):
         docs (Iterable[Doc]): The documents to predict.
         RETURNS (FullTransformerBatch): The extracted features.
 
-        DOCS: https://nightly.spacy.io/api/transformer#predict
+        DOCS: https://spacy.io/api/transformer#predict
         """
         if not any(len(doc) for doc in docs):
             # Handle cases where there are no tokens in any docs.
@@ -231,7 +231,7 @@ class Transformer(TrainablePipe):
         docs (Iterable[Doc]): The documents to modify.
         predictions: (FullTransformerBatch): A batch of activations.
 
-        DOCS: https://nightly.spacy.io/api/pipe#set_annotations
+        DOCS: https://spacy.io/api/pipe#set_annotations
         """
         doc_data = list(predictions.doc_data)
         for doc, data in zip(docs, doc_data):
@@ -271,7 +271,7 @@ class Transformer(TrainablePipe):
             Updated using the component name as the key.
         RETURNS (Dict[str, float]): The updated losses dictionary.
 
-        DOCS: https://nightly.spacy.io/api/transformer#update
+        DOCS: https://spacy.io/api/transformer#update
         """
         validate_examples(examples, "Transformer.update")
         if losses is None:
@@ -334,7 +334,7 @@ class Transformer(TrainablePipe):
             returns gold-standard Example objects.
         nlp (Language): The current nlp object.
 
-        DOCS: https://nightly.spacy.io/api/transformer#initialize
+        DOCS: https://spacy.io/api/transformer#initialize
         """
         validate_get_examples(get_examples, "Transformer.initialize")
         docs = [Doc(Vocab(), words=["hello"])]
@@ -354,7 +354,7 @@ class Transformer(TrainablePipe):
         path (str / Path): Path to a directory.
         exclude (Iterable[str]): String names of serialization fields to exclude.
 
-        DOCS: https://nightly.spacy.io/api/transformer#to_disk
+        DOCS: https://spacy.io/api/transformer#to_disk
         """
 
         def save_model(p):
@@ -381,7 +381,7 @@ class Transformer(TrainablePipe):
         exclude (Iterable[str]): String names of serialization fields to exclude.
         RETURNS (Transformer): The loaded object.
 
-        DOCS: https://nightly.spacy.io/api/transformer#from_disk
+        DOCS: https://spacy.io/api/transformer#from_disk
         """
 
         def load_model(p):
