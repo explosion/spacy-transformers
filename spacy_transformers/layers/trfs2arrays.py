@@ -23,11 +23,16 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     for trf_data in trf_datas:
         if len(trf_data.tensors) > 0:
             t_i = find_last_hidden(trf_data.tensors)
-            src = model.ops.reshape2f(trf_data.tensors[t_i], -1, trf_data.width)
-            dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
-            output, get_d_dst = pooling(dst, is_train)
-            outputs.append(output)
-            backprops.append((get_d_dst, get_d_src))
+            tensor_t_i = trf_data.tensors[t_i]
+            if tensor_t_i.size == 0:
+                # account for empty trf_data in the batch
+                outputs.append(model.ops.alloc2f(0, 0))
+            else:
+                src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)
+                dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
+                output, get_d_dst = pooling(dst, is_train)
+                outputs.append(output)
+                backprops.append((get_d_dst, get_d_src))
         else:
             outputs.append(model.ops.alloc2f(0, 0))
 
