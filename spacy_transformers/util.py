@@ -1,5 +1,6 @@
 from typing import List, Dict, Union
 from pathlib import Path
+from functools import partial
 import random
 from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
@@ -16,20 +17,22 @@ registry.annotation_setters = catalogue.create("spacy", "annotation_setters", en
 # fmt: on
 
 
-def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
+def huggingface_from_pretrained(source: Union[Path, str], tok_config: Dict, trf_config: Dict):
     """Create a Huggingface transformer model from pretrained weights. Will
     download the model if it is not already downloaded.
 
     source (Union[str, Path]): The name of the model or a path to it, such as
         'bert-base-cased'.
-    config (dict): Settings to pass to the tokenizer.
+    tok_config (dict): Settings to pass to the tokenizer.
+    trf_config (dict): Settings to pass to the transformer.
     """
     if hasattr(source, "absolute"):
         str_path = str(source.absolute())
     else:
         str_path = source
-    tokenizer = AutoTokenizer.from_pretrained(str_path, **config)
+    tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
     transformer = AutoModel.from_pretrained(str_path)
+    transformer.forward = partial(**trf_config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()

@@ -77,7 +77,8 @@ def init(model: Model, X=None, Y=None):
         return
     name = model.attrs["name"]
     tok_cfg = model.attrs["tokenizer_config"]
-    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg)
+    trf_cfg = model.attrs["transformers_config"]
+    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
     model.attrs["tokenizer"] = tokenizer
     model.attrs["set_transformer"](model, transformer)
     # Call the model with a batch of inputs to infer the width
