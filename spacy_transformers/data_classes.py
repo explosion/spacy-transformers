@@ -155,7 +155,7 @@ class TransformerData:
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
-    attention: Optional[tuple]  # wanted to make this Optional[Tuple[FloatsXd]],
+    attention: Optional[tuple] = None  # wanted to make this Optional[Tuple[FloatsXd]],
     # but got an error I couldn't solve
 
     @classmethod
