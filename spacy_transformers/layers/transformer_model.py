@@ -150,7 +150,7 @@ def forward(
         log_gpu_memory(model.attrs["logger"], "after forward")
     if model.attrs["transformers_config"]["output_attentions"] is True:
         attn = tensors[-1]
-        tensors[:-1]
+        tensors = tensors[:-1]
     else:
         attn = None
     output = FullTransformerBatch(
