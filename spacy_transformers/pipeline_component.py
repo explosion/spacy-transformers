@@ -144,7 +144,9 @@ class Transformer(TrainablePipe):
         if self.model.has_dim("nO") and listener.has_dim("nO") is None:
             listener.set_dim("nO", self.model.get_dim("nO"))
 
-    def remove_listener(self, listener: TransformerListener, component_name: str) -> bool:
+    def remove_listener(
+        self, listener: TransformerListener, component_name: str
+    ) -> bool:
         """Remove a listener for a downstream component. Usually internals."""
         if component_name in self.listener_map:
             if listener in self.listener_map[component_name]:
@@ -168,7 +170,10 @@ class Transformer(TrainablePipe):
         names = ("*", self.name)
         if isinstance(getattr(component, "model", None), Model):
             for node in component.model.walk():
-                if isinstance(node, TransformerListener) and node.upstream_name in names:
+                if (
+                    isinstance(node, TransformerListener)
+                    and node.upstream_name in names
+                ):
                     self.add_listener(node, component.name)
 
     def __call__(self, doc: Doc) -> Doc:

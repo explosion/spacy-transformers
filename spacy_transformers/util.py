@@ -17,7 +17,9 @@ registry.annotation_setters = catalogue.create("spacy", "annotation_setters", en
 # fmt: on
 
 
-def huggingface_from_pretrained(source: Union[Path, str], tok_config: Dict, trf_config: Dict):
+def huggingface_from_pretrained(
+    source: Union[Path, str], tok_config: Dict, trf_config: Dict
+):
     """Create a Huggingface transformer model from pretrained weights. Will
     download the model if it is not already downloaded.
 

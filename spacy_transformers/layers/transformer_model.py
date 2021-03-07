@@ -92,23 +92,18 @@ def init(model: Model, X=None, Y=None):
         for doc_spans in nested_spans:
             flat_spans.extend(doc_spans)
         token_data = huggingface_tokenize(
-            model.attrs["tokenizer"],
-            [span.text for span in flat_spans]
+            model.attrs["tokenizer"], [span.text for span in flat_spans]
         )
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
         align = get_alignment(
-            flat_spans,
-            wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
+            flat_spans, wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
         )
         wordpieces, align = truncate_oversize_splits(
             wordpieces, align, tokenizer.model_max_length
         )
     else:
         texts = ["hello world", "foo bar"]
-        token_data = huggingface_tokenize(
-            model.attrs["tokenizer"],
-            texts
-        )
+        token_data = huggingface_tokenize(model.attrs["tokenizer"], texts)
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
     model.layers[0].initialize(X=wordpieces)
     tensors = model.layers[0].predict(wordpieces)
@@ -134,8 +129,7 @@ def forward(
     maybe_flush_pytorch_cache(chance=model.attrs.get("flush_cache_chance", 0))
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "begin forward")
-    batch_encoding = huggingface_tokenize(
-        tokenizer, [span.text for span in flat_spans])
+    batch_encoding = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
     wordpieces = WordpieceBatch.from_batch_encoding(batch_encoding)
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], wordpieces, is_train)
@@ -154,7 +148,11 @@ def forward(
     else:
         attn = None
     output = FullTransformerBatch(
-        spans=nested_spans, wordpieces=wordpieces, tensors=tensors, align=align, attention=attn
+        spans=nested_spans,
+        wordpieces=wordpieces,
+        tensors=tensors,
+        align=align,
+        attention=attn,
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")

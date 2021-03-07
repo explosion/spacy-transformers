@@ -69,8 +69,7 @@ def transformer_tok2vec_v1(
         Leaving it at 1.0 is usually fine.
     """
     return chain(
-        TransformerModel(name, get_spans, tokenizer_config,
-                         transformers_config),
+        TransformerModel(name, get_spans, tokenizer_config, transformers_config),
         split_trf_batch(),
         trfs2arrays(pooling, grad_factor),
     )
