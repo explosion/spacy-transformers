@@ -145,7 +145,7 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    if model.attrs["transfomers_config"]["output_attentions"] is True:
+    if model.attrs["transformers_config"]["output_attentions"] is True:
         attn = tensors[-1]
         tensors[:-1]
     else:
