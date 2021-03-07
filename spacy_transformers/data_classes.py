@@ -90,7 +90,8 @@ class WordpieceBatch:
 
     @classmethod
     def from_batch_encoding(cls, token_data: BatchEncoding) -> "WordpieceBatch":
-        assert isinstance(token_data, BatchEncoding) or isinstance(token_data, dict)
+        assert isinstance(token_data, BatchEncoding) or isinstance(
+            token_data, dict)
         pad_token = token_data.get("pad_token", "[PAD]")
         lengths = [
             len([tok for tok in tokens if tok != pad_token])
@@ -100,7 +101,8 @@ class WordpieceBatch:
         return cls(
             strings=token_data["input_texts"],
             input_ids=torch2xp(token_data["input_ids"]).reshape((n_seq, -1)),
-            attention_mask=torch2xp(token_data["attention_mask"]).reshape((n_seq, -1)),
+            attention_mask=torch2xp(
+                token_data["attention_mask"]).reshape((n_seq, -1)),
             lengths=lengths,
             token_type_ids=(
                 torch2xp(token_data["token_type_ids"]).reshape((n_seq, -1))
@@ -155,12 +157,13 @@ class TransformerData:
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
-    attention: Optional[tuple] = None  # wanted to make this Optional[Tuple[FloatsXd]],
+    attention: Optional[tuple]  # wanted to make this Optional[Tuple[FloatsXd]],
     # but got an error I couldn't solve
 
     @classmethod
     def empty(cls) -> "TransformerData":
-        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
+        align = Ragged(numpy.zeros((0,), dtype="i"),
+                       numpy.zeros((0,), dtype="i"))
         return cls(wordpieces=WordpieceBatch.empty(), tensors=[], align=align)
 
     @classmethod
@@ -170,7 +173,8 @@ class TransformerData:
         return cls(
             wordpieces=WordpieceBatch.zeros([length], xp=xp),
             tensors=[xp.zeros((1, length, width), dtype="f")],
-            align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i")),
+            align=Ragged(numpy.arange(length),
+                         numpy.ones((length,), dtype="i")),
         )
 
     @property
@@ -256,7 +260,8 @@ class FullTransformerBatch:
     def empty(cls, nr_docs) -> "FullTransformerBatch":
         spans = [[] for i in range(nr_docs)]
         doc_data = [TransformerData.empty() for i in range(nr_docs)]
-        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
+        align = Ragged(numpy.zeros((0,), dtype="i"),
+                       numpy.zeros((0,), dtype="i"))
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
@@ -315,11 +320,16 @@ class FullTransformerBatch:
             doc_tokens = self.wordpieces[start:end]
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
+            if self.attention:
+                attn = [torch2xp(t[start:end]) for t in self.attention]
+            else:
+                attn = None
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
                     tensors=[torch2xp(t[start:end]) for t in self.tensors],
                     align=doc_align,
+                    attention=attn,
                 )
             )
             prev_tokens += doc_tokens.input_ids.size
