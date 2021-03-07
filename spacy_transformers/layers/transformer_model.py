@@ -25,6 +25,7 @@ def TransformerModel(
         overlap, and you can also omit sections of the Doc if they are not
         relevant.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
+    transformers_config (dict): Settings to pass to the transformers forward pass.
     """
 
     return Model(
@@ -144,8 +145,13 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
+    if model.attrs["transfomers_config"]["attention"]:
+        attn=tensors[-1]
+        tensors[:-1]
+    else:
+        attn=None
     output = FullTransformerBatch(
-        spans=nested_spans, wordpieces=wordpieces, tensors=tensors, align=align
+        spans=nested_spans, wordpieces=wordpieces, tensors=tensors, align=align, attention=attn
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")

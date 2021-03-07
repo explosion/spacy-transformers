@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
@@ -155,6 +155,8 @@ class TransformerData:
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
+    attention: Optional[tuple] = None  # wanted to make this Optional[Tuple[FloatsXd]],
+    # but got an error I couldn't solve
 
     @classmethod
     def empty(cls) -> "TransformerData":
@@ -247,6 +249,7 @@ class FullTransformerBatch:
     wordpieces: WordpieceBatch
     tensors: List[torch.Tensor]
     align: Ragged
+    attention: Optional[Tuple[torch.Tensor]] = None
     cached_doc_data: Optional[List[TransformerData]] = None
 
     @classmethod
