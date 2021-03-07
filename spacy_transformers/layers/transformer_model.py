@@ -112,6 +112,8 @@ def init(model: Model, X=None, Y=None):
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
     model.layers[0].initialize(X=wordpieces)
     tensors = model.layers[0].predict(wordpieces)
+    if trf_cfg["output_attentions"] is True:
+        tensors = tensors[:-1]  # remove attention
     t_i = find_last_hidden(tensors)
     model.set_dim("nO", tensors[t_i].shape[-1])
 
