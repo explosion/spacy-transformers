@@ -118,6 +118,7 @@ def forward(
 ) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
+    trf_config = model.attrs["transformers_config"]
     transformer = model.layers[0]
 
     nested_spans = get_spans(docs)
@@ -142,7 +143,7 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    if model.attrs["transformers_config"]["output_attentions"] is True:
+    if trf_config["output_attentions"] is True:
         attn = tensors[-1]
         tensors = tensors[:-1]
     else:
