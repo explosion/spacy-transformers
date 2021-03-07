@@ -32,7 +32,7 @@ def huggingface_from_pretrained(source: Union[Path, str], tok_config: Dict, trf_
         str_path = source
     tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
     transformer = AutoModel.from_pretrained(str_path)
-    transformer.forward = partial(**trf_config)
+    transformer.forward = partial(transformer.forward, **trf_config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
