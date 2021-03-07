@@ -23,7 +23,7 @@ def TransformerModel(
         This is used to manage long documents, by cutting them into smaller
         sequences before running the transformer. The spans are allowed to
         overlap, and you can also omit sections of the Doc if they are not
-        relevant.∏∏∏∏
+        relevant.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
     """
 
