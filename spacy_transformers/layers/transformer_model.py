@@ -15,7 +15,7 @@ from ..align import get_alignment
 
 
 def TransformerModel(
-    name: str, get_spans: Callable, tokenizer_config: dict
+    name: str, get_spans: Callable, tokenizer_config: dict, transformers_config: dict
 ) -> Model[List[Doc], FullTransformerBatch]:
     """
     get_spans (Callable[[List[Doc]], List[Span]]):
@@ -23,7 +23,7 @@ def TransformerModel(
         This is used to manage long documents, by cutting them into smaller
         sequences before running the transformer. The spans are allowed to
         overlap, and you can also omit sections of the Doc if they are not
-        relevant.
+        relevant.∏∏∏∏
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
     """
 
@@ -38,6 +38,7 @@ def TransformerModel(
             "get_spans": get_spans,
             "name": name,
             "tokenizer_config": tokenizer_config,
+            "transformers_config": transformers_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
             "flush_cache_chance": 0.0,
@@ -129,7 +130,8 @@ def forward(
     maybe_flush_pytorch_cache(chance=model.attrs.get("flush_cache_chance", 0))
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "begin forward")
-    batch_encoding = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
+    batch_encoding = huggingface_tokenize(
+        tokenizer, [span.text for span in flat_spans])
     wordpieces = WordpieceBatch.from_batch_encoding(batch_encoding)
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], wordpieces, is_train)
