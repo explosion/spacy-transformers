@@ -116,7 +116,11 @@ def DummyTransformerModel(width: int, depth: int):
             tensors.append(torch.zeros(*shape))
         return tensors, lambda d_tensors: tokens
 
-    return Model("dummy-transformer", _forward, attrs={"width": width, "depth": depth})
+    return Model(
+        "dummy-transformer",
+        _forward,
+        attrs={"width": width, "depth": depth, "output_attentions": False},
+    )
 
 
 def DummyTransformer(
