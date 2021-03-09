@@ -119,7 +119,7 @@ def DummyTransformerModel(width: int, depth: int):
     return Model(
         "dummy-transformer",
         _forward,
-        attrs={"width": width, "depth": depth, "output_attentions": False},
+        attrs={"width": width, "depth": depth},
     )
 
 
@@ -136,6 +136,7 @@ def DummyTransformer(
             "tokenizer": DummyTokenizer(),
             "grad_factor": 1.0,
             "flush_cache_chance": 0.0,
+            "transformers_config": {"output_attentions": False}
         },
         dims={"nO": width},
     )
