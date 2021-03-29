@@ -180,6 +180,7 @@ class Transformer(TrainablePipe):
 
         DOCS: https://spacy.io/api/transformer#call
         """
+        install_extensions()
         outputs = self.predict([doc])
         self.set_annotations([doc], outputs)
         return doc
@@ -195,6 +196,7 @@ class Transformer(TrainablePipe):
 
         DOCS: https://spacy.io/api/transformer#pipe
         """
+        install_extensions()
         for outer_batch in minibatch(stream, batch_size):
             outer_batch = list(outer_batch)
             for indices in batch_by_length(outer_batch, self.cfg["max_batch_items"]):
