@@ -47,7 +47,6 @@ def transformer_tok2vec_v1(
     name: str,
     get_spans,
     tokenizer_config,
-    transformers_config,
     pooling: Model[Ragged, Floats2d],
     grad_factor: float = 1.0,
 ) -> Model[List[Doc], List[Floats2d]]:
@@ -69,10 +68,46 @@ def transformer_tok2vec_v1(
         Leaving it at 1.0 is usually fine.
     """
     return chain(
+        TransformerModel(name, get_spans, tokenizer_config, transformers_config={}),
+        split_trf_batch(),
+        trfs2arrays(pooling, grad_factor),
+    )
+
+
+@registry.architectures.register("spacy-transformers.Tok2VecTransformer.v2")
+def transformer_tok2vec_v1(
+    name: str,
+    get_spans,
+    tokenizer_config: dict,
+    transformers_config: dict,
+    pooling: Model[Ragged, Floats2d],
+    grad_factor: float = 1.0,
+) -> Model[List[Doc], List[Floats2d]]:
+    """Use a transformer as a "Tok2Vec" layer directly. This does not allow
+    multiple components to share the transformer weights, and does not allow
+    the transformer to set annotations into the `Doc` object, but it's a
+    simpler solution if you only need the transformer within one component.
+
+    get_spans (Callable[[List[Doc]], List[List[Span]]]): A function to extract
+        spans from the batch of Doc objects. See the "TransformerModel" layer
+        for details.
+    tokenizer_config (dict): Settings to pass to the transformers tokenizer.
+    transformers_config (dict): Settings to pass to the transformers forward pass
+        of the transformer.
+    pooling (Model[Ragged, Floats2d]): A reduction layer used to calculate
+        the token vectors based on zero or more wordpiece vectors. If in doubt,
+        mean pooling (see `thinc.layers.reduce_mean`) is usually a good choice.
+     grad_factor (float): Reweight gradients from the component before passing
+        them to the transformer. You can set this to 0 to "freeze" the transformer
+        weights with respect to the component, or to make it learn more slowly.
+        Leaving it at 1.0 is usually fine.
+    """
+    return chain(
         TransformerModel(name, get_spans, tokenizer_config, transformers_config),
         split_trf_batch(),
         trfs2arrays(pooling, grad_factor),
     )
+
 
 
 registry.architectures.register(
