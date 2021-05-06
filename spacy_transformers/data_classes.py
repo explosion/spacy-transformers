@@ -155,13 +155,14 @@ class TransformerData:
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
-    attention: Optional[tuple] = None  # wanted to make this Optional[Tuple[FloatsXd]],
-    # but got an error I couldn't solve
+    attention: Optional[Tuple[FloatsXd]] = None
 
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(wordpieces=WordpieceBatch.empty(), tensors=[], align=align, attention=None)
+        return cls(
+            wordpieces=WordpieceBatch.empty(), tensors=[], align=align, attention=None
+        )
 
     @classmethod
     def zeros(cls, length: int, width: int, *, xp=numpy) -> "TransformerData":
