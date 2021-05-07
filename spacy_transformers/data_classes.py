@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
@@ -155,11 +155,14 @@ class TransformerData:
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
+    attention: Optional[Tuple[FloatsXd, ...]] = None
 
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(wordpieces=WordpieceBatch.empty(), tensors=[], align=align)
+        return cls(
+            wordpieces=WordpieceBatch.empty(), tensors=[], align=align, attention=None
+        )
 
     @classmethod
     def zeros(cls, length: int, width: int, *, xp=numpy) -> "TransformerData":
@@ -247,6 +250,7 @@ class FullTransformerBatch:
     wordpieces: WordpieceBatch
     tensors: List[torch.Tensor]
     align: Ragged
+    attention: Optional[Tuple[torch.Tensor]] = None
     cached_doc_data: Optional[List[TransformerData]] = None
 
     @classmethod
@@ -259,6 +263,7 @@ class FullTransformerBatch:
             wordpieces=WordpieceBatch.empty(),
             tensors=[],
             align=align,
+            attention=None,
             cached_doc_data=doc_data,
         )
 
@@ -312,11 +317,16 @@ class FullTransformerBatch:
             doc_tokens = self.wordpieces[start:end]
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
+            if self.attention:
+                attn = [torch2xp(t[start:end]) for t in self.attention]
+            else:
+                attn = None
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
                     tensors=[torch2xp(t[start:end]) for t in self.tensors],
                     align=doc_align,
+                    attention=attn,
                 )
             )
             prev_tokens += doc_tokens.input_ids.size

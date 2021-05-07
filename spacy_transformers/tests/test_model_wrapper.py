@@ -28,7 +28,9 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def trf_model(name):
-    model = TransformerModel(name, get_doc_spans, {"use_fast": True})
+    model = TransformerModel(
+        name, get_doc_spans, {"use_fast": True}, {"output_attentions": False}
+    )
     model.initialize()
     return model
 
