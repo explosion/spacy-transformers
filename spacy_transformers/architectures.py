@@ -46,7 +46,7 @@ def transformer_listener_tok2vec_v1(
 def transformer_tok2vec_v1(
     name: str,
     get_spans,
-    tokenizer_config,
+    tokenizer_config: dict,
     pooling: Model[Ragged, Floats2d],
     grad_factor: float = 1.0,
 ) -> Model[List[Doc], List[Floats2d]]:
@@ -68,18 +68,18 @@ def transformer_tok2vec_v1(
         Leaving it at 1.0 is usually fine.
     """
     return chain(
-        TransformerModel(name, get_spans, tokenizer_config, transformers_config={}),
+        TransformerModel(name, get_spans, tokenizer_config),
         split_trf_batch(),
         trfs2arrays(pooling, grad_factor),
     )
 
 
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v2")
-def transformer_tok2vec_v1(
+def transformer_tok2vec_v2(
     name: str,
     get_spans,
     tokenizer_config: dict,
-    transformers_config: dict,
+    transformer_config: dict,
     pooling: Model[Ragged, Floats2d],
     grad_factor: float = 1.0,
 ) -> Model[List[Doc], List[Floats2d]]:
@@ -103,7 +103,7 @@ def transformer_tok2vec_v1(
         Leaving it at 1.0 is usually fine.
     """
     return chain(
-        TransformerModel(name, get_spans, tokenizer_config, transformers_config),
+        TransformerModel(name, get_spans, tokenizer_config, transformer_config),
         split_trf_batch(),
         trfs2arrays(pooling, grad_factor),
     )

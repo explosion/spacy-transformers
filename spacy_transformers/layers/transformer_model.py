@@ -15,7 +15,7 @@ from ..align import get_alignment
 
 
 def TransformerModel(
-    name: str, get_spans: Callable, tokenizer_config: dict, transformers_config: dict
+    name: str, get_spans: Callable, tokenizer_config: dict = {}, transformer_config: dict = {}
 ) -> Model[List[Doc], FullTransformerBatch]:
     """
     get_spans (Callable[[List[Doc]], List[Span]]):
@@ -39,7 +39,7 @@ def TransformerModel(
             "get_spans": get_spans,
             "name": name,
             "tokenizer_config": tokenizer_config,
-            "transformers_config": transformers_config,
+            "transformers_config": transformer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
             "flush_cache_chance": 0.0,
