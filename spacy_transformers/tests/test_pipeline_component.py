@@ -10,6 +10,7 @@ from thinc.api import Model, Config
 from numpy.testing import assert_equal
 
 from .util import DummyTransformer
+from .. import TransformerModel
 from ..pipeline_component import Transformer
 from ..data_classes import TransformerData, FullTransformerBatch
 
@@ -228,3 +229,50 @@ def _assert_empty(trf_data):
     assert trf_data.wordpieces.attention_mask.size == 0
     assert trf_data.tensors == []
     assert len(trf_data.align.data) == 0
+
+
+def test_replace_listeners():
+    orig_config = Config().from_str(cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    examples = [Example.from_dict(nlp.make_doc("x y"), {"tags": ["V", "Z"]})]
+    nlp.initialize(lambda: examples)
+    transformer = nlp.get_pipe("transformer")
+    tagger = nlp.get_pipe("tagger")
+    tagger_tok2vec = tagger.model.get_ref("tok2vec")
+    tagger_listener = tagger_tok2vec.get_ref("listener")
+    assert isinstance(tagger_listener, TransformerListener)
+    assert transformer.listener_map["tagger"][0] == tagger_listener
+    assert (
+        nlp.config["components"]["transformer"]["model"]["@architectures"]
+        == "spacy-transformers.TransformerModel.v1"
+    )
+    assert (
+        nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
+        == "spacy-transformers.TransformerListener.v1"
+    )
+    nlp.replace_listeners("transformer", "tagger", ["model.tok2vec"])
+    tagger = nlp.get_pipe("tagger")
+    tagger_tok2vec = tagger.model.get_ref("tok2vec")
+    # assert isinstance(tagger_tok2vec, TransformerModel) - TODO
+    # TODO: below should be Tok2VecTransformer.v1 instead
+    assert (
+            nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
+            == "spacy-transformers.TransformerModel.v1"
+    )
+    with pytest.raises(ValueError):
+        nlp.replace_listeners("invalid", "tagger", ["model.tok2vec"])
+    with pytest.raises(ValueError):
+        nlp.replace_listeners("transformer", "parser", ["model.tok2vec"])
+    with pytest.raises(ValueError):
+        nlp.replace_listeners("transformer", "tagger", ["model.yolo"])
+    with pytest.raises(ValueError):
+        nlp.replace_listeners("transformer", "tagger", ["model.tok2vec", "model.yolo"])
+    # attempt training with the new pipeline
+    optimizer = nlp.initialize(lambda: examples)
+    print(nlp.pipe_names)
+    for i in range(2):
+        losses = {}
+        nlp.update(examples, sgd=optimizer, losses=losses)
+        print(losses)
+        assert losses["transformer"] == 0.0
+        assert losses["tagger"] > 0.0
