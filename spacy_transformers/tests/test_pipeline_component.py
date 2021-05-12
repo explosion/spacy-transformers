@@ -253,11 +253,10 @@ def test_replace_listeners():
     nlp.replace_listeners("transformer", "tagger", ["model.tok2vec"])
     tagger = nlp.get_pipe("tagger")
     tagger_tok2vec = tagger.model.get_ref("tok2vec")
-    # assert isinstance(tagger_tok2vec, TransformerModel) - TODO
-    # TODO: below should be Tok2VecTransformer.v1 instead
+    assert tagger_tok2vec.layers[0].layers[0].name == "transformer"
     assert (
             nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
-            == "spacy-transformers.TransformerModel.v1"
+            == "spacy-transformers.Tok2VecTransformer.v1"
     )
     with pytest.raises(ValueError):
         nlp.replace_listeners("invalid", "tagger", ["model.tok2vec"])
@@ -274,5 +273,4 @@ def test_replace_listeners():
         losses = {}
         nlp.update(examples, sgd=optimizer, losses=losses)
         print(losses)
-        assert losses["transformer"] == 0.0
         assert losses["tagger"] > 0.0

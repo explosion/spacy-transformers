@@ -1,16 +1,17 @@
 from typing import List, Tuple, Callable
+
+from spacy_transformers.layers.split_trf import replace_listener
+from thinc.types import ArgsKwargs
 import torch
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model, xp2torch
-from thinc.types import ArgsKwargs
-from transformers.tokenization_utils import BatchEncoding
+from thinc.api import PyTorchWrapper, Model, xp2torch, chain
 import logging
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import find_last_hidden, maybe_flush_pytorch_cache
-from ..truncate import truncate_oversize_splits
 from ..util import log_gpu_memory, log_batch_size
+from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
 
 
@@ -41,6 +42,7 @@ def TransformerModel(
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
             "flush_cache_chance": 0.0,
+            "replace_listener": replace_listener,
         },
     )
 
