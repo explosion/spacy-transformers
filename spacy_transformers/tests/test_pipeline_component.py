@@ -255,8 +255,8 @@ def test_replace_listeners():
     tagger_tok2vec = tagger.model.get_ref("tok2vec")
     assert tagger_tok2vec.layers[0].layers[0].name == "transformer"
     assert (
-            nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
-            == "spacy-transformers.Tok2VecTransformer.v1"
+        nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
+        == "spacy-transformers.Tok2VecTransformer.v1"
     )
     with pytest.raises(ValueError):
         nlp.replace_listeners("invalid", "tagger", ["model.tok2vec"])

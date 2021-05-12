@@ -13,7 +13,7 @@ def transformer_listener_tok2vec_v1(
 ) -> Model[List[Doc], List[Floats2d]]:
     """Create a 'TransformerListener' layer, which will connect to a Transformer
     component earlier in the pipeline.
-     
+
     The layer takes a list of Doc objects as input, and produces a list of
     2d arrays as output, with each array having one row per token. Most spaCy
     models expect a sublayer with this signature, making it easy to connect them

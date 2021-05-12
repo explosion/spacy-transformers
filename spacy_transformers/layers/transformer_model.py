@@ -1,6 +1,6 @@
 from typing import List, Tuple, Callable
 
-from spacy_transformers.layers.split_trf import replace_listener, replace_listener_cfg
+from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
 import torch
 from spacy.tokens import Doc
