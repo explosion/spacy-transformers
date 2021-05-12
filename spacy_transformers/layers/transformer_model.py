@@ -1,6 +1,6 @@
 from typing import List, Tuple, Callable
 
-from spacy_transformers.layers.split_trf import replace_listener
+from spacy_transformers.layers.split_trf import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
 import torch
 from spacy.tokens import Doc
@@ -43,6 +43,7 @@ def TransformerModel(
             "has_transformer": False,
             "flush_cache_chance": 0.0,
             "replace_listener": replace_listener,
+            "replace_listener_cfg": replace_listener_cfg,
         },
     )
 
