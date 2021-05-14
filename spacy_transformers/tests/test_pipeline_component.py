@@ -10,7 +10,6 @@ from thinc.api import Model, Config
 from numpy.testing import assert_equal
 
 from .util import DummyTransformer
-from .. import TransformerModel
 from ..pipeline_component import Transformer
 from ..data_classes import TransformerData, FullTransformerBatch
 
@@ -113,7 +112,7 @@ def test_transformer_pipeline_long_token(simple_nlp):
     doc = simple_nlp("https://example.com/" + "a/" * 1000)
 
 
-cfg_string_listener = """
+cfg_string = """
     [nlp]
     lang = "en"
     pipeline = ["transformer","tagger"]
@@ -143,7 +142,7 @@ cfg_string_listener = """
 
 def test_transformer_pipeline_tagger_listener():
     """Test that a pipeline with just a transformer+tagger runs and trains properly"""
-    orig_config = Config().from_str(cfg_string_listener)
+    orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     assert nlp.pipe_names == ["transformer", "tagger"]
     tagger = nlp.get_pipe("tagger")
@@ -167,7 +166,8 @@ def test_transformer_pipeline_tagger_listener():
         losses = {}
         nlp.update(train_examples, sgd=optimizer, losses=losses)
 
-    doc = nlp("We're interested at underwater basket weaving.")
+    text = "We're interested at underwater basket weaving."
+    doc = nlp(text)
     doc_tensor = tagger_trf.predict([doc])
     assert_equal(doc._.trf_data.tensors, doc_tensor[0].tensors)
 
@@ -176,16 +176,26 @@ def test_transformer_pipeline_tagger_listener():
         file_path = d / "trained_nlp"
         nlp.to_disk(file_path)
         nlp2 = util.load_model_from_path(file_path)
-        doc = nlp2("We're interested at underwater basket weaving.")
+        doc = nlp2(text)
         tagger2 = nlp2.get_pipe("tagger")
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
         doc_tensor2 = tagger_trf2.predict([doc])
         assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
 
+    # ensure to_bytes / from_bytes works
+    nlp_bytes = nlp.to_bytes()
+    nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    nlp3.from_bytes(nlp_bytes)
+    doc = nlp3(text)
+    tagger3 = nlp3.get_pipe("tagger")
+    tagger_trf3 = tagger3.model.get_ref("tok2vec").layers[0]
+    doc_tensor3 = tagger_trf3.predict([doc])
+    assert_equal(doc_tensor3[0].tensors, doc_tensor[0].tensors)
+
 
 def test_transformer_pipeline_empty():
     """Test that the pipeline doesn't fail with empty input"""
-    orig_config = Config().from_str(cfg_string_listener)
+    orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     tagger = nlp.get_pipe("tagger")
     train_examples = []
@@ -232,7 +242,7 @@ def _assert_empty(trf_data):
 
 
 def test_replace_listeners():
-    orig_config = Config().from_str(cfg_string_listener)
+    orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     examples = [Example.from_dict(nlp.make_doc("x y"), {"tags": ["V", "Z"]})]
     nlp.initialize(lambda: examples)
@@ -274,67 +284,3 @@ def test_replace_listeners():
         nlp.update(examples, sgd=optimizer, losses=losses)
         print(losses)
         assert losses["tagger"] > 0.0
-
-
-cfg_string_internal = """
-    [nlp]
-    lang = "en"
-    pipeline = ["tagger"]
-    
-    [components]
-    
-    [components.tagger]
-    factory = "tagger"
-    
-    [components.tagger.model]
-    @architectures = "spacy.Tagger.v1"
-    nO = null
-    
-    [components.tagger.model.tok2vec]
-    @architectures = "spacy-transformers.Tok2VecTransformer.v1"
-    name = "albert-base-v2"
-    tokenizer_config = {"use_fast": false}
-    grad_factor = 1.0
-    
-    [components.tagger.model.tok2vec.get_spans]
-    @span_getters = "spacy-transformers.strided_spans.v1"
-    window = 256
-    stride = 256
-
-    [components.tagger.model.tok2vec.pooling]
-    @layers = "reduce_mean.v1"
-    """
-
-
-def test_transformer_pipeline_tagger_internal():
-    """Test that a tagger with internal transformer runs and trains properly"""
-    orig_config = Config().from_str(cfg_string_internal)
-    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
-    assert nlp.pipe_names == ["tagger"]
-    tagger = nlp.get_pipe("tagger")
-    tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
-    assert isinstance(tagger_trf, Model)
-    train_examples = []
-    for t in TRAIN_DATA:
-        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
-        for tag in t[1]["tags"]:
-            tagger.add_label(tag)
-
-    optimizer = nlp.initialize(lambda: train_examples)
-    for i in range(2):
-        losses = {}
-        nlp.update(train_examples, sgd=optimizer, losses=losses)
-
-    doc = nlp("We're interested at underwater basket weaving.")
-    doc_tensor = tagger_trf.predict([doc])
-
-    # ensure IO goes OK
-    with make_tempdir() as d:
-        file_path = d / "trained_nlp"
-        nlp.to_disk(file_path)
-        nlp2 = util.load_model_from_path(file_path)
-        doc = nlp2("We're interested at underwater basket weaving.")
-        tagger2 = nlp2.get_pipe("tagger")
-        tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
-        doc_tensor2 = tagger_trf2.predict([doc])
-        assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
