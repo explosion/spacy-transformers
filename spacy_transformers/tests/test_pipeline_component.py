@@ -185,6 +185,7 @@ def test_transformer_pipeline_tagger_listener():
     # ensure to_bytes / from_bytes works
     nlp_bytes = nlp.to_bytes()
     nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    nlp3.initialize(lambda: train_examples)
     nlp3.from_bytes(nlp_bytes)
     doc = nlp3(text)
     tagger3 = nlp3.get_pipe("tagger")

@@ -29,4 +29,6 @@ def test_transformer_model_tobytes():
 
     nlp2 = Language()
     trf2 = nlp2.add_pipe("transformer")
+    # This second initialize call is necesary for the model to be defined correctly
+    nlp2.initialize()
     trf2.from_bytes(trf_bytes)
