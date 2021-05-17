@@ -79,6 +79,7 @@ def test_transformer_pipeline_tagger_internal():
         with pytest.raises(AssertionError):
             assert_equal(doc_tensor2.doc_data[0].tensors, doc_tensor.doc_data[0].tensors)
 
+        # results ARE the same if we call from_disk
         nlp2.from_disk(file_path)
         doc2 = nlp2("We're interested at underwater basket weaving.")
         tagger2 = nlp2.get_pipe("tagger")
