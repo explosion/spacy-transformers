@@ -245,8 +245,10 @@ def _assert_empty(trf_data):
 def test_replace_listeners():
     orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
-    examples = [Example.from_dict(nlp.make_doc("x y"), {"tags": ["V", "Z"]})]
-    nlp.initialize(lambda: examples)
+    text = "This is awesome"
+    examples = [Example.from_dict(nlp.make_doc(text), {"tags": ["A", "B", "C"]})]
+    optimizer = nlp.initialize(lambda: examples)
+    # verify correct configuration with transformer listener
     transformer = nlp.get_pipe("transformer")
     tagger = nlp.get_pipe("tagger")
     tagger_tok2vec = tagger.model.get_ref("tok2vec")
@@ -261,6 +263,16 @@ def test_replace_listeners():
         nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
         == "spacy-transformers.TransformerListener.v1"
     )
+    # train pipe before replacing listeners
+    for i in range(2):
+        losses = {}
+        nlp.update(examples, sgd=optimizer, losses=losses)
+        doc = nlp(text)
+
+    preds = [t.tag_ for t in doc]
+    doc_tensor = tagger_tok2vec.predict([doc])
+
+    # replace listener and verify predictions are still the same
     nlp.replace_listeners("transformer", "tagger", ["model.tok2vec"])
     tagger = nlp.get_pipe("tagger")
     tagger_tok2vec = tagger.model.get_ref("tok2vec")
@@ -269,6 +281,26 @@ def test_replace_listeners():
         nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
         == "spacy-transformers.Tok2VecTransformer.v1"
     )
+    doc2 = nlp(text)
+    assert preds == [t.tag_ for t in doc2]
+    assert_equal(doc_tensor, tagger_tok2vec.predict([doc2]))
+    # attempt training with the new pipeline
+    optimizer = nlp.resume_training()
+    for i in range(2):
+        losses = {}
+        nlp.update(examples, sgd=optimizer, losses=losses)
+        assert losses["tagger"] > 0.0
+
+
+def test_replace_listeners_invalid():
+    orig_config = Config().from_str(cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    text = "This is awesome"
+    examples = [Example.from_dict(nlp.make_doc(text), {"tags": ["A", "B", "C"]})]
+    optimizer = nlp.initialize(lambda: examples)
+    for i in range(2):
+        losses = {}
+        nlp.update(examples, sgd=optimizer, losses=losses)
     with pytest.raises(ValueError):
         nlp.replace_listeners("invalid", "tagger", ["model.tok2vec"])
     with pytest.raises(ValueError):
@@ -277,11 +309,3 @@ def test_replace_listeners():
         nlp.replace_listeners("transformer", "tagger", ["model.yolo"])
     with pytest.raises(ValueError):
         nlp.replace_listeners("transformer", "tagger", ["model.tok2vec", "model.yolo"])
-    # attempt training with the new pipeline
-    optimizer = nlp.initialize(lambda: examples)
-    print(nlp.pipe_names)
-    for i in range(2):
-        losses = {}
-        nlp.update(examples, sgd=optimizer, losses=losses)
-        print(losses)
-        assert losses["tagger"] > 0.0
