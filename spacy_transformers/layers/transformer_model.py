@@ -25,7 +25,7 @@ def TransformerModel(
         overlap, and you can also omit sections of the Doc if they are not
         relevant.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
-    transformers_config (dict): Settings to pass to the transformers forward pass.
+    transformer_config (dict): Settings to pass to the transformers forward pass.
     """
 
     return Model(
@@ -39,7 +39,7 @@ def TransformerModel(
             "get_spans": get_spans,
             "name": name,
             "tokenizer_config": tokenizer_config,
-            "transformers_config": transformer_config,
+            "transformer_config": transformer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
             "flush_cache_chance": 0.0,
@@ -77,7 +77,7 @@ def init(model: Model, X=None, Y=None):
         return
     name = model.attrs["name"]
     tok_cfg = model.attrs["tokenizer_config"]
-    trf_cfg = model.attrs["transformers_config"]
+    trf_cfg = model.attrs["transformer_config"]
     tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
     model.attrs["tokenizer"] = tokenizer
     model.attrs["set_transformer"](model, transformer)
@@ -118,7 +118,7 @@ def forward(
 ) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
-    trf_config = model.attrs["transformers_config"]
+    trf_config = model.attrs["transformer_config"]
     transformer = model.layers[0]
 
     nested_spans = get_spans(docs)
@@ -143,7 +143,7 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    if trf_config["output_attentions"] is True:
+    if ("output_attentions" in trf_config) and (trf_config["output_attentions"] is True):
         attn = tensors[-1]
         tensors = tensors[:-1]
     else:

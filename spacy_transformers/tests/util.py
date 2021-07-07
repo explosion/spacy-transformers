@@ -136,7 +136,7 @@ def DummyTransformer(
             "tokenizer": DummyTokenizer(),
             "grad_factor": 1.0,
             "flush_cache_chance": 0.0,
-            "transformers_config": {"output_attentions": False}
+            "transformer_config": {}
         },
         dims={"nO": width},
     )

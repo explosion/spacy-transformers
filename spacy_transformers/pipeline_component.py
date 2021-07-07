@@ -30,7 +30,7 @@ max_batch_items = 4096
 @architectures = "spacy-transformers.TransformerModel.v1"
 name = "roberta-base"
 tokenizer_config = {"use_fast": true}
-transformer_config: {"output_attentions": false}
+transformer_config = {"output_attentions": false}
 
 [transformer.model.get_spans]
 @span_getters = "spacy-transformers.strided_spans.v1"
@@ -394,7 +394,7 @@ class Transformer(TrainablePipe):
         def load_model(p):
             p = Path(p).absolute()
             tokenizer, transformer = huggingface_from_pretrained(
-                p, self.model.attrs["tokenizer_config"], self.model.attrs["transformers_config"]
+                p, self.model.attrs["tokenizer_config"], self.model.attrs["transformer_config"]
             )
             self.model.attrs["tokenizer"] = tokenizer
             self.model.attrs["set_transformer"](self.model, transformer)
