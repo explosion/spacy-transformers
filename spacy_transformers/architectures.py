@@ -42,6 +42,7 @@ def transformer_listener_tok2vec_v1(
     return model
 
 
+# Note: when updating, also make sure to update 'replace_listener_cfg' in _util.py
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v1")
 def transformer_tok2vec_v1(
     name: str,
