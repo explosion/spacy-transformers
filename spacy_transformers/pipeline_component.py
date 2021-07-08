@@ -30,6 +30,7 @@ max_batch_items = 4096
 @architectures = "spacy-transformers.TransformerModel.v1"
 name = "roberta-base"
 tokenizer_config = {"use_fast": true}
+transformer_config = {"output_attentions": false}
 
 [transformer.model.get_spans]
 @span_getters = "spacy-transformers.strided_spans.v1"
@@ -143,7 +144,9 @@ class Transformer(TrainablePipe):
         if self.model.has_dim("nO") and listener.has_dim("nO") is None:
             listener.set_dim("nO", self.model.get_dim("nO"))
 
-    def remove_listener(self, listener: TransformerListener, component_name: str) -> bool:
+    def remove_listener(
+        self, listener: TransformerListener, component_name: str
+    ) -> bool:
         """Remove a listener for a downstream component. Usually internals."""
         if component_name in self.listener_map:
             if listener in self.listener_map[component_name]:
@@ -167,7 +170,10 @@ class Transformer(TrainablePipe):
         names = ("*", self.name)
         if isinstance(getattr(component, "model", None), Model):
             for node in component.model.walk():
-                if isinstance(node, TransformerListener) and node.upstream_name in names:
+                if (
+                    isinstance(node, TransformerListener)
+                    and node.upstream_name in names
+                ):
                     self.add_listener(node, component.name)
 
     def __call__(self, doc: Doc) -> Doc:
@@ -296,7 +302,8 @@ class Transformer(TrainablePipe):
             nonlocal d_tensors
             for i, d_trf_data in enumerate(d_trf_datas):
                 for d_tensor in d_trf_data.tensors:
-                    losses[self.name] += float((d_tensor ** 2).sum())  # type: ignore
+                    # type: ignore
+                    losses[self.name] += float((d_tensor ** 2).sum())
                 if i >= len(d_tensors):
                     d_tensors.append(d_trf_data.tensors)
                 else:
@@ -389,7 +396,7 @@ class Transformer(TrainablePipe):
         def load_model(p):
             p = Path(p).absolute()
             tokenizer, transformer = huggingface_from_pretrained(
-                p, self.model.attrs["tokenizer_config"]
+                p, self.model.attrs["tokenizer_config"], self.model.attrs["transformer_config"]
             )
             self.model.attrs["tokenizer"] = tokenizer
             self.model.attrs["set_transformer"](self.model, transformer)

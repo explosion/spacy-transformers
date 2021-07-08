@@ -15,7 +15,7 @@ from ..align import get_alignment
 
 
 def TransformerModel(
-    name: str, get_spans: Callable, tokenizer_config: dict
+    name: str, get_spans: Callable, tokenizer_config: dict = {}, transformer_config: dict = {}
 ) -> Model[List[Doc], FullTransformerBatch]:
     """
     get_spans (Callable[[List[Doc]], List[Span]]):
@@ -25,6 +25,7 @@ def TransformerModel(
         overlap, and you can also omit sections of the Doc if they are not
         relevant.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
+    transformer_config (dict): Settings to pass to the transformers forward pass.
     """
 
     return Model(
@@ -38,6 +39,7 @@ def TransformerModel(
             "get_spans": get_spans,
             "name": name,
             "tokenizer_config": tokenizer_config,
+            "transformer_config": transformer_config,
             "set_transformer": set_pytorch_transformer,
             "has_transformer": False,
             "flush_cache_chance": 0.0,
@@ -75,7 +77,8 @@ def init(model: Model, X=None, Y=None):
         return
     name = model.attrs["name"]
     tok_cfg = model.attrs["tokenizer_config"]
-    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg)
+    trf_cfg = model.attrs["transformer_config"]
+    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
     model.attrs["tokenizer"] = tokenizer
     model.attrs["set_transformer"](model, transformer)
     # Call the model with a batch of inputs to infer the width
@@ -89,26 +92,23 @@ def init(model: Model, X=None, Y=None):
         for doc_spans in nested_spans:
             flat_spans.extend(doc_spans)
         token_data = huggingface_tokenize(
-            model.attrs["tokenizer"],
-            [span.text for span in flat_spans]
+            model.attrs["tokenizer"], [span.text for span in flat_spans]
         )
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
         align = get_alignment(
-            flat_spans,
-            wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
+            flat_spans, wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
         )
         wordpieces, align = truncate_oversize_splits(
             wordpieces, align, tokenizer.model_max_length
         )
     else:
         texts = ["hello world", "foo bar"]
-        token_data = huggingface_tokenize(
-            model.attrs["tokenizer"],
-            texts
-        )
+        token_data = huggingface_tokenize(model.attrs["tokenizer"], texts)
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
     model.layers[0].initialize(X=wordpieces)
     tensors = model.layers[0].predict(wordpieces)
+    if trf_cfg["output_attentions"] is True:
+        tensors = tensors[:-1]  # remove attention
     t_i = find_last_hidden(tensors)
     model.set_dim("nO", tensors[t_i].shape[-1])
 
@@ -118,6 +118,7 @@ def forward(
 ) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
+    trf_config = model.attrs["transformer_config"]
     transformer = model.layers[0]
 
     nested_spans = get_spans(docs)
@@ -142,8 +143,17 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
+    if ("output_attentions" in trf_config) and (trf_config["output_attentions"] is True):
+        attn = tensors[-1]
+        tensors = tensors[:-1]
+    else:
+        attn = None
     output = FullTransformerBatch(
-        spans=nested_spans, wordpieces=wordpieces, tensors=tensors, align=align
+        spans=nested_spans,
+        wordpieces=wordpieces,
+        tensors=tensors,
+        align=align,
+        attention=attn,
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")
