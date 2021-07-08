@@ -1,4 +1,4 @@
-from thinc.api import Model
+from thinc.api import Model, chain
 from typing import List
 from ..data_classes import FullTransformerBatch, TransformerData
 
