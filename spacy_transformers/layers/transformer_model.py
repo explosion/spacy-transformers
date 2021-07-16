@@ -16,7 +16,10 @@ from ..align import get_alignment
 
 
 def TransformerModel(
-    name: str, get_spans: Callable, tokenizer_config: dict = {}, transformer_config: dict = {}
+    name: str,
+    get_spans: Callable,
+    tokenizer_config: dict = {},
+    transformer_config: dict = {},
 ) -> Model[List[Doc], FullTransformerBatch]:
     """
     get_spans (Callable[[List[Doc]], List[Span]]):
@@ -110,7 +113,7 @@ def init(model: Model, X=None, Y=None):
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
     model.layers[0].initialize(X=wordpieces)
     tensors = model.layers[0].predict(wordpieces)
-    if trf_cfg["output_attentions"] is True:
+    if "output_attentions" in trf_cfg and trf_cfg["output_attentions"] is True:
         tensors = tensors[:-1]  # remove attention
     t_i = find_last_hidden(tensors)
     model.set_dim("nO", tensors[t_i].shape[-1])
@@ -121,7 +124,7 @@ def forward(
 ) -> Tuple[FullTransformerBatch, Callable]:
     tokenizer = model.attrs["tokenizer"]
     get_spans = model.attrs["get_spans"]
-    trf_config = model.attrs["transformer_config"]
+    trf_cfg = model.attrs["transformer_config"]
     transformer = model.layers[0]
 
     nested_spans = get_spans(docs)
@@ -146,7 +149,7 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    if ("output_attentions" in trf_config) and (trf_config["output_attentions"] is True):
+    if "output_attentions" in trf_cfg and trf_cfg["output_attentions"] is True:
         attn = tensors[-1]
         tensors = tensors[:-1]
     else:
