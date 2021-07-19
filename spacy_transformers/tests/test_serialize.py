@@ -29,5 +29,18 @@ def test_transformer_model_tobytes():
 
     nlp2 = Language()
     trf2 = nlp2.add_pipe("transformer")
-    nlp2.initialize()
+    # nlp2.initialize()
     trf2.from_bytes(trf_bytes)
+
+
+def test_transformer_pipeline_tobytes():
+    nlp = Language()
+    nlp.add_pipe("transformer")
+    nlp.initialize()
+    assert nlp.pipe_names == ["transformer"]
+    nlp_bytes = nlp.to_bytes()
+
+    nlp2 = Language()
+    nlp2.add_pipe("transformer")
+    nlp2.from_bytes(nlp_bytes)
+    assert nlp2.pipe_names == ["transformer"]

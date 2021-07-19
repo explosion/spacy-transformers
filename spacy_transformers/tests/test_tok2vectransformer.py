@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from spacy.training.example import Example
 from spacy.util import make_tempdir
@@ -68,10 +70,10 @@ def test_transformer_pipeline_tagger_internal():
     with make_tempdir() as d:
         file_path = d / "trained_nlp"
         nlp.to_disk(file_path)
-        nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
-        nlp2.initialize(lambda: train_examples)
 
         # results are not the same if we don't call from_disk
+        nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+        nlp2.initialize(lambda: train_examples)
         doc2 = nlp2("We're interested at underwater basket weaving.")
         tagger2 = nlp2.get_pipe("tagger")
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
@@ -80,9 +82,11 @@ def test_transformer_pipeline_tagger_internal():
             assert_equal(doc_tensor2.doc_data[0].tensors, doc_tensor.doc_data[0].tensors)
 
         # results ARE the same if we call from_disk
-        nlp2.from_disk(file_path)
-        doc2 = nlp2("We're interested at underwater basket weaving.")
-        tagger2 = nlp2.get_pipe("tagger")
-        tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
-        doc_tensor2 = tagger_trf2.predict([doc2])
-        assert_equal(doc_tensor2.doc_data[0].tensors, doc_tensor.doc_data[0].tensors)
+        nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+        # nlp3.initialize(lambda: train_examples)
+        nlp3.from_disk(file_path)
+        doc3 = nlp3("We're interested at underwater basket weaving.")
+        tagger3 = nlp3.get_pipe("tagger")
+        tagger_trf3 = tagger3.model.get_ref("tok2vec").layers[0]
+        doc_tensor3 = tagger_trf3.predict([doc3])
+        assert_equal(doc_tensor3.doc_data[0].tensors, doc_tensor.doc_data[0].tensors)
