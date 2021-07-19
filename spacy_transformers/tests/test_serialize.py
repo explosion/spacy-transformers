@@ -1,4 +1,5 @@
 from spacy import Language
+from spacy.util import make_tempdir
 
 from spacy_transformers import TransformerData
 import srsly
@@ -29,8 +30,18 @@ def test_transformer_model_tobytes():
 
     nlp2 = Language()
     trf2 = nlp2.add_pipe("transformer")
-    # nlp2.initialize()
     trf2.from_bytes(trf_bytes)
+
+
+def test_transformer_model_todisk():
+    nlp = Language()
+    trf = nlp.add_pipe("transformer")
+    nlp.initialize()
+    with make_tempdir() as d:
+        trf.to_disk(d)
+        nlp2 = Language()
+        trf2 = nlp2.add_pipe("transformer")
+        trf2.from_disk(d)
 
 
 def test_transformer_pipeline_tobytes():
@@ -44,3 +55,13 @@ def test_transformer_pipeline_tobytes():
     nlp2.add_pipe("transformer")
     nlp2.from_bytes(nlp_bytes)
     assert nlp2.pipe_names == ["transformer"]
+
+
+def test_transformer_pipeline_todisk():
+    nlp = Language()
+    nlp.add_pipe("transformer")
+    nlp.initialize()
+    with make_tempdir() as d:
+        nlp.to_disk(d)
+        nlp2 = Language()
+        nlp2.from_disk(d)

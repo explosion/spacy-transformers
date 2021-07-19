@@ -5,15 +5,13 @@ from spacy.pipeline.pipe import deserialize_config
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.training import Example, validate_examples, validate_get_examples
-from spacy import util
+from spacy import util, Errors
 from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
-import torch
-from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
-from .util import huggingface_from_pretrained, batch_by_length
+from .util import batch_by_length
 from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
@@ -335,7 +333,10 @@ class Transformer(TrainablePipe):
         pass
 
     def initialize(
-        self, get_examples: Callable[[], Iterable[Example]], *, nlp: Optional[Language] = None
+        self,
+        get_examples: Callable[[], Iterable[Example]],
+        *,
+        nlp: Optional[Language] = None,
     ):
         """Initialize the pipe for training, using data examples if available.
 
@@ -365,20 +366,10 @@ class Transformer(TrainablePipe):
 
         DOCS: https://spacy.io/api/transformer#to_disk
         """
-
-        def save_model(p):
-            trf_dir = Path(p).absolute()
-            if not trf_dir.exists():
-                trf_dir.mkdir()
-            self.model.attrs["tokenizer"].save_pretrained(str(trf_dir))
-            transformer = self.model.layers[0].shims[0]._model
-            torch.save(transformer.state_dict(), trf_dir / WEIGHTS_NAME)
-            transformer.config.to_json_file(trf_dir / CONFIG_NAME)
-
         serialize = {}
         serialize["cfg"] = lambda p: srsly.write_json(p, self.cfg)
         serialize["vocab"] = lambda p: self.vocab.to_disk(p)
-        serialize["model"] = lambda p: save_model(p)
+        serialize["model"] = lambda p: self.model.to_disk(p)
         util.to_disk(path, serialize, exclude)
 
     def from_disk(
@@ -394,12 +385,11 @@ class Transformer(TrainablePipe):
         """
 
         def load_model(p):
-            p = Path(p).absolute()
-            tokenizer, transformer = huggingface_from_pretrained(
-                p, self.model.attrs["tokenizer_config"], self.model.attrs["transformer_config"]
-            )
-            self.model.attrs["tokenizer"] = tokenizer
-            self.model.attrs["set_transformer"](self.model, transformer)
+            try:
+                with open(p, "rb") as mfile:
+                    self.model.from_bytes(mfile.read())
+            except AttributeError:
+                raise ValueError(Errors.E149) from None
 
         deserialize = {
             "vocab": self.vocab.from_disk,

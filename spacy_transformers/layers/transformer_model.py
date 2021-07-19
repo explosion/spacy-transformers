@@ -7,7 +7,6 @@ from spacy.tokens import Doc
 import logging
 
 import torch
-from torch import nn
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
@@ -34,16 +33,17 @@ def TransformerModel(
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
     transformer_config (dict): Settings to pass to the transformers forward pass.
     """
-    empty_wrapper = PyTorchWrapper(nn.Identity())
-
-    return Model(
+    tokenizer, transformer = huggingface_from_pretrained(
+        name, tokenizer_config, transformer_config
+    )
+    model = Model(
         "transformer",
         forward,
         init=init,
-        layers=[empty_wrapper],
+        layers=[],
         dims={"nO": None},
         attrs={
-            "tokenizer": None,
+            "tokenizer": tokenizer,
             "get_spans": get_spans,
             "name": name,
             "tokenizer_config": tokenizer_config,
@@ -55,6 +55,8 @@ def TransformerModel(
             "replace_listener_cfg": replace_listener_cfg,
         },
     )
+    set_pytorch_transformer(model, transformer)
+    return model
 
 
 def set_logger(model, out_file):
@@ -71,10 +73,12 @@ def set_logger(model, out_file):
 def set_pytorch_transformer(model, transformer):
     if model.attrs["has_transformer"]:
         raise ValueError("Cannot set second transformer.")
-    model.layers[-1] = PyTorchWrapper(
-        transformer,
-        convert_inputs=_convert_transformer_inputs,
-        convert_outputs=_convert_transformer_outputs,
+    model.layers.append(
+        PyTorchWrapper(
+            transformer,
+            convert_inputs=_convert_transformer_inputs,
+            convert_outputs=_convert_transformer_outputs,
+        )
     )
     model.attrs["has_transformer"] = True
     model.set_dim("nO", transformer.config.hidden_size)
@@ -83,12 +87,9 @@ def set_pytorch_transformer(model, transformer):
 def init(model: Model, X=None, Y=None):
     if model.attrs["has_transformer"]:
         return
-    name = model.attrs["name"]
-    tok_cfg = model.attrs["tokenizer_config"]
+    tokenizer = model.attrs["tokenizer"]
     trf_cfg = model.attrs["transformer_config"]
-    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
-    model.attrs["tokenizer"] = tokenizer
-    model.attrs["set_transformer"](model, transformer)
+
     # Call the model with a batch of inputs to infer the width
     if X:
         # If we're dealing with actual texts, do the work to setup the wordpieces
