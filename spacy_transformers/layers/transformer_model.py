@@ -1,11 +1,13 @@
 from typing import List, Tuple, Callable
 
-from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
-import torch
-from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model, xp2torch, chain
+
+from spacy.tokens import Doc
 import logging
+
+import torch
+from torch import nn
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
@@ -13,6 +15,7 @@ from ..util import find_last_hidden, maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
 from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
+from ..layers._util import replace_listener, replace_listener_cfg
 
 
 def TransformerModel(
@@ -31,12 +34,13 @@ def TransformerModel(
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
     transformer_config (dict): Settings to pass to the transformers forward pass.
     """
+    empty_wrapper = PyTorchWrapper(nn.Identity())
 
     return Model(
         "transformer",
         forward,
         init=init,
-        layers=[],
+        layers=[empty_wrapper],
         dims={"nO": None},
         attrs={
             "tokenizer": None,
@@ -67,12 +71,10 @@ def set_logger(model, out_file):
 def set_pytorch_transformer(model, transformer):
     if model.attrs["has_transformer"]:
         raise ValueError("Cannot set second transformer.")
-    model.layers.append(
-        PyTorchWrapper(
-            transformer,
-            convert_inputs=_convert_transformer_inputs,
-            convert_outputs=_convert_transformer_outputs,
-        )
+    model.layers[-1] = PyTorchWrapper(
+        transformer,
+        convert_inputs=_convert_transformer_inputs,
+        convert_outputs=_convert_transformer_outputs,
     )
     model.attrs["has_transformer"] = True
     model.set_dim("nO", transformer.config.hidden_size)
