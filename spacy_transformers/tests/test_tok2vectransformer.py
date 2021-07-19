@@ -83,7 +83,6 @@ def test_transformer_pipeline_tagger_internal():
 
         # results ARE the same if we call from_disk
         nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
-        # nlp3.initialize(lambda: train_examples)
         nlp3.from_disk(file_path)
         doc3 = nlp3("We're interested at underwater basket weaving.")
         tagger3 = nlp3.get_pipe("tagger")
