@@ -20,17 +20,17 @@ def docs(nlp):
     return [nlp(text) for text in texts]
 
 
-@pytest.fixture(scope="session", params=MODEL_NAMES)
+@pytest.fixture(scope="module", params=MODEL_NAMES)
 def name(request):
     return request.param
 
 
-@pytest.fixture(scope="session", params=[True, False])
+@pytest.fixture(scope="module", params=[True, False])
 def output_attentions(request):
     return request.param
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def trf_model(name, output_attentions):
     if name == "gpt2":
         model = TransformerModel(
