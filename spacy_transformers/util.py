@@ -34,6 +34,7 @@ def huggingface_from_pretrained(
         str_path = source
     tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
     transformer = AutoModel.from_pretrained(str_path)
+    trf_config["return_dict"] = True
     transformer.forward = partial(transformer.forward, **trf_config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):

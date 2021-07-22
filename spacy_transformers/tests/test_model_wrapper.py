@@ -6,8 +6,7 @@ from ..data_classes import FullTransformerBatch
 from ..span_getters import get_doc_spans
 
 
-MODEL_NAMES = ["distilbert-base-uncased"]
-# "bert-base-uncased", "gpt2", "xlnet-base-cased"]
+MODEL_NAMES = ["distilbert-base-uncased", "gpt2", "xlnet-base-cased"]
 
 
 @pytest.fixture
@@ -28,9 +27,17 @@ def name(request):
 
 @pytest.fixture(scope="session")
 def trf_model(name):
-    model = TransformerModel(
-        name, get_doc_spans, {"use_fast": True}, {"output_attentions": False}
-    )
+    if name == "gpt2":
+        model = TransformerModel(
+            name,
+            get_doc_spans,
+            {"use_fast": True, "pad_token": "<|endoftext|>"},
+            {"output_attentions": False},
+        )
+    else:
+        model = TransformerModel(
+            name, get_doc_spans, {"use_fast": True}, {"output_attentions": False}
+        )
     model.initialize()
     return model
 

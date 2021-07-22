@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, Any, Tuple
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
+from transformers.modeling_outputs import BaseModelOutput
 from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
@@ -155,13 +156,13 @@ class TransformerData:
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
-    attention: Optional[Tuple[FloatsXd, ...]] = None
+    attentions: Optional[Tuple[FloatsXd, ...]] = None
 
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
         return cls(
-            wordpieces=WordpieceBatch.empty(), tensors=[], align=align, attention=None
+            wordpieces=WordpieceBatch.empty(), tensors=[], align=align, attentions=None
         )
 
     @classmethod
@@ -248,9 +249,9 @@ class FullTransformerBatch:
 
     spans: List[List[Span]]
     wordpieces: WordpieceBatch
-    tensors: List[torch.Tensor]
+    tensors: BaseModelOutput
     align: Ragged
-    attention: Optional[Tuple[torch.Tensor]] = None
+    attentions: Optional[Tuple[torch.Tensor]] = None
     cached_doc_data: Optional[List[TransformerData]] = None
 
     @classmethod
@@ -261,9 +262,9 @@ class FullTransformerBatch:
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
-            tensors=[],
+            tensors=BaseModelOutput(),
             align=align,
-            attention=None,
+            attentions=None,
             cached_doc_data=doc_data,
         )
 
@@ -292,7 +293,7 @@ class FullTransformerBatch:
         return FullTransformerBatch(
             spans=self.spans,
             wordpieces=self.wordpieces,
-            tensors=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)],
+            tensors=BaseModelOutput(last_hidden_state=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)]),
             align=self.align,
         )
 
@@ -317,16 +318,16 @@ class FullTransformerBatch:
             doc_tokens = self.wordpieces[start:end]
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
-            if self.attention:
-                attn = [torch2xp(t[start:end]) for t in self.attention]
+            if self.attentions:
+                attn = [torch2xp(t[start:end]) for t in self.attentions]
             else:
                 attn = None
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors],
+                    tensors=[torch2xp(t[start:end]) for t in self.tensors.values()],
                     align=doc_align,
-                    attention=attn,
+                    attentions=attn,
                 )
             )
             prev_tokens += doc_tokens.input_ids.size

@@ -1,4 +1,5 @@
 from typing import List, Tuple, Callable
+from transformers.modeling_outputs import BaseModelOutput
 
 from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
@@ -9,7 +10,7 @@ import logging
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
-from ..util import find_last_hidden, maybe_flush_pytorch_cache
+from ..util import maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
 from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
@@ -113,10 +114,7 @@ def init(model: Model, X=None, Y=None):
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
     model.layers[0].initialize(X=wordpieces)
     tensors = model.layers[0].predict(wordpieces)
-    if "output_attentions" in trf_cfg and trf_cfg["output_attentions"] is True:
-        tensors = tensors[:-1]  # remove attention
-    t_i = find_last_hidden(tensors)
-    model.set_dim("nO", tensors[t_i].shape[-1])
+    model.set_dim("nO", tensors.last_hidden_state.shape[-1])
 
 
 def forward(
@@ -150,8 +148,7 @@ def forward(
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
     if "output_attentions" in trf_cfg and trf_cfg["output_attentions"] is True:
-        attn = tensors[-1]
-        tensors = tensors[:-1]
+        attn = tensors.attentions
     else:
         attn = None
     output = FullTransformerBatch(
@@ -159,7 +156,7 @@ def forward(
         wordpieces=wordpieces,
         tensors=tensors,
         align=align,
-        attention=attn,
+        attentions=attn,
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")
@@ -167,7 +164,7 @@ def forward(
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
         if "logger" in model.attrs:
             log_gpu_memory(model.attrs["logger"], "Begin backprop")
-        _ = bp_tensors(d_output.tensors)
+        _ = bp_tensors(d_output.tensors.last_hidden_state)
         if "logger" in model.attrs:
             log_gpu_memory(model.attrs["logger"], "After backprop")
         return docs
@@ -188,10 +185,8 @@ def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
 
 def _convert_transformer_outputs(model, inputs_outputs, is_train):
     _, tensors = inputs_outputs
-    if hasattr(tensors, "to_tuple"):
-        tensors = tensors.to_tuple()
 
-    def backprop(d_tensors: List[torch.Tensor]) -> ArgsKwargs:
-        return ArgsKwargs(args=(tensors,), kwargs={"grad_tensors": d_tensors})
+    def backprop(d_tensors: BaseModelOutput) -> ArgsKwargs:
+        return ArgsKwargs(args=(tensors.values(),), kwargs={"grad_tensors": d_tensors})
 
     return tensors, backprop

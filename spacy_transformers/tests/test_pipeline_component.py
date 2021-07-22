@@ -64,10 +64,10 @@ def test_init(component):
 def test_predict(component, docs):
     trf_data = component.predict(docs)
     assert isinstance(trf_data, FullTransformerBatch)
-    assert len(trf_data.tensors) == component.model.layers[0].attrs["depth"]
+    assert len(trf_data.tensors.last_hidden_state) == component.model.layers[0].attrs["depth"]
     n_tokens = trf_data.wordpieces.input_ids.shape[1]
     width = component.model.layers[0].attrs["width"]
-    assert trf_data.tensors[-1].shape == (len(docs), n_tokens, width)
+    assert trf_data.tensors.last_hidden_state[0].shape == (len(docs), n_tokens, width)
 
 
 def test_set_annotations(component, docs):

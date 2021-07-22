@@ -1,6 +1,7 @@
 from typing import Dict, List, Union
 import torch
 import copy
+from transformers.modeling_outputs import BaseModelOutput
 
 from spacy.tokens import Doc
 from thinc.api import Model
@@ -114,7 +115,7 @@ def DummyTransformerModel(width: int, depth: int):
         shape = (tokens.input_ids.shape[0], tokens.input_ids.shape[1], width)
         for i in range(depth):
             tensors.append(torch.zeros(*shape))
-        return tensors, lambda d_tensors: tokens
+        return BaseModelOutput(last_hidden_state=tensors), lambda d_tensors: tokens
 
     return Model(
         "dummy-transformer",
