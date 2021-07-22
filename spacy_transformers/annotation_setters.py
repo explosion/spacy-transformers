@@ -5,14 +5,15 @@ from .util import registry
 from .data_classes import FullTransformerBatch
 
 
+def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
+    """Set no additional annotations on the Doc objects."""
+    pass
+
+
 @registry.annotation_setters("spacy-transformers.null_annotation_setter.v1")
 def configure_null_annotation_setter() -> Callable[
     [List[Doc], FullTransformerBatch], None
 ]:
-    def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> None:
-        """Set no additional annotations on the Doc objects."""
-        pass
-
     return null_annotation_setter
 
 

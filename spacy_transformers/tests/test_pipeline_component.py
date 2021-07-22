@@ -1,4 +1,5 @@
 import pytest
+import torch
 from spacy.language import Language
 from spacy.training.example import Example
 from spacy.util import make_tempdir
@@ -6,12 +7,16 @@ from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from spacy import util
 from spacy_transformers.layers import TransformerListener
-from thinc.api import Model, Config
+from thinc.api import Model, Config, get_current_ops, NumpyOps
 from numpy.testing import assert_equal
+from spacy.tests.util import assert_docs_equal
 
 from .util import DummyTransformer
 from ..pipeline_component import Transformer
 from ..data_classes import TransformerData, FullTransformerBatch
+
+
+torch.set_num_threads(1)
 
 
 @pytest.fixture
@@ -121,7 +126,7 @@ cfg_string = """
 
     [components.tagger]
     factory = "tagger"
-    
+
     [components.tagger.model]
     @architectures = "spacy.Tagger.v1"
     nO = null
@@ -130,7 +135,7 @@ cfg_string = """
     @architectures = "spacy-transformers.TransformerListener.v1"
     grad_factor = 1.0
     upstream = ${components.transformer.name}
-    
+
     [components.tagger.model.tok2vec.pooling]
     @layers = "reduce_mean.v1"
 
@@ -228,3 +233,25 @@ def _assert_empty(trf_data):
     assert trf_data.wordpieces.attention_mask.size == 0
     assert trf_data.tensors == []
     assert len(trf_data.align.data) == 0
+
+
+@pytest.fixture
+def texts():
+    data = [
+        "Hello world.",
+        "This is spacy.",
+        "You can use multiprocessing with pipe method.",
+        "Please try!",
+    ]
+    return data
+
+
+def test_multiprocessing(simple_nlp, texts):
+    ops = get_current_ops()
+    if isinstance(ops, NumpyOps):
+        texts = texts * 3
+        expecteds = [simple_nlp(text) for text in texts]
+        docs = simple_nlp.pipe(texts, n_process=2, batch_size=2)
+
+        for doc, expected_doc in zip(docs, expecteds):
+            assert_docs_equal(doc, expected_doc)
