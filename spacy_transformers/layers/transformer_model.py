@@ -1,8 +1,9 @@
+from functools import partial
 from typing import List, Tuple, Callable
 
 import srsly
 from spacy.util import make_tempdir
-from transformers import AutoModel, AutoConfig
+from transformers import AutoModel, AutoConfig, AutoTokenizer
 
 from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
@@ -66,11 +67,19 @@ class TransformerModel(Model):
         result from loading and serializing a model.
         """
         config = {}
+        tok_dict = {}
         if self.attrs["has_transformer"]:
             transformer = self.layers[0].shims[0]._model
             config = transformer.config.to_dict()
+            tokenizer = self.attrs["tokenizer"]
+            with make_tempdir() as temp_dir:
+                tokenizer.save_pretrained(temp_dir, legacy_format=False)  # only works for fast tokenizers
+                for x in temp_dir.glob('**/*'):
+                    if x.is_file() and x.name.endswith(".json"):
+                        tok_dict[x.name] = srsly.read_json(x)
         msg = {
             "config": config,
+            "tokenizer": tok_dict,
             "tokenizer_config": self.attrs["tokenizer_config"],
             "transformer_config": self.attrs["transformer_config"],
         }
@@ -86,18 +95,22 @@ class TransformerModel(Model):
         """
         msg = srsly.msgpack_loads(bytes_data)
         config_dict = msg["config"]
+        tok_dict = msg["tokenizer"]
+        tok_config = msg["tokenizer_config"]
+        trf_config = msg["transformer_config"]
         if config_dict:
-            print("dict from", config_dict)
             with make_tempdir() as temp_dir:
-                config_file = temp_dir / "conf.json"
+                config_file = temp_dir / "config.json"
                 srsly.write_json(config_file, config_dict)
                 config = AutoConfig.from_pretrained(config_file)
-                print("type config", type(config))
-            # tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
-            transformer = AutoModel.from_config(config)
-            print("type transformer", type(transformer))
+                for x, x_dict in tok_dict.items():
+                    srsly.write_json(temp_dir / x, x_dict)
+                tokenizer = AutoTokenizer.from_pretrained(str(temp_dir.absolute()), **tok_config)
 
-            # self.attrs["tokenizer"] = tokenizer
+            transformer = AutoModel.from_config(config)
+            transformer.forward = partial(transformer.forward, **trf_config)
+
+            self.attrs["tokenizer"] = tokenizer
             self.attrs["set_transformer"](self, transformer)
         return self
 
