@@ -6,6 +6,7 @@ from spacy.util import make_tempdir
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from spacy import util
+from spacy_transformers.layers import TransformerListener
 from thinc.api import Model, Config, get_current_ops, NumpyOps
 from numpy.testing import assert_equal
 from spacy.tests.util import assert_docs_equal
