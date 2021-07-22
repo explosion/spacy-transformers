@@ -25,18 +25,26 @@ def name(request):
     return request.param
 
 
+@pytest.fixture(scope="session", params=[True, False])
+def output_attentions(request):
+    return request.param
+
+
 @pytest.fixture(scope="session")
-def trf_model(name):
+def trf_model(name, output_attentions):
     if name == "gpt2":
         model = TransformerModel(
             name,
             get_doc_spans,
             {"use_fast": True, "pad_token": "<|endoftext|>"},
-            {"output_attentions": False},
+            {"output_attentions": output_attentions},
         )
     else:
         model = TransformerModel(
-            name, get_doc_spans, {"use_fast": True}, {"output_attentions": False}
+            name,
+            get_doc_spans,
+            {"use_fast": True},
+            {"output_attentions": output_attentions},
         )
     model.initialize()
     return model
@@ -48,4 +56,8 @@ def test_model_init(name, trf_model):
 
 def test_model_predict(docs, trf_model):
     outputs = trf_model.predict(docs)
+    if trf_model.attrs["transformer_config"].get("output_attentions", None) is True:
+        assert outputs.attentions is not None
+    else:
+        assert outputs.attentions is None
     assert isinstance(outputs, FullTransformerBatch)
