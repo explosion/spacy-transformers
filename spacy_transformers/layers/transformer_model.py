@@ -1,5 +1,9 @@
 from typing import List, Tuple, Callable
 
+import srsly
+from spacy.util import make_tempdir
+from transformers import AutoModel, AutoConfig
+
 from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
 import torch
@@ -15,42 +19,87 @@ from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
 
 
-def TransformerModel(
-    name: str,
-    get_spans: Callable,
-    tokenizer_config: dict = {},
-    transformer_config: dict = {},
-) -> Model[List[Doc], FullTransformerBatch]:
-    """
-    get_spans (Callable[[List[Doc]], List[Span]]):
-        A function to extract spans from the batch of Doc objects.
-        This is used to manage long documents, by cutting them into smaller
-        sequences before running the transformer. The spans are allowed to
-        overlap, and you can also omit sections of the Doc if they are not
-        relevant.
-    tokenizer_config (dict): Settings to pass to the transformers tokenizer.
-    transformer_config (dict): Settings to pass to the transformers forward pass.
-    """
+class TransformerModel(Model):
+    def __init__(
+        self,
+        name: str,
+        get_spans: Callable,
+        tokenizer_config: dict = {},
+        transformer_config: dict = {},
+    ):
+        """
+        get_spans (Callable[[List[Doc]], List[Span]]):
+            A function to extract spans from the batch of Doc objects.
+            This is used to manage long documents, by cutting them into smaller
+            sequences before running the transformer. The spans are allowed to
+            overlap, and you can also omit sections of the Doc if they are not
+            relevant.
+        tokenizer_config (dict): Settings to pass to the transformers tokenizer.
+        transformer_config (dict): Settings to pass to the transformers forward pass.
+        """
+        super().__init__(
+            "transformer",
+            forward,
+            init=init,
+            layers=[],
+            dims={"nO": None},
+            attrs={
+                "tokenizer": None,
+                "get_spans": get_spans,
+                "name": name,
+                "tokenizer_config": tokenizer_config,
+                "transformer_config": transformer_config,
+                "set_transformer": set_pytorch_transformer,
+                "has_transformer": False,
+                "flush_cache_chance": 0.0,
+                "replace_listener": replace_listener,
+                "replace_listener_cfg": replace_listener_cfg,
+            },
+        )
 
-    return Model(
-        "transformer",
-        forward,
-        init=init,
-        layers=[],
-        dims={"nO": None},
-        attrs={
-            "tokenizer": None,
-            "get_spans": get_spans,
-            "name": name,
-            "tokenizer_config": tokenizer_config,
-            "transformer_config": transformer_config,
-            "set_transformer": set_pytorch_transformer,
-            "has_transformer": False,
-            "flush_cache_chance": 0.0,
-            "replace_listener": replace_listener,
-            "replace_listener_cfg": replace_listener_cfg,
-        },
-    )
+    def to_bytes(self) -> bytes:
+        """Serialize the model to a bytes representation. Models are usually
+        serialized using msgpack, so you should be able to call msgpack.loads()
+        on the data and get back a dictionary with the contents.
+
+        Serialization should round-trip identically, i.e. the same bytes should
+        result from loading and serializing a model.
+        """
+        config = {}
+        if self.attrs["has_transformer"]:
+            transformer = self.layers[0].shims[0]._model
+            config = transformer.config.to_dict()
+        msg = {
+            "config": config,
+            "tokenizer_config": self.attrs["tokenizer_config"],
+            "transformer_config": self.attrs["transformer_config"],
+        }
+        return srsly.msgpack_dumps(msg)
+
+    def from_bytes(self, bytes_data: bytes) -> "Model":
+        """Deserialize the model from a bytes representation. Models are usually
+        serialized using msgpack, so you should be able to call msgpack.loads()
+        on the data and get back a dictionary with the contents.
+
+        Serialization should round-trip identically, i.e. the same bytes should
+        result from loading and serializing a model.
+        """
+        msg = srsly.msgpack_loads(bytes_data)
+        config_dict = msg["config"]
+        if config_dict:
+            print("dict from", config_dict)
+            with make_tempdir() as temp_dir:
+                config_file = temp_dir / "conf.json"
+                srsly.write_json(config_file, config_dict)
+                config = AutoConfig.from_pretrained(config_file)
+                print("type config", type(config))
+            # tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
+            transformer = AutoModel.from_config(config)
+            print("type transformer", type(transformer))
+
+            # self.attrs["tokenizer"] = tokenizer
+            self.attrs["set_transformer"](self, transformer)
+        return self
 
 
 def set_logger(model, out_file):

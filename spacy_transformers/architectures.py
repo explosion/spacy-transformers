@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Callable
 from thinc.api import Model, chain
 from thinc.types import Ragged, Floats2d
 from spacy.tokens import Doc
+
 from .layers import TransformerModel, TransformerListener
 from .layers import trfs2arrays, split_trf_batch
 from .util import registry
@@ -110,7 +111,12 @@ def transformer_tok2vec_v2(
     )
 
 
-
-registry.architectures.register(
-    "spacy-transformers.TransformerModel.v1", func=TransformerModel
-)
+@registry.architectures.register("spacy-transformers.TransformerModel.v1")
+def create_TransformerModel(
+    name: str,
+    get_spans: Callable,
+    tokenizer_config: dict = {},
+    transformer_config: dict = {},
+) -> Model[List[Doc], "FullTransformerBatch"]:
+    model = TransformerModel(name, get_spans, tokenizer_config, transformer_config)
+    return model
