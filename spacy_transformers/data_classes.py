@@ -262,7 +262,7 @@ class FullTransformerBatch:
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
-            tensors=BaseModelOutput(),
+            tensors=BaseModelOutput(last_hidden_state=[]),
             align=align,
             attentions=None,
             cached_doc_data=doc_data,
