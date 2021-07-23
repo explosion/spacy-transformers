@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any, Tuple
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
-from transformers.modeling_outputs import BaseModelOutput
+from transformers.file_utils import ModelOutput
 from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
@@ -240,7 +240,7 @@ class FullTransformerBatch:
         Span may overlap or have gaps, but for each Doc, there is a non-overlapping
         contiguous slice of the outputs.
     wordpieces (WordpieceBatch): Token data from the Huggingface tokenizer.
-    tensors (List[torch.Tensor]): The output of the transformer model.
+    tensors (ModelOutput): The output of the transformer model.
     align (Ragged): Alignment from the spaCy tokenization to the wordpieces.
         This is a ragged array, where align.lengths[i] indicates the number of
         wordpiece tokens that token i aligns against. The actual indices are
@@ -249,7 +249,7 @@ class FullTransformerBatch:
 
     spans: List[List[Span]]
     wordpieces: WordpieceBatch
-    tensors: BaseModelOutput
+    tensors: ModelOutput
     align: Ragged
     attentions: Optional[Tuple[torch.Tensor]] = None
     cached_doc_data: Optional[List[TransformerData]] = None
@@ -262,7 +262,7 @@ class FullTransformerBatch:
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
-            tensors=BaseModelOutput(last_hidden_state=[]),
+            tensors=ModelOutput(last_hidden_state=torch.FloatTensor((0,))),
             align=align,
             attentions=None,
             cached_doc_data=doc_data,
@@ -290,10 +290,14 @@ class FullTransformerBatch:
         to pass back into the transformer model.
         """
         xp = get_array_module(arrays[0][0])
+        # construct a dummy ModelOutput with the tensor values
+        tensors = ModelOutput()
+        for i, x in enumerate(transpose_list(arrays)):
+            tensors[f"output_{i}"] = xp2torch(xp.vstack(x))
         return FullTransformerBatch(
             spans=self.spans,
             wordpieces=self.wordpieces,
-            tensors=BaseModelOutput(last_hidden_state=[xp2torch(xp.vstack(x)) for x in transpose_list(arrays)]),
+            tensors=tensors,
             align=self.align,
         )
 
@@ -325,7 +329,11 @@ class FullTransformerBatch:
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
-                    tensors=[torch2xp(t[start:end]) for t in self.tensors.values()],
+                    tensors=[
+                        torch2xp(t[start:end])
+                        for t in self.tensors.values()
+                        if isinstance(t, torch.Tensor)
+                    ],
                     align=doc_align,
                     attentions=attn,
                 )

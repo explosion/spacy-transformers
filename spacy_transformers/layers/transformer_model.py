@@ -1,5 +1,5 @@
 from typing import List, Tuple, Callable
-from transformers.modeling_outputs import BaseModelOutput
+from transformers.file_utils import ModelOutput
 
 from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
 from thinc.types import ArgsKwargs
@@ -164,7 +164,7 @@ def forward(
     def backprop_transformer(d_output: FullTransformerBatch) -> List[Doc]:
         if "logger" in model.attrs:
             log_gpu_memory(model.attrs["logger"], "Begin backprop")
-        _ = bp_tensors(d_output.tensors.last_hidden_state)
+        _ = bp_tensors(d_output.tensors.values())
         if "logger" in model.attrs:
             log_gpu_memory(model.attrs["logger"], "After backprop")
         return docs
@@ -186,7 +186,7 @@ def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
 def _convert_transformer_outputs(model, inputs_outputs, is_train):
     _, tensors = inputs_outputs
 
-    def backprop(d_tensors: BaseModelOutput) -> ArgsKwargs:
-        return ArgsKwargs(args=(tensors.values(),), kwargs={"grad_tensors": d_tensors})
+    def backprop(d_tensors: ModelOutput) -> ArgsKwargs:
+        return ArgsKwargs(args=(tensors.last_hidden_state,), kwargs={"grad_tensors": d_tensors})
 
     return tensors, backprop

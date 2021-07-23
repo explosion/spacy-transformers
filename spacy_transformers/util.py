@@ -72,17 +72,6 @@ def maybe_flush_pytorch_cache(chance: float = 1.0):
         torch.cuda.empty_cache()
 
 
-def find_last_hidden(tensors) -> int:
-    """Find the index of the hidden layer in a list of activation tensors.
-    Internals.
-    """
-    for i, tensor in reversed(list(enumerate(tensors))):
-        if len(tensor.shape) == 3:
-            return i
-    else:
-        raise ValueError("No 3d tensors")
-
-
 def transpose_list(nested_list):
     output = []
     for i, entry in enumerate(nested_list):

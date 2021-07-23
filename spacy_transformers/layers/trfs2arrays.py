@@ -2,7 +2,6 @@ from typing import List
 from thinc.api import Model
 from thinc.types import Ragged, Floats2d, FloatsXd
 from ..data_classes import TransformerData
-from ..util import find_last_hidden
 from ..align import apply_alignment
 
 
@@ -22,8 +21,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     backprops = []
     for trf_data in trf_datas:
         if len(trf_data.tensors) > 0:
-            t_i = find_last_hidden(trf_data.tensors)
-            tensor_t_i = trf_data.tensors[t_i]
+            tensor_t_i = trf_data.tensors[0]
             if tensor_t_i.size == 0:
                 # account for empty trf_data in the batch
                 outputs.append(model.ops.alloc2f(0, 0))
@@ -46,8 +44,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             d_dst = get_d_dst(d_output)
             d_src = get_d_src(d_dst)
             d_src *= grad_factor
-            t_i = find_last_hidden(trf_data.tensors)
-            d_tensors[t_i] = d_src.reshape(trf_data.tensors[t_i].shape)
+            d_tensors[0] = d_src.reshape(trf_data.tensors[0].shape)
             d_trf_datas.append(
                 TransformerData(
                     tensors=d_tensors,
