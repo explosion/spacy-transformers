@@ -142,6 +142,13 @@ cfg_string = """
     [components.transformer]
     factory = "transformer"
     name = "custom_upstream"
+
+    [components.transformer.model]
+    @architectures = "spacy-transformers.TransformerModel.v1"
+    name = "albert-base-v2"
+
+    [components.transformer.model.transformer_config]
+    output_attentions = true
     """
 
 
@@ -295,6 +302,9 @@ def test_replace_listeners():
         losses = {}
         nlp.update(examples, sgd=optimizer, losses=losses)
         assert losses["tagger"] > 0.0
+
+    # check for presence of pooling_output in tensors
+    assert len(doc2._.trf_data.tensors) == 2
 
 
 def test_replace_listeners_invalid():
