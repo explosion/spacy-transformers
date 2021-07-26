@@ -327,7 +327,7 @@ class FullTransformerBatch:
                 elif (
                     isinstance(output, tuple)
                     and all(isinstance(t, torch.Tensor) for t in output)
-                    and all(t.shape[-2] == last_hidden_state.shape[-2] for t in output)
+                    and all(t.shape[0] == last_hidden_state.shape[0] for t in output)
                 ):
                     model_output[key] = [torch2xp(t[start:end]) for t in output]
             outputs.append(
