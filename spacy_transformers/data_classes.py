@@ -190,12 +190,14 @@ class TransformerData:
             "wordpieces": self.wordpieces.to_dict(),
             "tensors": self.tensors,
             "align": [self.align.dataXd, self.align.lengths],
+            "model_output": self.model_output,
         }
 
     def from_dict(self, msg: Dict[str, Any]) -> "TransformerData":
         self.wordpieces = WordpieceBatch.empty().from_dict(msg["wordpieces"])
         self.tensors = msg["tensors"]
         self.align = Ragged(*msg["align"])
+        self.model_output = msg["model_output"]
         return self
 
     def to_bytes(self) -> bytes:
