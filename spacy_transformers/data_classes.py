@@ -135,24 +135,21 @@ class TransformerData:
     The transformer models return tensors that refer to a whole padded batch
     of documents. These tensors are wrapped into the FullTransformerBatch object.
     The FullTransformerBatch then splits out the per-document data, which is
-    handled by this class. Instances of this class are` typically assigned to
+    handled by this class. Instances of this class are typically assigned to
     the doc._.trf_data extension attribute.
 
     Attributes
     ----------
     wordpieces (WordpieceBatch): A slice of the wordpiece token data produced
         by the Huggingface tokenizer.
-    tensors (List[FloatsXd]): The activations for the Doc from the transformer.
-        Usually the last tensor that is 3-dimensional will be the most important,
-        as that will provide the final hidden state. Generally activations that
-        are 2-dimensional will be attention weights. Details of this variable
-        will differ depending on the underlying transformer model.
+    tensors (List[FloatsXd]): A list containing as the first element the last
+        hidden state for the doc from the transformer.
     align (Ragged): Alignment from the Doc's tokenization to the wordpieces.
         This is a ragged array, where align.lengths[i] indicates the number of
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
     model_output (Optional[ModelOutput]): Any additional model output from the
-        transformer model.
+        transformer model, determined by the model and transformer config.
     """
 
     wordpieces: WordpieceBatch
