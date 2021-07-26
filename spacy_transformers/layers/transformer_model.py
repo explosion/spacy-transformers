@@ -147,16 +147,11 @@ def forward(
     tensors, bp_tensors = transformer(wordpieces, is_train)
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "after forward")
-    if "output_attentions" in trf_cfg and trf_cfg["output_attentions"] is True:
-        attn = tensors.attentions
-    else:
-        attn = None
     output = FullTransformerBatch(
         spans=nested_spans,
         wordpieces=wordpieces,
         tensors=tensors,
         align=align,
-        attentions=attn,
     )
     if "logger" in model.attrs:
         log_gpu_memory(model.attrs["logger"], "return from forward")

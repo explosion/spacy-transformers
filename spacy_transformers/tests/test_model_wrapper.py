@@ -57,7 +57,7 @@ def test_model_init(name, trf_model):
 def test_model_predict(docs, trf_model):
     outputs = trf_model.predict(docs)
     if trf_model.attrs["transformer_config"].get("output_attentions", None) is True:
-        assert outputs.attentions is not None
+        assert outputs.tensors.attentions is not None
     else:
-        assert outputs.attentions is None
+        assert outputs.tensors.attentions is None
     assert isinstance(outputs, FullTransformerBatch)

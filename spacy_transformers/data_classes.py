@@ -151,6 +151,8 @@ class TransformerData:
         This is a ragged array, where align.lengths[i] indicates the number of
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
+    attentions (Optional[Tuple[FloatsXd, ...]]): Attentions weights after the
+        attention softmax from the transformer model.
     """
 
     wordpieces: WordpieceBatch
@@ -251,7 +253,6 @@ class FullTransformerBatch:
     wordpieces: WordpieceBatch
     tensors: ModelOutput
     align: Ragged
-    attentions: Optional[Tuple[torch.Tensor]] = None
     cached_doc_data: Optional[List[TransformerData]] = None
 
     @classmethod
@@ -264,7 +265,6 @@ class FullTransformerBatch:
             wordpieces=WordpieceBatch.empty(),
             tensors=ModelOutput(last_hidden_state=torch.FloatTensor((0,))),
             align=align,
-            attentions=None,
             cached_doc_data=doc_data,
         )
 
@@ -322,10 +322,9 @@ class FullTransformerBatch:
             doc_tokens = self.wordpieces[start:end]
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
-            if self.attentions:
-                attn = [torch2xp(t[start:end]) for t in self.attentions]
-            else:
-                attn = None
+            attentions = None
+            if "attentions" in self.tensors:
+                attentions = [torch2xp(t[start:end]) for t in self.tensors.attentions]
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
@@ -335,7 +334,7 @@ class FullTransformerBatch:
                         if isinstance(t, torch.Tensor)
                     ],
                     align=doc_align,
-                    attentions=attn,
+                    attentions=attentions,
                 )
             )
             prev_tokens += doc_tokens.input_ids.size
