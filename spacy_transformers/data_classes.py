@@ -151,21 +151,19 @@ class TransformerData:
         This is a ragged array, where align.lengths[i] indicates the number of
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
-    attentions (Optional[Tuple[FloatsXd, ...]]): Attentions weights after the
-        attention softmax from the transformer model.
+    model_output (Optional[ModelOutput]): Any additional model output from the
+        transformer model.
     """
 
     wordpieces: WordpieceBatch
     tensors: List[FloatsXd]
     align: Ragged
-    attentions: Optional[Tuple[FloatsXd, ...]] = None
+    model_output: ModelOutput = None
 
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(
-            wordpieces=WordpieceBatch.empty(), tensors=[], align=align, attentions=None
-        )
+        return cls(wordpieces=WordpieceBatch.empty(), tensors=[], align=align)
 
     @classmethod
     def zeros(cls, length: int, width: int, *, xp=numpy) -> "TransformerData":
@@ -322,19 +320,23 @@ class FullTransformerBatch:
             doc_tokens = self.wordpieces[start:end]
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
-            attentions = None
-            if "attentions" in self.tensors:
-                attentions = [torch2xp(t[start:end]) for t in self.tensors.attentions]
+            model_output = ModelOutput()
+            last_hidden_state = self.tensors.last_hidden_state
+            for key, output in self.tensors.items():
+                if isinstance(output, torch.Tensor) and key != "last_hidden_state":
+                    model_output[key] = torch2xp(output[start:end])
+                elif (
+                    isinstance(output, tuple)
+                    and all(isinstance(t, torch.Tensor) for t in output)
+                    and all(t.shape[-2] == last_hidden_state.shape[-2] for t in output)
+                ):
+                    model_output[key] = [torch2xp(t[start:end]) for t in output]
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
-                    tensors=[
-                        torch2xp(t[start:end])
-                        for t in self.tensors.values()
-                        if isinstance(t, torch.Tensor)
-                    ],
+                    tensors=[torch2xp(last_hidden_state[start:end])],
                     align=doc_align,
-                    attentions=attentions,
+                    model_output=model_output,
                 )
             )
             prev_tokens += doc_tokens.input_ids.size

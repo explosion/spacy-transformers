@@ -30,21 +30,32 @@ def output_attentions(request):
     return request.param
 
 
+@pytest.fixture(scope="module", params=[True, False])
+def output_hidden_states(request):
+    return request.param
+
+
 @pytest.fixture(scope="module")
-def trf_model(name, output_attentions):
+def trf_model(name, output_attentions, output_hidden_states):
     if name == "gpt2":
         model = TransformerModel(
             name,
             get_doc_spans,
             {"use_fast": True, "pad_token": "<|endoftext|>"},
-            {"output_attentions": output_attentions},
+            {
+                "output_attentions": output_attentions,
+                "output_hidden_states": output_hidden_states,
+            },
         )
     else:
         model = TransformerModel(
             name,
             get_doc_spans,
             {"use_fast": True},
-            {"output_attentions": output_attentions},
+            {
+                "output_attentions": output_attentions,
+                "output_hidden_states": output_hidden_states,
+            },
         )
     model.initialize()
     return model
@@ -56,8 +67,15 @@ def test_model_init(name, trf_model):
 
 def test_model_predict(docs, trf_model):
     outputs = trf_model.predict(docs)
+    shape = outputs.tensors.last_hidden_state.shape
     if trf_model.attrs["transformer_config"].get("output_attentions", None) is True:
         assert outputs.tensors.attentions is not None
+        assert all([t.shape[-2] == shape[-2] for t in outputs.tensors.attentions])
     else:
         assert outputs.tensors.attentions is None
+    if trf_model.attrs["transformer_config"].get("output_hidden_states", None) is True:
+        assert outputs.tensors.hidden_states is not None
+        assert all([t.shape[-2] == shape[-2] for t in outputs.tensors.hidden_states])
+    else:
+        assert outputs.tensors.hidden_states is None
     assert isinstance(outputs, FullTransformerBatch)

@@ -303,8 +303,8 @@ def test_replace_listeners():
         nlp.update(examples, sgd=optimizer, losses=losses)
         assert losses["tagger"] > 0.0
 
-    # check for presence of pooling_output in tensors
-    assert len(doc2._.trf_data.tensors) == 2
+    # check for presence of pooler_output in tensors
+    assert doc2._.trf_data.model_output.pooler_output is not None
 
 
 def test_replace_listeners_invalid():
