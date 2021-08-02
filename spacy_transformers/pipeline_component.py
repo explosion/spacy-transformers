@@ -305,7 +305,7 @@ class Transformer(TrainablePipe):
                     # type: ignore
                     losses[self.name] += float((d_tensor ** 2).sum())
                 if i >= len(d_tensors):
-                    d_tensors.append(list(d_trf_data.tensors))
+                    d_tensors.append(d_trf_data.tensors)
                 else:
                     for j, d_tensor in enumerate(d_trf_data.tensors):
                         d_tensors[i][j] += d_tensor

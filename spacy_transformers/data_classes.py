@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Union, Tuple
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
 from transformers.file_utils import ModelOutput
-from thinc.types import Ragged, Floats3d, Ints2d
+from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 import srsly
@@ -174,8 +174,8 @@ class TransformerData:
         )
 
     @property
-    def tensors(self) -> Tuple:
-        return self.model_output.to_tuple()
+    def tensors(self) -> List[Union[FloatsXd, List[FloatsXd]]]:
+        return list(self.model_output.to_tuple())
 
     @property
     def tokens(self) -> Dict[str, Any]:
@@ -268,8 +268,8 @@ class FullTransformerBatch:
         )
 
     @property
-    def tensors(self) -> Tuple:
-        return self.model_output.to_tuple()
+    def tensors(self) -> List[Union[torch.Tensor, Tuple[torch.Tensor]]]:
+        return list(self.model_output.to_tuple())
 
     @property
     def tokens(self) -> Dict[str, Any]:
