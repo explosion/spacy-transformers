@@ -260,7 +260,7 @@ class FullTransformerBatch:
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
-            tensors=ModelOutput(last_hidden_state=torch.FloatTensor((0,))),
+            tensors=ModelOutput(),
             align=align,
             cached_doc_data=doc_data,
         )
