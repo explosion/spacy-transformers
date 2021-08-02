@@ -67,15 +67,15 @@ def test_model_init(name, trf_model):
 
 def test_model_predict(docs, trf_model):
     outputs = trf_model.predict(docs)
-    shape = outputs.tensors.last_hidden_state.shape
+    shape = outputs.model_output.last_hidden_state.shape
     if trf_model.attrs["transformer_config"].get("output_attentions", None) is True:
-        assert outputs.tensors.attentions is not None
-        assert all([t.shape[0] == shape[0] for t in outputs.tensors.attentions])
+        assert outputs.model_output.attentions is not None
+        assert all([t.shape[0] == shape[0] for t in outputs.model_output.attentions])
     else:
-        assert outputs.tensors.attentions is None
+        assert outputs.model_output.attentions is None
     if trf_model.attrs["transformer_config"].get("output_hidden_states", None) is True:
-        assert outputs.tensors.hidden_states is not None
-        assert all([t.shape[0] == shape[0] for t in outputs.tensors.hidden_states])
+        assert outputs.model_output.hidden_states is not None
+        assert all([t.shape[0] == shape[0] for t in outputs.model_output.hidden_states])
     else:
-        assert outputs.tensors.hidden_states is None
+        assert outputs.model_output.hidden_states is None
     assert isinstance(outputs, FullTransformerBatch)

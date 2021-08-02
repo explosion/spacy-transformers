@@ -4,7 +4,7 @@ import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
 from transformers.file_utils import ModelOutput
-from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
+from thinc.types import Ragged, Floats3d, Ints2d
 from thinc.api import get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 import srsly
@@ -142,25 +142,24 @@ class TransformerData:
     ----------
     wordpieces (WordpieceBatch): A slice of the wordpiece token data produced
         by the Huggingface tokenizer.
-    tensors (List[FloatsXd]): A list containing as the first element the last
-        hidden state for the doc from the transformer.
+    model_output (ModelOutput): The model output from the transformer model,
+        determined by the model and transformer config.
     align (Ragged): Alignment from the Doc's tokenization to the wordpieces.
         This is a ragged array, where align.lengths[i] indicates the number of
         wordpiece tokens that token i aligns against. The actual indices are
         provided at align[i].dataXd.
-    model_output (Optional[ModelOutput]): Any additional model output from the
-        transformer model, determined by the model and transformer config.
     """
 
     wordpieces: WordpieceBatch
-    tensors: List[FloatsXd]
+    model_output: ModelOutput
     align: Ragged
-    model_output: ModelOutput = None
 
     @classmethod
     def empty(cls) -> "TransformerData":
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
-        return cls(wordpieces=WordpieceBatch.empty(), tensors=[], align=align)
+        return cls(
+            wordpieces=WordpieceBatch.empty(), model_output=ModelOutput(), align=align
+        )
 
     @classmethod
     def zeros(cls, length: int, width: int, *, xp=numpy) -> "TransformerData":
@@ -168,9 +167,15 @@ class TransformerData:
         with zeros."""
         return cls(
             wordpieces=WordpieceBatch.zeros([length], xp=xp),
-            tensors=[xp.zeros((1, length, width), dtype="f")],
+            model_output=ModelOutput(
+                last_hidden_state=xp.zeros((1, length, width), dtype="f")
+            ),
             align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i")),
         )
+
+    @property
+    def tensors(self) -> Tuple:
+        return self.model_output.to_tuple()
 
     @property
     def tokens(self) -> Dict[str, Any]:
@@ -179,25 +184,22 @@ class TransformerData:
 
     @property
     def width(self) -> int:
-        for tensor in reversed(self.tensors):
-            if len(tensor.shape) == 3:
-                return tensor.shape[-1]
+        if "last_hidden_state" in self.model_output:
+            return self.model_output.last_hidden_state.shape[-1]
         else:
-            raise ValueError("Cannot find last hidden layer")
+            raise ValueError("Cannot find last hidden state")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "wordpieces": self.wordpieces.to_dict(),
-            "tensors": self.tensors,
-            "align": [self.align.dataXd, self.align.lengths],
             "model_output": self.model_output,
+            "align": [self.align.dataXd, self.align.lengths],
         }
 
     def from_dict(self, msg: Dict[str, Any]) -> "TransformerData":
         self.wordpieces = WordpieceBatch.empty().from_dict(msg["wordpieces"])
-        self.tensors = msg["tensors"]
+        self.model_output = ModelOutput(msg["model_output"])
         self.align = Ragged(*msg["align"])
-        self.model_output = msg["model_output"]
         return self
 
     def to_bytes(self) -> bytes:
@@ -239,7 +241,7 @@ class FullTransformerBatch:
         Span may overlap or have gaps, but for each Doc, there is a non-overlapping
         contiguous slice of the outputs.
     wordpieces (WordpieceBatch): Token data from the Huggingface tokenizer.
-    tensors (ModelOutput): The output of the transformer model.
+    model_output (ModelOutput): The output of the transformer model.
     align (Ragged): Alignment from the spaCy tokenization to the wordpieces.
         This is a ragged array, where align.lengths[i] indicates the number of
         wordpiece tokens that token i aligns against. The actual indices are
@@ -248,7 +250,7 @@ class FullTransformerBatch:
 
     spans: List[List[Span]]
     wordpieces: WordpieceBatch
-    tensors: ModelOutput
+    model_output: ModelOutput
     align: Ragged
     cached_doc_data: Optional[List[TransformerData]] = None
 
@@ -260,10 +262,14 @@ class FullTransformerBatch:
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
-            tensors=ModelOutput(),
+            model_output=ModelOutput(),
             align=align,
             cached_doc_data=doc_data,
         )
+
+    @property
+    def tensors(self) -> Tuple:
+        return self.model_output.to_tuple()
 
     @property
     def tokens(self) -> Dict[str, Any]:
@@ -288,13 +294,13 @@ class FullTransformerBatch:
         """
         xp = get_array_module(arrays[0][0])
         # construct a dummy ModelOutput with the tensor values
-        tensors = ModelOutput()
+        model_output = ModelOutput()
         for i, x in enumerate(transpose_list(arrays)):
-            tensors[f"output_{i}"] = xp2torch(xp.vstack(x))
+            model_output[f"output_{i}"] = xp2torch(xp.vstack(x))
         return FullTransformerBatch(
             spans=self.spans,
             wordpieces=self.wordpieces,
-            tensors=tensors,
+            model_output=model_output,
             align=self.align,
         )
 
@@ -320,9 +326,9 @@ class FullTransformerBatch:
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
             model_output = ModelOutput()
-            last_hidden_state = self.tensors.last_hidden_state
-            for key, output in self.tensors.items():
-                if isinstance(output, torch.Tensor) and key != "last_hidden_state":
+            last_hidden_state = self.model_output.last_hidden_state
+            for key, output in self.model_output.items():
+                if isinstance(output, torch.Tensor):
                     model_output[key] = torch2xp(output[start:end])
                 elif (
                     isinstance(output, tuple)
@@ -333,9 +339,8 @@ class FullTransformerBatch:
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
-                    tensors=[torch2xp(last_hidden_state[start:end])],
-                    align=doc_align,
                     model_output=model_output,
+                    align=doc_align,
                 )
             )
             prev_tokens += doc_tokens.input_ids.size

@@ -335,7 +335,10 @@ class Transformer(TrainablePipe):
         pass
 
     def initialize(
-        self, get_examples: Callable[[], Iterable[Example]], *, nlp: Optional[Language] = None
+        self,
+        get_examples: Callable[[], Iterable[Example]],
+        *,
+        nlp: Optional[Language] = None,
     ):
         """Initialize the pipe for training, using data examples if available.
 
@@ -396,7 +399,9 @@ class Transformer(TrainablePipe):
         def load_model(p):
             p = Path(p).absolute()
             tokenizer, transformer = huggingface_from_pretrained(
-                p, self.model.attrs["tokenizer_config"], self.model.attrs["transformer_config"]
+                p,
+                self.model.attrs["tokenizer_config"],
+                self.model.attrs["transformer_config"],
             )
             self.model.attrs["tokenizer"] = tokenizer
             self.model.attrs["set_transformer"](self.model, transformer)

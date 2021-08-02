@@ -55,7 +55,6 @@ cfg_string = """
 
 @pytest.mark.parametrize("config_string", [cfg_string])
 def test_init_nlp(config_string):
-
     @spacy.registry.readers.register("toy_tagger_data.v1")
     def read_tagger_data():
         def parse_data(nlp, index):
@@ -68,8 +67,6 @@ def test_init_nlp(config_string):
         }
 
     config = spacy.util.load_config_from_str(config_string, interpolate=False)
-    config = Config(
-        DEFAULT_CONFIG, section_order=CONFIG_SECTION_ORDER
-    ).merge(config)
+    config = Config(DEFAULT_CONFIG, section_order=CONFIG_SECTION_ORDER).merge(config)
     nlp = init_nlp(config, use_gpu=False)
     assert nlp is not None

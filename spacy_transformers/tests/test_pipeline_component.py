@@ -66,8 +66,15 @@ def test_predict(component, docs):
     n_tokens = trf_data.wordpieces.input_ids.shape[1]
     width = component.model.layers[0].attrs["width"]
     assert isinstance(trf_data, FullTransformerBatch)
-    assert len(trf_data.tensors.last_hidden_state) == component.model.layers[0].attrs["depth"]
-    assert trf_data.tensors.last_hidden_state[0].shape == (len(docs), n_tokens, width)
+    assert (
+        len(trf_data.model_output.last_hidden_state)
+        == component.model.layers[0].attrs["depth"]
+    )
+    assert trf_data.model_output.last_hidden_state[0].shape == (
+        len(docs),
+        n_tokens,
+        width,
+    )
 
 
 def test_set_annotations(component, docs):
@@ -250,7 +257,7 @@ def _assert_empty(trf_data):
     assert trf_data.wordpieces.strings == []
     assert trf_data.wordpieces.input_ids.size == 0
     assert trf_data.wordpieces.attention_mask.size == 0
-    assert trf_data.tensors == []
+    assert trf_data.tensors == ()
     assert len(trf_data.align.data) == 0
 
 

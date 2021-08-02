@@ -77,7 +77,9 @@ def test_transformer_pipeline_tagger_internal():
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
         doc_tensor2 = tagger_trf2.predict([doc2])
         with pytest.raises(AssertionError):
-            assert_equal(doc_tensor2.doc_data[0].tensors, doc_tensor.doc_data[0].tensors)
+            assert_equal(
+                doc_tensor2.doc_data[0].tensors, doc_tensor.doc_data[0].tensors
+            )
 
         # results ARE the same if we call from_disk
         nlp2.from_disk(file_path)
