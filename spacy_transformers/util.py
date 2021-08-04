@@ -9,6 +9,9 @@ import catalogue
 from spacy.util import registry
 from thinc.api import get_current_ops, CupyOps
 import torch.cuda
+import tempfile
+import shutil
+import contextlib
 
 
 # fmt: off
@@ -139,3 +142,15 @@ def log_batch_size(logger, token_data, is_train):
         logger.info(f"{batch_size} x {seq_len} ({squared}) update")
     else:
         logger.info(f"{batch_size} x {seq_len} ({squared}) predict")
+
+
+@contextlib.contextmanager
+def make_tempdir():
+    """Execute a block in a temporary directory and remove the directory and
+    its contents at the end of the with block.
+
+    YIELDS (Path): The path of the temp directory.
+    """
+    d = Path(tempfile.mkdtemp())
+    yield d
+    shutil.rmtree(str(d))

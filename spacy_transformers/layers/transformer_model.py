@@ -1,23 +1,23 @@
-from functools import partial
+import copy
 from typing import List, Tuple, Callable
 
-import srsly
-from spacy.util import make_tempdir
-from transformers import AutoModel, AutoConfig, AutoTokenizer
-
-from spacy_transformers.layers._util import replace_listener, replace_listener_cfg
-from thinc.types import ArgsKwargs
-import torch
 from spacy.tokens import Doc
 from thinc.api import PyTorchWrapper, Model, xp2torch, chain
+from thinc.types import ArgsKwargs
+
+import torch
+
 import logging
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import find_last_hidden, maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
+from ..layers._util import replace_listener, replace_listener_cfg
 from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
+from .hf_wrapper import HFWrapper
+from .hf_shim import HFModel
 
 
 class TransformerModel(Model):
@@ -38,18 +38,21 @@ class TransformerModel(Model):
         tokenizer_config (dict): Settings to pass to the transformers tokenizer.
         transformer_config (dict): Settings to pass to the transformers forward pass.
         """
+        hf_model = HFModel(None, None, tokenizer_config, transformer_config)
+        wrapper = HFWrapper(
+            hf_model,
+            convert_inputs=_convert_transformer_inputs,
+            convert_outputs=_convert_transformer_outputs,
+        )
         super().__init__(
             "transformer",
             forward,
             init=init,
-            layers=[],
+            layers=[wrapper],
             dims={"nO": None},
             attrs={
-                "tokenizer": None,
                 "get_spans": get_spans,
                 "name": name,
-                "tokenizer_config": tokenizer_config,
-                "transformer_config": transformer_config,
                 "set_transformer": set_pytorch_transformer,
                 "has_transformer": False,
                 "flush_cache_chance": 0.0,
@@ -58,64 +61,38 @@ class TransformerModel(Model):
             },
         )
 
-    def to_bytes(self) -> bytes:
-        """Serialize the model to a bytes representation. Models are usually
-        serialized using msgpack, so you should be able to call msgpack.loads()
-        on the data and get back a dictionary with the contents.
+    @property
+    def tokenizer(self):
+        return self.layers[0].shims[0]._hfmodel.tokenizer
 
-        Serialization should round-trip identically, i.e. the same bytes should
-        result from loading and serializing a model.
+    @property
+    def transformer(self):
+        return self.layers[0].shims[0]._hfmodel.transformer
+
+    @property
+    def tokenizer_config(self):
+        return self.layers[0].shims[0]._hfmodel.tokenizer_config
+
+    @property
+    def transformer_config(self):
+        return self.layers[0].shims[0]._hfmodel.transformer_config
+
+    def copy(self):
         """
-        config = {}
-        tok_dict = {}
-        if self.attrs["has_transformer"]:
-            transformer = self.layers[0].shims[0]._model
-            config = transformer.config.to_dict()
-            tokenizer = self.attrs["tokenizer"]
-            with make_tempdir() as temp_dir:
-                tokenizer.save_pretrained(temp_dir, legacy_format=False)  # only works for fast tokenizers
-                for x in temp_dir.glob('**/*'):
-                    if x.is_file() and x.name.endswith(".json"):
-                        tok_dict[x.name] = srsly.read_json(x)
-        msg = {
-            "config": config,
-            "tokenizer": tok_dict,
-            "tokenizer_config": self.attrs["tokenizer_config"],
-            "transformer_config": self.attrs["transformer_config"],
-            "model": super().to_bytes(),
-        }
-        return srsly.msgpack_dumps(msg)
-
-    def from_bytes(self, bytes_data: bytes) -> "Model":
-        """Deserialize the model from a bytes representation. Models are usually
-        serialized using msgpack, so you should be able to call msgpack.loads()
-        on the data and get back a dictionary with the contents.
-
-        Serialization should round-trip identically, i.e. the same bytes should
-        result from loading and serializing a model.
+        Create a copy of the model, its attributes, and its parameters. Any child
+        layers will also be deep-copied. The copy will receive a distinct `model.id`
+        value.
         """
-        msg = srsly.msgpack_loads(bytes_data)
-        config_dict = msg["config"]
-        tok_dict = msg["tokenizer"]
-        tok_config = msg["tokenizer_config"]
-        trf_config = msg["transformer_config"]
-        model_bytes = msg["model"]
-        if config_dict:
-            with make_tempdir() as temp_dir:
-                config_file = temp_dir / "config.json"
-                srsly.write_json(config_file, config_dict)
-                config = AutoConfig.from_pretrained(config_file)
-                for x, x_dict in tok_dict.items():
-                    srsly.write_json(temp_dir / x, x_dict)
-                tokenizer = AutoTokenizer.from_pretrained(str(temp_dir.absolute()), **tok_config)
-
-            transformer = AutoModel.from_config(config)
-            transformer.forward = partial(transformer.forward, **trf_config)
-
-            self.attrs["tokenizer"] = tokenizer
-            self.attrs["set_transformer"](self, transformer)
-        super().from_bytes(model_bytes)
-        return self
+        copied = TransformerModel(self.name, self.attrs["get_spans"])
+        params = {}
+        for name in self.param_names:
+            params[name] = self.get_param(name) if self.has_param(name) else None
+        copied.params = copy.deepcopy(params)
+        copied.dims = copy.deepcopy(self._dims)
+        copied.layers[0] = copy.deepcopy(self.layers[0])
+        for name in self.grad_names:
+            copied.set_grad(name, self.get_grad(name).copy())
+        return copied
 
 
 def set_logger(model, out_file):
@@ -129,16 +106,12 @@ def set_logger(model, out_file):
     model.attrs["logger"] = logging.getLogger(__name__)
 
 
-def set_pytorch_transformer(model, transformer):
+def set_pytorch_transformer(model, transformer, tokenizer):
     if model.attrs["has_transformer"]:
         raise ValueError("Cannot set second transformer.")
-    model.layers.append(
-        PyTorchWrapper(
-            transformer,
-            convert_inputs=_convert_transformer_inputs,
-            convert_outputs=_convert_transformer_outputs,
-        )
-    )
+    model.layers[0].shims[0]._model = transformer
+    model.layers[0].shims[0]._hfmodel.transformer = transformer
+    model.layers[0].shims[0]._hfmodel.tokenizer = tokenizer
     model.attrs["has_transformer"] = True
     model.set_dim("nO", transformer.config.hidden_size)
 
@@ -147,11 +120,11 @@ def init(model: Model, X=None, Y=None):
     if model.attrs["has_transformer"]:
         return
     name = model.attrs["name"]
-    tok_cfg = model.attrs["tokenizer_config"]
-    trf_cfg = model.attrs["transformer_config"]
+    tok_cfg = model.tokenizer_config
+    trf_cfg = model.transformer_config
     tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
-    model.attrs["tokenizer"] = tokenizer
-    model.attrs["set_transformer"](model, transformer)
+    model.attrs["set_transformer"](model, transformer, tokenizer)
+    tokenizer = model.tokenizer
     # Call the model with a batch of inputs to infer the width
     if X:
         # If we're dealing with actual texts, do the work to setup the wordpieces
@@ -162,19 +135,17 @@ def init(model: Model, X=None, Y=None):
         flat_spans = []
         for doc_spans in nested_spans:
             flat_spans.extend(doc_spans)
-        token_data = huggingface_tokenize(
-            model.attrs["tokenizer"], [span.text for span in flat_spans]
-        )
+        token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
         align = get_alignment(
-            flat_spans, wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
+            flat_spans, wordpieces.strings, tokenizer.all_special_tokens
         )
         wordpieces, align = truncate_oversize_splits(
             wordpieces, align, tokenizer.model_max_length
         )
     else:
         texts = ["hello world", "foo bar"]
-        token_data = huggingface_tokenize(model.attrs["tokenizer"], texts)
+        token_data = huggingface_tokenize(tokenizer, texts)
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
     model.layers[0].initialize(X=wordpieces)
     tensors = model.layers[0].predict(wordpieces)
@@ -185,11 +156,11 @@ def init(model: Model, X=None, Y=None):
 
 
 def forward(
-    model: Model, docs: List[Doc], is_train: bool
+    model: TransformerModel, docs: List[Doc], is_train: bool
 ) -> Tuple[FullTransformerBatch, Callable]:
-    tokenizer = model.attrs["tokenizer"]
+    tokenizer = model.tokenizer
     get_spans = model.attrs["get_spans"]
-    trf_cfg = model.attrs["transformer_config"]
+    trf_cfg = model.transformer_config
     transformer = model.layers[0]
 
     nested_spans = get_spans(docs)
@@ -205,9 +176,7 @@ def forward(
     wordpieces = WordpieceBatch.from_batch_encoding(batch_encoding)
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], wordpieces, is_train)
-    align = get_alignment(
-        flat_spans, wordpieces.strings, model.attrs["tokenizer"].all_special_tokens
-    )
+    align = get_alignment(flat_spans, wordpieces.strings, tokenizer.all_special_tokens)
     wordpieces, align = truncate_oversize_splits(
         wordpieces, align, tokenizer.model_max_length
     )
@@ -241,7 +210,7 @@ def forward(
 
 
 def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
-    # Adapter for the PyTorchWrapper. See https://thinc.ai/docs/usage-frameworks
+    # Adapter for the HFWrapper. See https://thinc.ai/docs/usage-frameworks
     kwargs = {
         "input_ids": xp2torch(wps.input_ids),
         "attention_mask": xp2torch(wps.attention_mask),

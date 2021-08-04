@@ -1,4 +1,4 @@
-import pytest
+import spacy
 from spacy.training.example import Example
 from spacy.util import make_tempdir
 from spacy import util
@@ -60,7 +60,7 @@ def test_transformer_pipeline_textcat():
     with make_tempdir() as d:
         file_path = d / "trained_nlp"
         nlp.to_disk(file_path)
-        nlp2 = util.load_model_from_path(file_path)
+        nlp2 = spacy.load(file_path)
         doc2 = nlp2("We're interested at underwater basket weaving.")
         cats2 = doc2.cats
         assert cats1 == cats2

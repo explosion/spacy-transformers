@@ -193,4 +193,4 @@ def test_initialized_inline_transformer_pipeline_todisk():
         nlp2 = spacy.load(d)
         assert nlp2.pipe_names == ["tagger"]
         tagger2 = nlp2.get_pipe("tagger")
-        assert tagger2.labels == ["V"]
+        assert list(tagger2.labels) == ["V"]
