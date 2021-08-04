@@ -82,6 +82,7 @@ class TransformerModel(Model):
             "tokenizer": tok_dict,
             "tokenizer_config": self.attrs["tokenizer_config"],
             "transformer_config": self.attrs["transformer_config"],
+            "model": super().to_bytes(),
         }
         return srsly.msgpack_dumps(msg)
 
@@ -98,6 +99,7 @@ class TransformerModel(Model):
         tok_dict = msg["tokenizer"]
         tok_config = msg["tokenizer_config"]
         trf_config = msg["transformer_config"]
+        model_bytes = msg["model"]
         if config_dict:
             with make_tempdir() as temp_dir:
                 config_file = temp_dir / "config.json"
@@ -112,6 +114,7 @@ class TransformerModel(Model):
 
             self.attrs["tokenizer"] = tokenizer
             self.attrs["set_transformer"](self, transformer)
+        super().from_bytes(model_bytes)
         return self
 
 
