@@ -1,8 +1,13 @@
+import spacy
 from spacy import Language
+from spacy.lang.en import English
 from spacy.util import make_tempdir
+from spacy import util
 
 from spacy_transformers import TransformerData
 import srsly
+
+from thinc.api import Config
 
 
 def test_serialize_transformer_data():
@@ -22,7 +27,7 @@ def test_transformer_tobytes():
     trf2.from_bytes(trf_bytes)
 
 
-def test_transformer_model_tobytes():
+def test_initialized_transformer_tobytes():
     nlp = Language()
     trf = nlp.add_pipe("transformer")
     nlp.initialize()
@@ -33,7 +38,7 @@ def test_transformer_model_tobytes():
     trf2.from_bytes(trf_bytes)
 
 
-def test_transformer_model_todisk():
+def test_initialized_transformer_todisk():
     nlp = Language()
     trf = nlp.add_pipe("transformer")
     nlp.initialize()
@@ -58,10 +63,135 @@ def test_transformer_pipeline_tobytes():
 
 
 def test_transformer_pipeline_todisk():
-    nlp = Language()
+    nlp = English()
     nlp.add_pipe("transformer")
     nlp.initialize()
     with make_tempdir() as d:
         nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        assert nlp2.pipe_names == ["transformer"]
+
+
+inline_cfg_string = """
+    [nlp]
+    lang = "en"
+    pipeline = ["tagger"]
+
+    [components]
+
+    [components.tagger]
+    factory = "tagger"
+
+    [components.tagger.model]
+    @architectures = "spacy.Tagger.v1"
+    nO = null
+
+    [components.tagger.model.tok2vec]
+    @architectures = "spacy-transformers.Tok2VecTransformer.v1"
+    name = "albert-base-v2"
+    tokenizer_config = {"use_fast": false}
+    grad_factor = 1.0
+
+    [components.tagger.model.tok2vec.get_spans]
+    @span_getters = "spacy-transformers.strided_spans.v1"
+    window = 256
+    stride = 256
+
+    [components.tagger.model.tok2vec.pooling]
+    @layers = "reduce_mean.v1"
+    """
+
+
+def test_inline_transformer_tobytes():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    tagger = nlp.get_pipe("tagger")
+    tagger_bytes = tagger.to_bytes()
+
+    nlp2 = Language()
+    tagger2 = nlp2.add_pipe("tagger")
+    tagger2.from_bytes(tagger_bytes)
+
+
+def test_initialized_inline_transformer_tobytes():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["tagger"]
+    tagger = nlp.get_pipe("tagger")
+    tagger.add_label("V")
+    nlp.initialize()
+    tagger_bytes = tagger.to_bytes()
+
+    nlp2 = Language()
+    tagger2 = nlp2.add_pipe("tagger")
+    tagger2.from_bytes(tagger_bytes)
+    assert tagger2.labels == ["V"]
+
+
+def test_inline_transformer_todisk():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["tagger"]
+    tagger = nlp.get_pipe("tagger")
+    tagger.add_label("V")
+    with make_tempdir() as d:
+        tagger.to_disk(d)
         nlp2 = Language()
-        nlp2.from_disk(d)
+        tagger2 = nlp2.add_pipe("tagger")
+        tagger2.from_disk(d)
+        assert tagger2.labels == ["V"]
+
+
+def test_initialized_inline_transformer_todisk():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["tagger"]
+    tagger = nlp.get_pipe("tagger")
+    tagger.add_label("V")
+    nlp.initialize()
+    with make_tempdir() as d:
+        tagger.to_disk(d)
+        nlp2 = Language()
+        tagger2 = nlp2.add_pipe("tagger")
+        tagger2.from_disk(d)
+        assert tagger2.labels == ["V"]
+
+
+def test_inline_transformer_pipeline_tobytes():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["tagger"]
+    tagger = nlp.get_pipe("tagger")
+    tagger.add_label("V")
+    nlp.initialize()
+    nlp_bytes = nlp.to_bytes()
+
+    nlp2 = Language()
+    nlp2.add_pipe("tagger")
+    nlp2.from_bytes(nlp_bytes)
+    assert nlp2.pipe_names == ["tagger"]
+
+
+def test_inline_transformer_pipeline_todisk():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["tagger"]
+    with make_tempdir() as d:
+        nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        assert nlp2.pipe_names == ["tagger"]
+
+
+def test_initialized_inline_transformer_pipeline_todisk():
+    orig_config = Config().from_str(inline_cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    assert nlp.pipe_names == ["tagger"]
+    tagger = nlp.get_pipe("tagger")
+    tagger.add_label("V")
+    nlp.initialize()
+    with make_tempdir() as d:
+        nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        assert nlp2.pipe_names == ["tagger"]
+        tagger2 = nlp2.get_pipe("tagger")
+        assert tagger2.labels == ["V"]
