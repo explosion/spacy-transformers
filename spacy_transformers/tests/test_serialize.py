@@ -108,8 +108,8 @@ def test_inline_transformer_tobytes():
     tagger = nlp.get_pipe("tagger")
     tagger_bytes = tagger.to_bytes()
 
-    nlp2 = Language()
-    tagger2 = nlp2.add_pipe("tagger")
+    nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    tagger2 = nlp2.get_pipe("tagger")
     tagger2.from_bytes(tagger_bytes)
 
 
@@ -122,10 +122,10 @@ def test_initialized_inline_transformer_tobytes():
     nlp.initialize()
     tagger_bytes = tagger.to_bytes()
 
-    nlp2 = Language()
-    tagger2 = nlp2.add_pipe("tagger")
+    nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    tagger2 = nlp2.get_pipe("tagger")
     tagger2.from_bytes(tagger_bytes)
-    assert tagger2.labels == ["V"]
+    assert list(tagger2.labels) == ["V"]
 
 
 def test_inline_transformer_todisk():
@@ -136,10 +136,10 @@ def test_inline_transformer_todisk():
     tagger.add_label("V")
     with make_tempdir() as d:
         tagger.to_disk(d)
-        nlp2 = Language()
-        tagger2 = nlp2.add_pipe("tagger")
+        nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+        tagger2 = nlp2.get_pipe("tagger")
         tagger2.from_disk(d)
-        assert tagger2.labels == ["V"]
+        assert list(tagger2.labels) == ["V"]
 
 
 def test_initialized_inline_transformer_todisk():
@@ -151,10 +151,10 @@ def test_initialized_inline_transformer_todisk():
     nlp.initialize()
     with make_tempdir() as d:
         tagger.to_disk(d)
-        nlp2 = Language()
-        tagger2 = nlp2.add_pipe("tagger")
+        nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+        tagger2 = nlp2.get_pipe("tagger")
         tagger2.from_disk(d)
-        assert tagger2.labels == ["V"]
+        assert list(tagger2.labels) == ["V"]
 
 
 def test_inline_transformer_pipeline_tobytes():
@@ -166,8 +166,7 @@ def test_inline_transformer_pipeline_tobytes():
     nlp.initialize()
     nlp_bytes = nlp.to_bytes()
 
-    nlp2 = Language()
-    nlp2.add_pipe("tagger")
+    nlp2 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     nlp2.from_bytes(nlp_bytes)
     assert nlp2.pipe_names == ["tagger"]
 
