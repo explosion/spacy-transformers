@@ -1,4 +1,5 @@
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 import srsly
 from functools import partial
@@ -43,11 +44,10 @@ class HFShim(PyTorchShim):
             config = hf_model.transformer.config.to_dict()
             tokenizer = hf_model.tokenizer
             with make_tempdir() as temp_dir:
-                # only works for fast tokenizers
-                tokenizer.save_pretrained(temp_dir, legacy_format=False)
+                tokenizer.save_pretrained(temp_dir)
                 for x in temp_dir.glob("**/*"):
-                    if x.is_file() and x.name.endswith(".json"):
-                        tok_dict[x.name] = srsly.read_json(x)
+                    if x.is_file():
+                        tok_dict[x.name] = x.read_bytes()
             filelike = BytesIO()
             torch.save(self._model.state_dict(), filelike)
             filelike.seek(0)
@@ -72,8 +72,8 @@ class HFShim(PyTorchShim):
                 config_file = temp_dir / "config.json"
                 srsly.write_json(config_file, config_dict)
                 config = AutoConfig.from_pretrained(config_file)
-                for x, x_dict in tok_dict.items():
-                    srsly.write_json(temp_dir / x, x_dict)
+                for x, x_bytes in tok_dict.items():
+                    Path(temp_dir / x).write_bytes(x_bytes)
                 tokenizer = AutoTokenizer.from_pretrained(
                     str(temp_dir.absolute()), **tok_config
                 )
