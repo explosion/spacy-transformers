@@ -28,8 +28,8 @@ cfg_string = """
 
     [components.tagger.model.tok2vec]
     @architectures = "spacy-transformers.Tok2VecTransformer.v1"
-    name = "albert-base-v2"
-    tokenizer_config = {"use_fast": true}
+    name = "roberta-base"
+    tokenizer_config = {"use_fast": false}
     grad_factor = 1.0
 
     [components.tagger.model.tok2vec.get_spans]
