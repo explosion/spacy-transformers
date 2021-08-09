@@ -1,9 +1,9 @@
 import pytest
 import numpy
-from spacy_transformers.data_classes import WordpieceBatch
-from spacy_transformers.truncate import _truncate_tokens, _truncate_alignment
 from thinc.types import Ragged
 from thinc.api import NumpyOps
+from ..data_classes import WordpieceBatch
+from ..truncate import _truncate_tokens, _truncate_alignment
 
 
 @pytest.fixture

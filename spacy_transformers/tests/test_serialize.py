@@ -3,11 +3,11 @@ from spacy import Language
 from spacy.lang.en import English
 from spacy.util import make_tempdir
 from spacy import util
-
-from spacy_transformers import TransformerData
 import srsly
-
 from thinc.api import Config
+
+from .. import TransformerData
+from ..util import make_tempdir
 
 
 def test_serialize_transformer_data():
