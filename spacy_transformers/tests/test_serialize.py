@@ -88,7 +88,7 @@ inline_cfg_string = """
 
     [components.tagger.model.tok2vec]
     @architectures = "spacy-transformers.Tok2VecTransformer.v1"
-    name = "albert-base-v2"
+    name = "distilbert-base-uncased"
     tokenizer_config = {"use_fast": true}
     grad_factor = 1.0
 
