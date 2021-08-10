@@ -9,7 +9,7 @@ from .hf_shim import HFShim
 
 @registry.layers("HFWrapper.v1")
 def HFWrapper(
-    hf_model: "HFModel",
+    hf_model: "HFObjects",
     convert_inputs: Optional[Callable] = None,
     convert_outputs: Optional[Callable] = None,
 ) -> Model[Any, Any]:

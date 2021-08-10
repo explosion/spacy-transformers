@@ -1,9 +1,10 @@
+from typing import Any, Dict
 from io import BytesIO
 from pathlib import Path
-from typing import Any
 import srsly
 from functools import partial
 import torch
+from dataclasses import dataclass, field
 from spacy.vectors import get_current_ops
 
 from ..util import make_tempdir
@@ -13,24 +14,19 @@ from thinc.api import PyTorchShim
 from transformers import AutoModel, AutoConfig, AutoTokenizer
 
 
-class HFModel:
-    def __init__(
-        self,
-        transformer,
-        tokenizer,
-        tokenizer_config: dict = {},
-        transformer_config: dict = {},
-    ):
-        self.transformer = transformer
-        self.tokenizer = tokenizer
-        self.tokenizer_config = dict(tokenizer_config)
-        self.transformer_config = dict(transformer_config)
+@dataclass
+class HFObjects:
+
+    transformer: Any
+    tokenizer: Any
+    tokenizer_config: Dict[str, Any] = field(default_factory=dict)
+    transformer_config: Dict[str, Any] = field(default_factory=dict)
 
 
 class HFShim(PyTorchShim):
     """Interface between a HF Pytorch model and a Thinc Model."""
 
-    def __init__(self, model: HFModel, config=None, optimizer: Any = None):
+    def __init__(self, model: HFObjects, config=None, optimizer: Any = None):
         self._hfmodel = model
         super().__init__(model.transformer, config, optimizer)
 
@@ -80,7 +76,7 @@ class HFShim(PyTorchShim):
 
             transformer = AutoModel.from_config(config)
             transformer.forward = partial(transformer.forward, **trf_config)
-            self._hfmodel = HFModel(transformer, tokenizer, tok_config, trf_config)
+            self._hfmodel = HFObjects(transformer, tokenizer, tok_config, trf_config)
             self._model = transformer
             filelike = BytesIO(msg["state"])
             filelike.seek(0)

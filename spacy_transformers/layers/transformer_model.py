@@ -17,7 +17,7 @@ from ..layers._util import replace_listener, replace_listener_cfg
 from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
 from .hf_wrapper import HFWrapper
-from .hf_shim import HFModel
+from .hf_shim import HFObjects
 
 
 class TransformerModel(Model):
@@ -38,7 +38,7 @@ class TransformerModel(Model):
         tokenizer_config (dict): Settings to pass to the transformers tokenizer.
         transformer_config (dict): Settings to pass to the transformers forward pass.
         """
-        hf_model = HFModel(None, None, tokenizer_config, transformer_config)
+        hf_model = HFObjects(None, None, tokenizer_config, transformer_config)
         wrapper = HFWrapper(
             hf_model,
             convert_inputs=_convert_transformer_inputs,
