@@ -89,7 +89,7 @@ class HFShim(PyTorchShim):
                 map_location = "cpu"
             else:  # pragma: no cover
                 device_id = torch.cuda.current_device()
-                map_location = "cuda:%d" % device_id
+                map_location = f"cuda:{device_id}"
             self._model.load_state_dict(torch.load(filelike, map_location=map_location))
             self._model.to(map_location)
         return self
