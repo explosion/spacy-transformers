@@ -174,8 +174,8 @@ class TransformerData:
         )
 
     @property
-    def tensors(self) -> List[Union[FloatsXd, List[FloatsXd]]]:
-        return list(self.model_output.to_tuple())
+    def tensors(self) -> Tuple[Union[FloatsXd, List[FloatsXd]]]:
+        return self.model_output.to_tuple()
 
     @property
     def tokens(self) -> Dict[str, Any]:
@@ -268,8 +268,8 @@ class FullTransformerBatch:
         )
 
     @property
-    def tensors(self) -> List[Union[torch.Tensor, Tuple[torch.Tensor]]]:
-        return list(self.model_output.to_tuple())
+    def tensors(self) -> Tuple[Union[torch.Tensor, Tuple[torch.Tensor]]]:
+        return self.model_output.to_tuple()
 
     @property
     def tokens(self) -> Dict[str, Any]:
