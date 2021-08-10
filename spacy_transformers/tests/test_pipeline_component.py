@@ -6,13 +6,14 @@ from spacy.util import make_tempdir
 from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from spacy import util
-from spacy_transformers.layers import TransformerListener
 from thinc.api import Model, Config, get_current_ops, NumpyOps
 from numpy.testing import assert_equal
 from spacy.tests.util import assert_docs_equal
 
 from .util import DummyTransformer
+from .. import TransformerModel
 from ..pipeline_component import Transformer
+from ..layers import TransformerListener
 from ..data_classes import TransformerData, FullTransformerBatch
 
 
@@ -190,7 +191,6 @@ def test_transformer_pipeline_tagger_listener():
     # ensure to_bytes / from_bytes works
     nlp_bytes = nlp.to_bytes()
     nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
-    nlp3.initialize(lambda: train_examples)
     nlp3.from_bytes(nlp_bytes)
     doc = nlp3(text)
     tagger3 = nlp3.get_pipe("tagger")
@@ -260,6 +260,7 @@ def test_replace_listeners():
     tagger_listener = tagger_tok2vec.get_ref("listener")
     assert isinstance(tagger_listener, TransformerListener)
     assert transformer.listener_map["tagger"][0] == tagger_listener
+    assert isinstance(transformer.model, TransformerModel)
     assert (
         nlp.config["components"]["transformer"]["model"]["@architectures"]
         == "spacy-transformers.TransformerModel.v1"
@@ -281,10 +282,11 @@ def test_replace_listeners():
     nlp.replace_listeners("transformer", "tagger", ["model.tok2vec"])
     tagger = nlp.get_pipe("tagger")
     tagger_tok2vec = tagger.model.get_ref("tok2vec")
+    assert isinstance(tagger_tok2vec, Model)
     assert tagger_tok2vec.layers[0].layers[0].name == "transformer"
     assert (
         nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
-        == "spacy-transformers.Tok2VecTransformer.v1"
+        == "spacy-transformers.Tok2VecTransformer.v2"
     )
     doc2 = nlp(text)
     assert preds == [t.tag_ for t in doc2]
