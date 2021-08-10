@@ -23,8 +23,8 @@ class HFModel:
     ):
         self.transformer = transformer
         self.tokenizer = tokenizer
-        self.tokenizer_config = tokenizer_config
-        self.transformer_config = transformer_config
+        self.tokenizer_config = dict(tokenizer_config)
+        self.transformer_config = dict(transformer_config)
 
 
 class HFShim(PyTorchShim):
