@@ -7,6 +7,7 @@ from spacy.tokens import Doc
 from thinc.api import Model
 
 from ..data_classes import FullTransformerBatch
+from ..layers.hf_shim import HFObjects
 from ..span_getters import get_doc_spans
 from ..layers.transformer_model import forward as transformer_forward
 
@@ -126,16 +127,36 @@ def DummyTransformer(
     depth: int = 2, width: int = 4, get_spans=get_doc_spans
 ) -> Model[List[Doc], FullTransformerBatch]:
     """Create a test model that produces a FullTransformerBatch object."""
-    return Model(
+    hf_model = HFObjects(None, DummyTokenizer())
+
+    return DummyModel(
         "dummy-transformer",
         transformer_forward,
         layers=[DummyTransformerModel(width=width, depth=depth)],
         attrs={
             "get_spans": get_spans,
-            "tokenizer": DummyTokenizer(),
+            "hf_model": hf_model,
             "grad_factor": 1.0,
             "flush_cache_chance": 0.0,
             "transformer_config": {},
         },
         dims={"nO": width},
     )
+
+
+class DummyModel(Model):
+    @property
+    def tokenizer(self):
+        return DummyTokenizer()
+
+    @property
+    def transformer(self):
+        return None
+
+    @property
+    def tokenizer_config(self):
+        return {}
+
+    @property
+    def transformer_config(self):
+        return {}
