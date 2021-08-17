@@ -12,7 +12,7 @@ from ..util import make_tempdir
 
 DEFAULT_CONFIG = {
     "model": {
-        "@architectures": "spacy-transformers.TransformerModel.v1",
+        "@architectures": "spacy-transformers.TransformerModel.v2",
         "name": "distilbert-base-uncased",
     }
 }
@@ -95,9 +95,10 @@ inline_cfg_string = """
     nO = null
 
     [components.tagger.model.tok2vec]
-    @architectures = "spacy-transformers.Tok2VecTransformer.v1"
+    @architectures = "spacy-transformers.Tok2VecTransformer.v2"
     name = "distilbert-base-uncased"
     tokenizer_config = {"use_fast": true}
+    transformer_config = {"output_attentions": false}
     grad_factor = 1.0
 
     [components.tagger.model.tok2vec.get_spans]

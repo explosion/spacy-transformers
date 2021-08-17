@@ -27,10 +27,10 @@ max_batch_items = 4096
 @annotation_setters = "spacy-transformers.null_annotation_setter.v1"
 
 [transformer.model]
-@architectures = "spacy-transformers.TransformerModel.v1"
+@architectures = "spacy-transformers.TransformerModel.v2"
 name = "roberta-base"
 tokenizer_config = {"use_fast": true}
-transformer_config = {"output_attentions": false}
+transformer_config = {}
 
 [transformer.model.get_spans]
 @span_getters = "spacy-transformers.strided_spans.v1"

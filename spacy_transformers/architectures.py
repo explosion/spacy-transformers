@@ -112,7 +112,17 @@ def transformer_tok2vec_v2(
 
 
 @registry.architectures.register("spacy-transformers.TransformerModel.v1")
-def create_TransformerModel(
+def create_TransformerModel_v1(
+    name: str,
+    get_spans: Callable,
+    tokenizer_config: dict = {},
+) -> Model[List[Doc], "FullTransformerBatch"]:
+    model = TransformerModel(name, get_spans, tokenizer_config)
+    return model
+
+
+@registry.architectures.register("spacy-transformers.TransformerModel.v2")
+def create_TransformerModel_v2(
     name: str,
     get_spans: Callable,
     tokenizer_config: dict = {},

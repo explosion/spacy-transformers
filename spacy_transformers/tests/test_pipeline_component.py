@@ -263,7 +263,7 @@ def test_replace_listeners():
     assert isinstance(transformer.model, TransformerModel)
     assert (
         nlp.config["components"]["transformer"]["model"]["@architectures"]
-        == "spacy-transformers.TransformerModel.v1"
+        == "spacy-transformers.TransformerModel.v2"
     )
     assert (
         nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
