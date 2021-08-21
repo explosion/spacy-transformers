@@ -1,8 +1,7 @@
 from typing import List, Dict, Union
 from pathlib import Path
-from functools import partial
 import random
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
@@ -36,9 +35,9 @@ def huggingface_from_pretrained(
     else:
         str_path = source
     tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
-    transformer = AutoModel.from_pretrained(str_path)
     trf_config["return_dict"] = True
-    transformer.forward = partial(transformer.forward, **trf_config)
+    config = AutoConfig.from_pretrained(str_path, **trf_config)
+    transformer = AutoModel.from_config(config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
