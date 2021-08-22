@@ -152,7 +152,7 @@ cfg_string = """
     name = "custom_upstream"
 
     [components.transformer.model]
-    @architectures = "spacy-transformers.TransformerModel.v1"
+    @architectures = "spacy-transformers.TransformerModel.v2"
     name = "albert-base-v2"
 
     [components.transformer.model.transformer_config]
