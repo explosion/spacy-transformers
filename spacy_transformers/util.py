@@ -55,9 +55,13 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
         return_token_type_ids=None,  # Sets to model default
         padding="longest",
     )
+
+    # Copy input IDs to the GPU to avoid small device -> host transfers.
+    input_ids_cpu = token_data["input_ids"].cpu()
+
     token_data["input_texts"] = []
-    for i in range(len(token_data["input_ids"])):
-        wp_texts = tokenizer.convert_ids_to_tokens(token_data["input_ids"][i])
+    for i in range(len(input_ids_cpu)):
+        wp_texts = tokenizer.convert_ids_to_tokens(input_ids_cpu[i])
         token_data["input_texts"].append(wp_texts)
     token_data["pad_token"] = tokenizer.pad_token
     return token_data
