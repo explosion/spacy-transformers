@@ -56,7 +56,7 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
         padding="longest",
     )
 
-    # Copy input IDs to the GPU to avoid small device -> host transfers.
+    # Copy input IDs to the CPU to avoid small device -> host transfers.
     input_ids_cpu = token_data["input_ids"].cpu()
 
     token_data["input_texts"] = []
