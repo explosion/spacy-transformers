@@ -4,7 +4,7 @@ import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
 from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
-from thinc.api import get_array_module, xp2torch, torch2xp
+from thinc.api import NumpyOps, get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 import srsly
 
@@ -97,13 +97,16 @@ class WordpieceBatch:
             for tokens in token_data["input_texts"]
         ]
         n_seq = len(lengths)
+
+        numpy_ops = NumpyOps()
+
         return cls(
             strings=token_data["input_texts"],
-            input_ids=torch2xp(token_data["input_ids"]).reshape((n_seq, -1)),
-            attention_mask=torch2xp(token_data["attention_mask"]).reshape((n_seq, -1)),
+            input_ids=numpy_ops.asarray2i(token_data["input_ids"]),
+            attention_mask=numpy_ops.asarray2f(token_data["attention_mask"]),
             lengths=lengths,
             token_type_ids=(
-                torch2xp(token_data["token_type_ids"]).reshape((n_seq, -1))
+                numpy_ops.asarray2i(token_data["token_type_ids"])
                 if "token_type_ids" in token_data
                 else None
             ),
