@@ -12,7 +12,7 @@ def replace_listener_cfg(tok2vec_model_cfg, listener_model_cfg):
         "TransformerModel" in tok2vec_model_cfg["@architectures"]
         and "TransformerListener" in listener_model_cfg["@architectures"]
     ):
-        result["@architectures"] = "spacy-transformers.Tok2VecTransformer.v2"
+        result["@architectures"] = "spacy-transformers.Tok2VecTransformer.v1"
         for key in ["pooling", "grad_factor"]:
             if key in listener_model_cfg and key not in result:
                 result[key] = listener_model_cfg[key]
