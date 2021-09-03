@@ -9,7 +9,7 @@ from spacy.vectors import get_current_ops
 
 from ..util import make_tempdir
 
-from thinc.api import PyTorchShim
+from thinc.api import PyTorchGradScaler, PyTorchShim
 
 from transformers import AutoModel, AutoConfig, AutoTokenizer
 
@@ -26,9 +26,28 @@ class HFObjects:
 class HFShim(PyTorchShim):
     """Interface between a HF Pytorch model and a Thinc Model."""
 
-    def __init__(self, model: HFObjects, config=None, optimizer: Any = None):
+    def __init__(
+        self,
+        model: HFObjects,
+        config=None,
+        optimizer: Any = None,
+        mixed_precision: bool = False,
+        grad_scaler_config: dict = {},
+    ):
         self._hfmodel = model
-        super().__init__(model.transformer, config, optimizer)
+
+        # Enable gradient scaling when mixed precision is enabled and gradient
+        # scaling is not explicitly disabled in the configuration.
+        if "enabled" not in grad_scaler_config:
+            grad_scaler_config["enabled"] = mixed_precision
+
+        super().__init__(
+            model.transformer,
+            config,
+            optimizer,
+            mixed_precision,
+            grad_scaler=PyTorchGradScaler(**grad_scaler_config),
+        )
 
     def to_bytes(self):
         config = {}

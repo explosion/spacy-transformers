@@ -28,6 +28,8 @@ class TransformerModel(Model):
         get_spans: Callable,
         tokenizer_config: dict = {},
         transformer_config: dict = {},
+        mixed_precision: bool = False,
+        grad_scaler_config: dict = {},
     ):
         """
         get_spans (Callable[[List[Doc]], List[Span]]):
@@ -44,6 +46,8 @@ class TransformerModel(Model):
             hf_model,
             convert_inputs=_convert_transformer_inputs,
             convert_outputs=_convert_transformer_outputs,
+            mixed_precision=mixed_precision,
+            grad_scaler_config=grad_scaler_config,
         )
         super().__init__(
             "transformer",
