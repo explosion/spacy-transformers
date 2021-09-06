@@ -2,7 +2,6 @@ from typing import Any, Dict
 from io import BytesIO
 from pathlib import Path
 import srsly
-from functools import partial
 import torch
 from dataclasses import dataclass, field
 from spacy.vectors import get_current_ops
@@ -75,7 +74,6 @@ class HFShim(PyTorchShim):
                 )
 
             transformer = AutoModel.from_config(config)
-            transformer.forward = partial(transformer.forward, **trf_config)
             self._hfmodel = HFObjects(transformer, tokenizer, tok_config, trf_config)
             self._model = transformer
             filelike = BytesIO(msg["state"])
