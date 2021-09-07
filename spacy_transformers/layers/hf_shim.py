@@ -4,6 +4,7 @@ from pathlib import Path
 import srsly
 import torch
 from dataclasses import dataclass, field
+from spacy.util import SimpleFrozenDict
 from spacy.vectors import get_current_ops
 
 from ..util import make_tempdir
@@ -18,8 +19,8 @@ class HFObjects:
 
     transformer: Any
     tokenizer: Any
-    tokenizer_config: Dict[str, Any] = field(default_factory=dict)
-    transformer_config: Dict[str, Any] = field(default_factory=dict)
+    init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
+    init_transformer_config: Dict[str, Any] = field(default_factory=dict)
 
 
 class HFShim(PyTorchShim):
@@ -51,8 +52,6 @@ class HFShim(PyTorchShim):
             "config": config,
             "state": weights_bytes,
             "tokenizer": tok_dict,
-            "tokenizer_config": hf_model.tokenizer_config,
-            "transformer_config": hf_model.transformer_config,
         }
         return srsly.msgpack_dumps(msg)
 
@@ -60,8 +59,6 @@ class HFShim(PyTorchShim):
         msg = srsly.msgpack_loads(bytes_data)
         config_dict = msg["config"]
         tok_dict = msg["tokenizer"]
-        tok_config = msg["tokenizer_config"]
-        trf_config = msg["transformer_config"]
         if config_dict:
             with make_tempdir() as temp_dir:
                 config_file = temp_dir / "config.json"
@@ -69,12 +66,12 @@ class HFShim(PyTorchShim):
                 config = AutoConfig.from_pretrained(config_file)
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
-                tokenizer = AutoTokenizer.from_pretrained(
-                    str(temp_dir.absolute()), **tok_config
-                )
+                tokenizer = AutoTokenizer.from_pretrained(str(temp_dir.absolute()))
 
             transformer = AutoModel.from_config(config)
-            self._hfmodel = HFObjects(transformer, tokenizer, tok_config, trf_config)
+            self._hfmodel = HFObjects(
+                transformer, tokenizer, SimpleFrozenDict(), SimpleFrozenDict()
+            )
             self._model = transformer
             filelike = BytesIO(msg["state"])
             filelike.seek(0)
