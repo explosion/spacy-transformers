@@ -40,7 +40,7 @@ class HFShim(PyTorchShim):
             config = hf_model.transformer.config.to_dict()
             tokenizer = hf_model.tokenizer
             with make_tempdir() as temp_dir:
-                tokenizer.save_pretrained(temp_dir)
+                tokenizer.save_pretrained(str(temp_dir.absolute()))
                 for x in temp_dir.glob("**/*"):
                     if x.is_file():
                         tok_dict[x.name] = x.read_bytes()
