@@ -104,6 +104,28 @@ def test_transformer_pipeline_todisk():
         assert nlp2.pipe_names == ["transformer"]
 
 
+def test_transformer_pipeline_todisk_settings():
+    nlp = English()
+    trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
+    nlp.initialize()
+    # initially no attentions
+    assert trf.model.transformer.config.output_attentions is False
+    assert "attentions" not in nlp("test")._.trf_data.model_output
+    # add attentions on-the-fly
+    trf.model.transformer.config.output_attentions = True
+    assert nlp("test")._.trf_data.model_output.attentions is not None
+    with make_tempdir() as d:
+        nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        assert nlp2.pipe_names == ["transformer"]
+        # after deserialization the output_attentions setting is preserved
+        assert (
+            nlp2.get_pipe("transformer").model.transformer.config.output_attentions
+            is True
+        )
+        assert nlp2("test")._.trf_data.model_output.attentions is not None
+
+
 inline_cfg_string = """
     [nlp]
     lang = "en"
