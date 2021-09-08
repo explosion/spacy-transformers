@@ -17,8 +17,8 @@ from transformers import AutoModel, AutoConfig, AutoTokenizer
 @dataclass
 class HFObjects:
 
-    transformer: Any
     tokenizer: Any
+    transformer: Any
     init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
     init_transformer_config: Dict[str, Any] = field(default_factory=dict)
 
@@ -70,7 +70,7 @@ class HFShim(PyTorchShim):
 
             transformer = AutoModel.from_config(config)
             self._hfmodel = HFObjects(
-                transformer, tokenizer, SimpleFrozenDict(), SimpleFrozenDict()
+                tokenizer, transformer, SimpleFrozenDict(), SimpleFrozenDict()
             )
             self._model = transformer
             filelike = BytesIO(msg["state"])
