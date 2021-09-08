@@ -1,3 +1,4 @@
+import pytest
 import spacy
 from spacy import Language
 from spacy.lang.en import English
@@ -124,6 +125,12 @@ def test_transformer_pipeline_todisk_settings():
             is True
         )
         assert nlp2("test")._.trf_data.model_output.attentions is not None
+        # after deserialization the init configs are empty SimpleFrozenDicts
+        assert nlp2.get_pipe("transformer").model._init_tokenizer_config == {}
+        with pytest.raises(NotImplementedError):
+            nlp2.get_pipe("transformer").model._init_tokenizer_config[
+                "use_fast"
+            ] = False
 
 
 inline_cfg_string = """

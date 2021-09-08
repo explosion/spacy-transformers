@@ -71,12 +71,12 @@ class TransformerModel(Model):
         return self.layers[0].shims[0]._hfmodel.transformer
 
     @property
-    def init_tokenizer_config(self):
-        return self.layers[0].shims[0]._hfmodel.init_tokenizer_config
+    def _init_tokenizer_config(self):
+        return self.layers[0].shims[0]._hfmodel._init_tokenizer_config
 
     @property
-    def init_transformer_config(self):
-        return self.layers[0].shims[0]._hfmodel.init_transformer_config
+    def _init_transformer_config(self):
+        return self.layers[0].shims[0]._hfmodel._init_transformer_config
 
     def copy(self):
         """
@@ -121,8 +121,8 @@ def init(model: Model, X=None, Y=None):
     if model.attrs["has_transformer"]:
         return
     name = model.attrs["name"]
-    tok_cfg = model.init_tokenizer_config
-    trf_cfg = model.init_transformer_config
+    tok_cfg = model._init_tokenizer_config
+    trf_cfg = model._init_transformer_config
     tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
     model.attrs["set_transformer"](model, transformer, tokenizer)
     tokenizer = model.tokenizer

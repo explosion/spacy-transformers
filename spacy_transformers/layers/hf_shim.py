@@ -19,8 +19,8 @@ class HFObjects:
 
     tokenizer: Any
     transformer: Any
-    init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
-    init_transformer_config: Dict[str, Any] = field(default_factory=dict)
+    _init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
+    _init_transformer_config: Dict[str, Any] = field(default_factory=dict)
 
 
 class HFShim(PyTorchShim):
