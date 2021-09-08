@@ -34,6 +34,8 @@ class HFShim(PyTorchShim):
         config = {}
         tok_dict = {}
         weights_bytes = {}
+        tok_cfg = {}
+        trf_cfg = {}
         hf_model = self._hfmodel
         if hf_model.transformer is not None:
             tok_dict = {}
@@ -48,10 +50,15 @@ class HFShim(PyTorchShim):
             torch.save(self._model.state_dict(), filelike)
             filelike.seek(0)
             weights_bytes = filelike.getvalue()
+        else:
+            tok_cfg = hf_model._init_tokenizer_config
+            trf_cfg = hf_model._init_transformer_config
         msg = {
             "config": config,
             "state": weights_bytes,
             "tokenizer": tok_dict,
+            "_init_tokenizer_config": tok_cfg,
+            "_init_transformer_config": trf_cfg,
         }
         return srsly.msgpack_dumps(msg)
 
@@ -83,4 +90,6 @@ class HFShim(PyTorchShim):
                 map_location = f"cuda:{device_id}"
             self._model.load_state_dict(torch.load(filelike, map_location=map_location))
             self._model.to(map_location)
+        else:
+            self._hfmodel = HFObjects(None, None, msg["_init_tokenizer_config"], msg["_init_transformer_config"])
         return self

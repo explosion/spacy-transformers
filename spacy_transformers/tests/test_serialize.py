@@ -136,6 +136,17 @@ def test_transformer_pipeline_todisk_settings():
             trf2.model._init_tokenizer_config["use_fast"] = False
 
 
+def test_transformer_pipeline_todisk_before_initialize():
+    nlp = English()
+    trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
+    with make_tempdir() as d:
+        # serialize before initialization
+        nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        nlp2.initialize()
+        assert "last_hidden_state" in nlp2("test")._.trf_data.model_output
+
+
 inline_cfg_string = """
     [nlp]
     lang = "en"
