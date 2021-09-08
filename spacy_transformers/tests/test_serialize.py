@@ -110,8 +110,13 @@ def test_transformer_pipeline_todisk_settings():
     trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
     nlp.initialize()
     # initially no attentions
+    assert trf.model.tokenizer.model_max_length == 512
     assert trf.model.transformer.config.output_attentions is False
     assert "attentions" not in nlp("test")._.trf_data.model_output
+    # modify model_max_length (note that modifications to
+    # tokenizer.model_max_length are not serialized by save_pretrained
+    # see: https://github.com/explosion/spaCy/discussions/7393)
+    trf.model.tokenizer.init_kwargs["model_max_length"] = 499
     # add attentions on-the-fly
     trf.model.transformer.config.output_attentions = True
     assert nlp("test")._.trf_data.model_output.attentions is not None
@@ -119,18 +124,16 @@ def test_transformer_pipeline_todisk_settings():
         nlp.to_disk(d)
         nlp2 = spacy.load(d)
         assert nlp2.pipe_names == ["transformer"]
-        # after deserialization the output_attentions setting is preserved
-        assert (
-            nlp2.get_pipe("transformer").model.transformer.config.output_attentions
-            is True
-        )
+        trf2 = nlp2.get_pipe("transformer")
+        # model_max_length is preserved
+        assert trf2.model.tokenizer.model_max_length == 499
+        # output_attentions setting is preserved
+        assert trf2.model.transformer.config.output_attentions is True
         assert nlp2("test")._.trf_data.model_output.attentions is not None
-        # after deserialization the init configs are empty SimpleFrozenDicts
-        assert nlp2.get_pipe("transformer").model._init_tokenizer_config == {}
+        # the init configs are empty SimpleFrozenDicts
+        assert trf2.model._init_tokenizer_config == {}
         with pytest.raises(NotImplementedError):
-            nlp2.get_pipe("transformer").model._init_tokenizer_config[
-                "use_fast"
-            ] = False
+            trf2.model._init_tokenizer_config["use_fast"] = False
 
 
 inline_cfg_string = """
