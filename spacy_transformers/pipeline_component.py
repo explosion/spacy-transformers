@@ -335,7 +335,10 @@ class Transformer(TrainablePipe):
         pass
 
     def initialize(
-        self, get_examples: Callable[[], Iterable[Example]], *, nlp: Optional[Language] = None
+        self,
+        get_examples: Callable[[], Iterable[Example]],
+        *,
+        nlp: Optional[Language] = None,
     ):
         """Initialize the pipe for training, using data examples if available.
 

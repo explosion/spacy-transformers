@@ -64,11 +64,18 @@ def test_init(component):
 
 def test_predict(component, docs):
     trf_data = component.predict(docs)
-    assert isinstance(trf_data, FullTransformerBatch)
-    assert len(trf_data.tensors) == component.model.layers[0].attrs["depth"]
     n_tokens = trf_data.wordpieces.input_ids.shape[1]
     width = component.model.layers[0].attrs["width"]
-    assert trf_data.tensors[-1].shape == (len(docs), n_tokens, width)
+    assert isinstance(trf_data, FullTransformerBatch)
+    assert (
+        len(trf_data.model_output.last_hidden_state)
+        == component.model.layers[0].attrs["depth"]
+    )
+    assert trf_data.model_output.last_hidden_state[0].shape == (
+        len(docs),
+        n_tokens,
+        width,
+    )
 
 
 def test_set_annotations(component, docs):
@@ -143,6 +150,13 @@ cfg_string = """
     [components.transformer]
     factory = "transformer"
     name = "custom_upstream"
+
+    [components.transformer.model]
+    @architectures = "spacy-transformers.TransformerModel.v2"
+    name = "albert-base-v2"
+
+    [components.transformer.model.transformer_config]
+    output_attentions = true
     """
 
 
@@ -243,7 +257,7 @@ def _assert_empty(trf_data):
     assert trf_data.wordpieces.strings == []
     assert trf_data.wordpieces.input_ids.size == 0
     assert trf_data.wordpieces.attention_mask.size == 0
-    assert trf_data.tensors == []
+    assert trf_data.tensors == ()
     assert len(trf_data.align.data) == 0
 
 
@@ -297,6 +311,10 @@ def test_replace_listeners():
         losses = {}
         nlp.update(examples, sgd=optimizer, losses=losses)
         assert losses["tagger"] > 0.0
+
+    # check for presence of additional fields in model_output
+    assert doc2._.trf_data.model_output.pooler_output is not None
+    assert doc2._.trf_data.model_output.attentions is not None
 
 
 def test_replace_listeners_invalid():

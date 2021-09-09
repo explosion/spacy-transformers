@@ -1,8 +1,7 @@
 from typing import List, Dict, Union
 from pathlib import Path
-from functools import partial
 import random
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
@@ -36,8 +35,9 @@ def huggingface_from_pretrained(
     else:
         str_path = source
     tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
-    transformer = AutoModel.from_pretrained(str_path)
-    transformer.forward = partial(transformer.forward, **trf_config)
+    trf_config["return_dict"] = True
+    config = AutoConfig.from_pretrained(str_path, **trf_config)
+    transformer = AutoModel.from_config(config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
@@ -76,17 +76,6 @@ def maybe_flush_pytorch_cache(chance: float = 1.0):
     """
     if random.random() < chance and torch.cuda.is_available():
         torch.cuda.empty_cache()
-
-
-def find_last_hidden(tensors) -> int:
-    """Find the index of the hidden layer in a list of activation tensors.
-    Internals.
-    """
-    for i, tensor in reversed(list(enumerate(tensors))):
-        if len(tensor.shape) == 3:
-            return i
-    else:
-        raise ValueError("No 3d tensors")
 
 
 def transpose_list(nested_list):

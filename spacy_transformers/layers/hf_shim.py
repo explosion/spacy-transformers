@@ -2,9 +2,9 @@ from typing import Any, Dict
 from io import BytesIO
 from pathlib import Path
 import srsly
-from functools import partial
 import torch
 from dataclasses import dataclass, field
+from spacy.util import SimpleFrozenDict
 from spacy.vectors import get_current_ops
 
 from ..util import make_tempdir
@@ -17,10 +17,10 @@ from transformers import AutoModel, AutoConfig, AutoTokenizer
 @dataclass
 class HFObjects:
 
-    transformer: Any
     tokenizer: Any
-    tokenizer_config: Dict[str, Any] = field(default_factory=dict)
-    transformer_config: Dict[str, Any] = field(default_factory=dict)
+    transformer: Any
+    _init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
+    _init_transformer_config: Dict[str, Any] = field(default_factory=dict)
 
 
 class HFShim(PyTorchShim):
@@ -34,13 +34,15 @@ class HFShim(PyTorchShim):
         config = {}
         tok_dict = {}
         weights_bytes = {}
+        tok_cfg = {}
+        trf_cfg = {}
         hf_model = self._hfmodel
         if hf_model.transformer is not None:
             tok_dict = {}
             config = hf_model.transformer.config.to_dict()
             tokenizer = hf_model.tokenizer
             with make_tempdir() as temp_dir:
-                tokenizer.save_pretrained(temp_dir)
+                tokenizer.save_pretrained(str(temp_dir.absolute()))
                 for x in temp_dir.glob("**/*"):
                     if x.is_file():
                         tok_dict[x.name] = x.read_bytes()
@@ -48,12 +50,15 @@ class HFShim(PyTorchShim):
             torch.save(self._model.state_dict(), filelike)
             filelike.seek(0)
             weights_bytes = filelike.getvalue()
+        else:
+            tok_cfg = hf_model._init_tokenizer_config
+            trf_cfg = hf_model._init_transformer_config
         msg = {
             "config": config,
             "state": weights_bytes,
             "tokenizer": tok_dict,
-            "tokenizer_config": hf_model.tokenizer_config,
-            "transformer_config": hf_model.transformer_config,
+            "_init_tokenizer_config": tok_cfg,
+            "_init_transformer_config": trf_cfg,
         }
         return srsly.msgpack_dumps(msg)
 
@@ -61,8 +66,6 @@ class HFShim(PyTorchShim):
         msg = srsly.msgpack_loads(bytes_data)
         config_dict = msg["config"]
         tok_dict = msg["tokenizer"]
-        tok_config = msg["tokenizer_config"]
-        trf_config = msg["transformer_config"]
         if config_dict:
             with make_tempdir() as temp_dir:
                 config_file = temp_dir / "config.json"
@@ -70,13 +73,12 @@ class HFShim(PyTorchShim):
                 config = AutoConfig.from_pretrained(config_file)
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
-                tokenizer = AutoTokenizer.from_pretrained(
-                    str(temp_dir.absolute()), **tok_config
-                )
+                tokenizer = AutoTokenizer.from_pretrained(str(temp_dir.absolute()))
 
             transformer = AutoModel.from_config(config)
-            transformer.forward = partial(transformer.forward, **trf_config)
-            self._hfmodel = HFObjects(transformer, tokenizer, tok_config, trf_config)
+            self._hfmodel = HFObjects(
+                tokenizer, transformer, SimpleFrozenDict(), SimpleFrozenDict()
+            )
             self._model = transformer
             filelike = BytesIO(msg["state"])
             filelike.seek(0)
@@ -88,4 +90,6 @@ class HFShim(PyTorchShim):
                 map_location = f"cuda:{device_id}"
             self._model.load_state_dict(torch.load(filelike, map_location=map_location))
             self._model.to(map_location)
+        else:
+            self._hfmodel = HFObjects(None, None, msg["_init_tokenizer_config"], msg["_init_transformer_config"])
         return self

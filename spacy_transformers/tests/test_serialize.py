@@ -1,10 +1,14 @@
+import pytest
 import spacy
 from spacy import Language
 from spacy.lang.en import English
+from spacy.tests.util import assert_docs_equal
+from spacy.tokens import Doc
 from spacy.util import make_tempdir
 from spacy import util
 import srsly
 from thinc.api import Config
+from numpy.testing import assert_array_equal
 
 from .. import TransformerData
 from ..util import make_tempdir
@@ -23,6 +27,27 @@ def test_serialize_transformer_data():
     bytes_data = srsly.msgpack_dumps(data)
     new_data = srsly.msgpack_loads(bytes_data)
     assert isinstance(new_data["x"], TransformerData)
+
+    nlp = Language()
+    trf = nlp.add_pipe(
+        "transformer",
+        config={
+            "model": {
+                "name": "distilbert-base-uncased",
+                "transformer_config": {"output_attentions": True},
+            }
+        },
+    )
+    nlp.initialize()
+    doc = nlp("This is a test.")
+    b = doc.to_bytes()
+    reloaded_doc = Doc(nlp.vocab)
+    reloaded_doc.from_bytes(b)
+    assert_docs_equal(doc, reloaded_doc)
+    for key in doc._.trf_data.model_output:
+        assert_array_equal(
+            doc._.trf_data.model_output[key], reloaded_doc._.trf_data.model_output[key]
+        )
 
 
 def test_transformer_tobytes():
@@ -78,6 +103,48 @@ def test_transformer_pipeline_todisk():
         nlp.to_disk(d)
         nlp2 = spacy.load(d)
         assert nlp2.pipe_names == ["transformer"]
+
+
+def test_transformer_pipeline_todisk_settings():
+    nlp = English()
+    trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
+    nlp.initialize()
+    # initially no attentions
+    assert trf.model.tokenizer.model_max_length == 512
+    assert trf.model.transformer.config.output_attentions is False
+    assert "attentions" not in nlp("test")._.trf_data.model_output
+    # modify model_max_length (note that modifications to
+    # tokenizer.model_max_length are not serialized by save_pretrained
+    # see: https://github.com/explosion/spaCy/discussions/7393)
+    trf.model.tokenizer.init_kwargs["model_max_length"] = 499
+    # add attentions on-the-fly
+    trf.model.transformer.config.output_attentions = True
+    assert nlp("test")._.trf_data.model_output.attentions is not None
+    with make_tempdir() as d:
+        nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        assert nlp2.pipe_names == ["transformer"]
+        trf2 = nlp2.get_pipe("transformer")
+        # model_max_length is preserved
+        assert trf2.model.tokenizer.model_max_length == 499
+        # output_attentions setting is preserved
+        assert trf2.model.transformer.config.output_attentions is True
+        assert nlp2("test")._.trf_data.model_output.attentions is not None
+        # the init configs are empty SimpleFrozenDicts
+        assert trf2.model._init_tokenizer_config == {}
+        with pytest.raises(NotImplementedError):
+            trf2.model._init_tokenizer_config["use_fast"] = False
+
+
+def test_transformer_pipeline_todisk_before_initialize():
+    nlp = English()
+    trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
+    with make_tempdir() as d:
+        # serialize before initialization
+        nlp.to_disk(d)
+        nlp2 = spacy.load(d)
+        nlp2.initialize()
+        assert "last_hidden_state" in nlp2("test")._.trf_data.model_output
 
 
 inline_cfg_string = """
