@@ -107,8 +107,11 @@ def test_listeners(component, docs):
 
 
 TRAIN_DATA = [
-    ("I like green eggs", {"tags": ["N", "V", "J", "N"]}),
-    ("Eat blue ham", {"tags": ["V", "J", "N"]}),
+    (
+        "I like green eggs",
+        {"tags": ["N", "V", "J", "N"], "sent_starts": [True, False, True, False]},
+    ),
+    ("Eat blue ham", {"tags": ["V", "J", "N"], "sent_starts": [True, False, False]}),
 ]
 
 
@@ -128,9 +131,24 @@ def test_transformer_pipeline_long_token(simple_nlp):
 cfg_string = """
     [nlp]
     lang = "en"
-    pipeline = ["transformer","tagger"]
+    pipeline = ["transformer","tagger","senter"]
 
     [components]
+
+    [components.senter]
+    factory = "senter"
+
+    [components.senter.model]
+    @architectures = "spacy.Tagger.v1"
+    nO = null
+
+    [components.senter.model.tok2vec]
+    @architectures = "spacy-transformers.TransformerListener.v1"
+    grad_factor = 1.0
+    upstream = ${components.transformer.name}
+
+    [components.senter.model.tok2vec.pooling]
+    @layers = "reduce_mean.v1"
 
     [components.tagger]
     factory = "tagger"
@@ -160,11 +178,12 @@ cfg_string = """
     """
 
 
-def test_transformer_pipeline_tagger_listener():
-    """Test that a pipeline with just a transformer+tagger runs and trains properly"""
+def test_transformer_pipeline_tagger_senter_listener():
+    """Test that a pipeline with just a transformer+tagger+senter runs and
+    trains properly"""
     orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
-    assert nlp.pipe_names == ["transformer", "tagger"]
+    assert nlp.pipe_names == ["transformer", "tagger", "senter"]
     tagger = nlp.get_pipe("tagger")
     transformer = nlp.get_pipe("transformer")
     tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
