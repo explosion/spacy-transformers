@@ -51,6 +51,11 @@ jobs:
       pip uninstall -y -r installed.txt
     displayName: "Uninstall all packages"
 
+  - script: |
+      pip install "torch==1.6.0+cpu" -f https://download.pytorch.org/whl/torch_stable.html
+    displayName: 'Install oldest supported torch for python 3.6'
+    condition: eq($(python.version), '3.6')
+
   - script: pip install dist/*.tar.gz
     displayName: 'Install from sdist'
 
