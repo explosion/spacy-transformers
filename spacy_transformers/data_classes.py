@@ -180,8 +180,10 @@ class TransformerData:
         )
 
     @property
-    def tensors(self) -> Tuple[Union[FloatsXd, List[FloatsXd]]]:
-        return self.model_output.to_tuple()
+    def tensors(self, exlude=EXCLUDED_KEYS) -> Tuple[Union[FloatsXd, List[FloatsXd]]]:
+        return tuple(
+            self.model_output[k] for k in self.model_output.keys() if k not in exlude
+        )
 
     @property
     def tokens(self) -> Dict[str, Any]:
@@ -274,8 +276,12 @@ class FullTransformerBatch:
         )
 
     @property
-    def tensors(self) -> Tuple[Union[torch.Tensor, Tuple[torch.Tensor]]]:
-        return self.model_output.to_tuple()
+    def tensors(
+        self, exlude=EXCLUDED_KEYS
+    ) -> Tuple[Union[torch.Tensor, Tuple[torch.Tensor]]]:
+        return tuple(
+            self.model_output[k] for k in self.model_output.keys() if k not in exlude
+        )
 
     @property
     def tokens(self) -> Dict[str, Any]:
