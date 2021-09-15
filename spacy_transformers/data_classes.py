@@ -13,6 +13,9 @@ from .util import transpose_list
 from .align import get_token_positions
 
 
+EXCLUDED_KEYS = ("attentions",)
+
+
 @dataclass
 class WordpieceBatch:
     """Holds data from the transformers BatchEncoding class.

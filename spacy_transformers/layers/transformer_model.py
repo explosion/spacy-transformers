@@ -3,14 +3,12 @@ from typing import List, Tuple, Callable
 from transformers.file_utils import ModelOutput
 
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model, xp2torch, chain
+from thinc.api import Model, xp2torch
 from thinc.types import ArgsKwargs
-
-import torch
 
 import logging
 
-from ..data_classes import FullTransformerBatch, WordpieceBatch
+from ..data_classes import FullTransformerBatch, WordpieceBatch, EXCLUDED_KEYS
 from ..util import huggingface_tokenize, huggingface_from_pretrained
 from ..util import maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
@@ -216,10 +214,11 @@ def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
 
 def _convert_transformer_outputs(model, inputs_outputs, is_train):
     _, model_output = inputs_outputs
+    tensors = tuple(model_output[k] for k in model_output.keys() if k not in EXCLUDED_KEYS)
 
     def backprop(d_model_output: ModelOutput) -> ArgsKwargs:
         return ArgsKwargs(
-            args=(model_output.last_hidden_state,),
+            args=(tensors,),
             kwargs={"grad_tensors": d_model_output.values()},
         )
 

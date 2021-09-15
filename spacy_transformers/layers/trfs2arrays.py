@@ -1,8 +1,9 @@
 from typing import List
 from transformers.file_utils import ModelOutput
 from thinc.api import Model
-from thinc.types import Ragged, Floats2d, FloatsXd
-from ..data_classes import TransformerData
+from thinc.util import is_xp_array
+from thinc.types import Ragged, Floats2d
+from ..data_classes import TransformerData, EXCLUDED_KEYS
 from ..align import apply_alignment
 
 
@@ -39,12 +40,14 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         d_trf_datas = []
         zipped = zip(trf_datas, d_outputs, backprops)
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
-            d_model_output = ModelOutput(
-                last_hidden_state=model.ops.alloc(
-                    trf_data.model_output.last_hidden_state.shape,
-                    dtype=trf_data.model_output.last_hidden_state.dtype,
-                )
-            )
+            d_model_output = ModelOutput()
+            for key, tensor in trf_data.model_output.items():
+                if key in EXCLUDED_KEYS:
+                    pass
+                elif is_xp_array(tensor):
+                    d_model_output[key] = model.ops.alloc(
+                        tensor.shape, dtype=tensor.dtype
+                    )
             d_dst = get_d_dst(d_output)
             d_src = get_d_src(d_dst)
             d_src *= grad_factor
