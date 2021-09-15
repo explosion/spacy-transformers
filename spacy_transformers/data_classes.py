@@ -123,7 +123,7 @@ class WordpieceBatch:
         }
 
     def from_dict(self, msg: Dict[str, Any]) -> "WordpieceBatch":
-        self.string = msg["strings"]
+        self.strings = msg["strings"]
         self.input_ids = msg["input_ids"]
         self.attention_mask = msg["attention_mask"]
         self.lengths = msg["lengths"]
