@@ -1,30 +1,30 @@
 from typing import Tuple, List, Optional
 import numpy
-from thinc.types import Ragged, Ints1d, Ints2d, Floats2d, Floats3d
+from thinc.types import Ragged, Ints2d
 from .data_classes import WordpieceBatch
 
 
 def truncate_oversize_splits(
     wordpieces: WordpieceBatch, align: Ragged, max_length: int
 ) -> Tuple[WordpieceBatch, Ragged]:
-    """Drop wordpieces from inputs that are too long. This can happen because 
+    """Drop wordpieces from inputs that are too long. This can happen because
     the splitter is based on linguistic tokens, and the number of wordpieces
     that each token is split into is unpredictable, so we can end up with splits
     that have more wordpieces than the model's maximum.
-    
+
     To solve this, we calculate a score for each wordpiece in the split,
     and drop the wordpieces with the highest scores. I can think of a few
     scoring schemes we could use:
-    
+
     a) Drop the ends of longest wordpieces. This scoring would be just:
-        position_in_token 
+        position_in_token
     b) Drop the middles of longest wordpieces. The score would be:
         min(length - position_in_token, position_in_token)
     c) Drop all wordpieces from longest tokens. This would be:
         length
     d) Drop wordpieces from the end of the split. This would be:
         position_in_split
-    
+
     The advantage of a) and b) is that they give some representation to each
     token. The advantage of c) is that it leaves a higher % of tokens with intact
     representations. The advantage of d) is that it leaves contiguous chunks of

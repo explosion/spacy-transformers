@@ -3,10 +3,8 @@ from typing import List, Tuple, Callable
 from transformers.file_utils import ModelOutput
 
 from spacy.tokens import Doc
-from thinc.api import PyTorchWrapper, Model, xp2torch, chain
+from thinc.api import Model, xp2torch
 from thinc.types import ArgsKwargs
-
-import torch
 
 import logging
 
@@ -210,7 +208,9 @@ def _convert_transformer_inputs(model, wps: WordpieceBatch, is_train):
         "attention_mask": xp2torch(wps.attention_mask).to(device=hf_device),
     }
     if wps.token_type_ids is not None:
-        kwargs["token_type_ids"] = xp2torch(wps.token_type_ids).long().to(device=hf_device)
+        kwargs["token_type_ids"] = (
+            xp2torch(wps.token_type_ids).long().to(device=hf_device)
+        )
     return ArgsKwargs(args=(), kwargs=kwargs), lambda dX: []
 
 

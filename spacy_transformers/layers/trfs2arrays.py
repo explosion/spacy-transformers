@@ -1,7 +1,7 @@
 from typing import List
 from transformers.file_utils import ModelOutput
 from thinc.api import Model
-from thinc.types import Ragged, Floats2d, FloatsXd
+from thinc.types import Ragged, Floats2d
 from ..data_classes import TransformerData
 from ..align import apply_alignment
 

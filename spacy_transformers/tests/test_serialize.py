@@ -29,7 +29,7 @@ def test_serialize_transformer_data():
     assert isinstance(new_data["x"], TransformerData)
 
     nlp = Language()
-    trf = nlp.add_pipe(
+    nlp.add_pipe(
         "transformer",
         config={
             "model": {
@@ -138,7 +138,7 @@ def test_transformer_pipeline_todisk_settings():
 
 def test_transformer_pipeline_todisk_before_initialize():
     nlp = English()
-    trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
+    nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
     with make_tempdir() as d:
         # serialize before initialization
         nlp.to_disk(d)
