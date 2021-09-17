@@ -37,7 +37,7 @@ def huggingface_from_pretrained(
     tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
     trf_config["return_dict"] = True
     config = AutoConfig.from_pretrained(str_path, **trf_config)
-    transformer = AutoModel.from_config(config)
+    transformer = AutoModel.from_pretrained(str_path, config=config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
