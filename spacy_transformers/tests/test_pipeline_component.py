@@ -170,7 +170,7 @@ cfg_string = """
     name = "custom_upstream"
 
     [components.transformer.model]
-    @architectures = "spacy-transformers.TransformerModel.v2"
+    @architectures = "spacy-transformers.TransformerModel.v3"
     name = "albert-base-v2"
 
     [components.transformer.model.transformer_config]
@@ -296,7 +296,7 @@ def test_replace_listeners():
     assert isinstance(transformer.model, TransformerModel)
     assert (
         nlp.config["components"]["transformer"]["model"]["@architectures"]
-        == "spacy-transformers.TransformerModel.v2"
+        == "spacy-transformers.TransformerModel.v3"
     )
     assert (
         nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]

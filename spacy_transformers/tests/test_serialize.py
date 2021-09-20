@@ -16,7 +16,7 @@ from ..util import make_tempdir
 
 DEFAULT_CONFIG = {
     "model": {
-        "@architectures": "spacy-transformers.TransformerModel.v2",
+        "@architectures": "spacy-transformers.TransformerModel.v3",
         "name": "distilbert-base-uncased",
     }
 }
