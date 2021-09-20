@@ -6,7 +6,7 @@ from ..data_classes import WordpieceBatch
 
 @pytest.fixture
 def wordpieces():
-    strings = [["some"], ["random"], ["string"], ["are"], ["added"], ["here"]]
+    strings = [["some", "random", "strings"], ["are"], ["added", "here"]]
     shape = (len(strings), max(len(seq) for seq in strings))
     wordpieces = WordpieceBatch(
         strings=strings,
