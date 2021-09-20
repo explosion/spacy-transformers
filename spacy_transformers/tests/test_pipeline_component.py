@@ -319,7 +319,7 @@ def test_replace_listeners():
     assert tagger_tok2vec.layers[0].layers[0].name == "transformer"
     assert (
         nlp.config["components"]["tagger"]["model"]["tok2vec"]["@architectures"]
-        == "spacy-transformers.Tok2VecTransformer.v2"
+        == "spacy-transformers.Tok2VecTransformer.v3"
     )
     doc2 = nlp(text)
     assert preds == [t.tag_ for t in doc2]

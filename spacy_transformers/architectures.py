@@ -111,6 +111,67 @@ def transformer_tok2vec_v2(
     )
 
 
+# Note: when updating, also make sure to update 'replace_listener_cfg' in _util.py
+@registry.architectures.register("spacy-transformers.Tok2VecTransformer.v3")
+def transformer_tok2vec_v3(
+    name: str,
+    get_spans,
+    tokenizer_config: dict,
+    transformer_config: dict,
+    pooling: Model[Ragged, Floats2d],
+    grad_factor: float = 1.0,
+    mixed_precision: bool = False,
+    grad_scaler_config: dict = {},
+) -> Model[List[Doc], List[Floats2d]]:
+    """Use a transformer as a "Tok2Vec" layer directly. This does not allow
+    multiple components to share the transformer weights, and does not allow
+    the transformer to set annotations into the `Doc` object, but it's a
+    simpler solution if you only need the transformer within one component.
+
+    get_spans (Callable[[List[Doc]], List[List[Span]]]): A function to extract
+        spans from the batch of Doc objects. See the "TransformerModel" layer
+        for details.
+    tokenizer_config (dict): Settings to pass to the transformers tokenizer.
+    transformers_config (dict): Settings to pass to the transformers forward pass
+        of the transformer.
+    pooling (Model[Ragged, Floats2d]): A reduction layer used to calculate
+        the token vectors based on zero or more wordpiece vectors. If in doubt,
+        mean pooling (see `thinc.layers.reduce_mean`) is usually a good choice.
+    grad_factor (float): Reweight gradients from the component before passing
+        them to the transformer. You can set this to 0 to "freeze" the transformer
+        weights with respect to the component, or to make it learn more slowly.
+        Leaving it at 1.0 is usually fine.
+    mixed_precision (bool): Enable mixed-precision. Mixed-precision replaces
+        whitelisted ops to half-precision counterparts. This speeds up training
+        and prediction on modern GPUs and reduces GPU memory use.
+    grad_scaler_config (dict): Configuration for gradient scaling in mixed-precision
+        training. Gradient scaling is enabled automatically when mixed-precision
+        training is used.
+
+        Setting `enabled` to `False` in the gradient scaling configuration disables
+        gradient scaling. The `init_scale` (default: `2 ** 16`) determines the
+        initial scale. `backoff_factor` (default: `0.5`) specifies the factor
+        by which the scale should be reduced when gradients overflow.
+        `growth_interval` (default: `2000`) configures the number of steps
+        without gradient overflows after which the scale should be increased.
+        Finally, `growth_factor` (default: `2.0`) determines the factor by which
+        the scale should be increased when no overflows were found for
+        `growth_interval` steps.
+    """
+    return chain(
+        TransformerModel(
+            name,
+            get_spans,
+            tokenizer_config,
+            transformer_config,
+            mixed_precision,
+            grad_scaler_config,
+        ),
+        split_trf_batch(),
+        trfs2arrays(pooling, grad_factor),
+    )
+
+
 @registry.architectures.register("spacy-transformers.TransformerModel.v1")
 def create_TransformerModel_v1(
     name: str,
