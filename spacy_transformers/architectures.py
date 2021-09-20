@@ -150,10 +150,10 @@ def create_TransformerModel_v3(
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
     transformers_config (dict): Settings to pass to the transformers forward pass
         of the transformer.
-    mixed_precision (bool): enable mixed-precision. Mixed-precision replaces
+    mixed_precision (bool): Enable mixed-precision. Mixed-precision replaces
         whitelisted ops to half-precision counterparts. This speeds up training
         and prediction on modern GPUs and reduces GPU memory use.
-    grad_scaler_config (dict): configuration for gradient scaling in mixed-precision
+    grad_scaler_config (dict): Configuration for gradient scaling in mixed-precision
         training. Gradient scaling is enabled automatically when mixed-precision
         training is used.
 
