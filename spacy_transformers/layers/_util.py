@@ -1,4 +1,4 @@
-from thinc.api import Model, chain
+from thinc.api import chain
 from .split_trf import split_trf_batch
 
 

@@ -126,6 +126,7 @@ def test_transformer_pipeline_long_token(simple_nlp):
     the model max length. We should truncate instead.
     """
     doc = simple_nlp("https://example.com/" + "a/" * 1000)
+    assert len(doc) == 1
 
 
 cfg_string = """

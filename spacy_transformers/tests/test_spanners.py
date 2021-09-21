@@ -2,7 +2,6 @@ import pytest
 from spacy.lang.en import English
 
 from ..span_getters import configure_strided_spans, configure_get_sent_spans
-from ..util import registry
 
 
 @pytest.mark.parametrize(

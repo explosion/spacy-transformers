@@ -4,7 +4,7 @@ import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
 from transformers.file_utils import ModelOutput
-from thinc.types import Ragged, Floats3d, FloatsXd, Ints2d
+from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd, Ints2d
 from thinc.api import NumpyOps, get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 import srsly
@@ -34,7 +34,7 @@ class WordpieceBatch:
 
     strings: List[List[str]]
     input_ids: Ints2d
-    attention_mask: Floats3d
+    attention_mask: Floats2d
     lengths: List[int]
     token_type_ids: Optional[Ints2d]
 
@@ -97,7 +97,6 @@ class WordpieceBatch:
             len([tok for tok in tokens if tok != pad_token])
             for tokens in token_data["input_texts"]
         ]
-        n_seq = len(lengths)
 
         numpy_ops = NumpyOps()
 
@@ -123,7 +122,7 @@ class WordpieceBatch:
         }
 
     def from_dict(self, msg: Dict[str, Any]) -> "WordpieceBatch":
-        self.string = msg["strings"]
+        self.strings = msg["strings"]
         self.input_ids = msg["input_ids"]
         self.attention_mask = msg["attention_mask"]
         self.lengths = msg["lengths"]
@@ -259,8 +258,8 @@ class FullTransformerBatch:
 
     @classmethod
     def empty(cls, nr_docs) -> "FullTransformerBatch":
-        spans = [[] for i in range(nr_docs)]
-        doc_data = [TransformerData.empty() for i in range(nr_docs)]
+        spans = [[] for _ in range(nr_docs)]
+        doc_data = [TransformerData.empty() for _ in range(nr_docs)]
         align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
         return cls(
             spans=spans,
