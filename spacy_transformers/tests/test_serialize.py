@@ -16,7 +16,7 @@ from ..util import make_tempdir
 
 DEFAULT_CONFIG = {
     "model": {
-        "@architectures": "spacy-transformers.TransformerModel.v2",
+        "@architectures": "spacy-transformers.TransformerModel.v3",
         "name": "distilbert-base-uncased",
     }
 }
@@ -29,7 +29,7 @@ def test_serialize_transformer_data():
     assert isinstance(new_data["x"], TransformerData)
 
     nlp = Language()
-    trf = nlp.add_pipe(
+    nlp.add_pipe(
         "transformer",
         config={
             "model": {
@@ -138,7 +138,7 @@ def test_transformer_pipeline_todisk_settings():
 
 def test_transformer_pipeline_todisk_before_initialize():
     nlp = English()
-    trf = nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
+    nlp.add_pipe("transformer", config=DEFAULT_CONFIG)
     with make_tempdir() as d:
         # serialize before initialization
         nlp.to_disk(d)
@@ -162,7 +162,7 @@ inline_cfg_string = """
     nO = null
 
     [components.tagger.model.tok2vec]
-    @architectures = "spacy-transformers.Tok2VecTransformer.v2"
+    @architectures = "spacy-transformers.Tok2VecTransformer.v3"
     name = "distilbert-base-uncased"
     tokenizer_config = {"use_fast": true}
     transformer_config = {"output_attentions": false}

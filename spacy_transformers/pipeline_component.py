@@ -9,11 +9,9 @@ from spacy import util, Errors
 from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
-import torch
-from transformers import WEIGHTS_NAME, CONFIG_NAME
 from pathlib import Path
 
-from .util import huggingface_from_pretrained, batch_by_length
+from .util import batch_by_length
 from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
 from .layers import TransformerListener
@@ -27,10 +25,12 @@ max_batch_items = 4096
 @annotation_setters = "spacy-transformers.null_annotation_setter.v1"
 
 [transformer.model]
-@architectures = "spacy-transformers.TransformerModel.v2"
+@architectures = "spacy-transformers.TransformerModel.v3"
 name = "roberta-base"
 tokenizer_config = {"use_fast": true}
 transformer_config = {}
+mixed_precision = false
+grad_scaler_config = {}
 
 [transformer.model.get_spans]
 @span_getters = "spacy-transformers.strided_spans.v1"
