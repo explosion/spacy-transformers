@@ -12,6 +12,8 @@ def HFWrapper(
     hf_model: "HFObjects",
     convert_inputs: Optional[Callable] = None,
     convert_outputs: Optional[Callable] = None,
+    mixed_precision: bool = False,
+    grad_scaler_config: dict = {},
 ) -> Model[Any, Any]:
     """Wrap a PyTorch HF model, so that it has the same API as Thinc models.
     To optimize the model, you'll need to create a PyTorch optimizer and call
@@ -38,10 +40,17 @@ def HFWrapper(
         convert_inputs = convert_pytorch_default_inputs
     if convert_outputs is None:
         convert_outputs = convert_pytorch_default_outputs
+
     return Model(
         "hf-pytorch",
         pt_forward,
         attrs={"convert_inputs": convert_inputs, "convert_outputs": convert_outputs},
-        shims=[HFShim(hf_model)],
+        shims=[
+            HFShim(
+                hf_model,
+                mixed_precision=mixed_precision,
+                grad_scaler_config=grad_scaler_config,
+            )
+        ],
         dims={"nI": None, "nO": None},
     )
