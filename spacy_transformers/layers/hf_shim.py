@@ -19,6 +19,7 @@ class HFObjects:
 
     tokenizer: Any
     transformer: Any
+    vocab_file_contents: Any
     _init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
     _init_transformer_config: Dict[str, Any] = field(default_factory=dict)
 
@@ -61,6 +62,11 @@ class HFShim(PyTorchShim):
             config = hf_model.transformer.config.to_dict()
             tokenizer = hf_model.tokenizer
             with make_tempdir() as temp_dir:
+                if hasattr(tokenizer, "vocab_file"):
+                    vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
+                    with open(str((temp_dir / vocab_file_name).absolute()), "wb") as fileh:
+                        fileh.write(hf_model.vocab_file_contents)
+                    tokenizer.vocab_file = str((temp_dir / vocab_file_name).absolute())
                 tokenizer.save_pretrained(str(temp_dir.absolute()))
                 for x in temp_dir.glob("**/*"):
                     if x.is_file():
@@ -93,10 +99,15 @@ class HFShim(PyTorchShim):
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
                 tokenizer = AutoTokenizer.from_pretrained(str(temp_dir.absolute()))
+                vocab_file_contents = None
+                if hasattr(tokenizer, "vocab_file"):
+                    vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
+                    with open(str((temp_dir / vocab_file_name).absolute()), "rb") as fileh:
+                        vocab_file_contents = fileh.read()
 
             transformer = AutoModel.from_config(config)
             self._hfmodel = HFObjects(
-                tokenizer, transformer, SimpleFrozenDict(), SimpleFrozenDict()
+                tokenizer, transformer, vocab_file_contents, SimpleFrozenDict(), SimpleFrozenDict()
             )
             self._model = transformer
             filelike = BytesIO(msg["state"])

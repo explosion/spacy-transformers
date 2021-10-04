@@ -39,7 +39,7 @@ class TransformerModel(Model):
         tokenizer_config (dict): Settings to pass to the transformers tokenizer.
         transformer_config (dict): Settings to pass to the transformers forward pass.
         """
-        hf_model = HFObjects(None, None, tokenizer_config, transformer_config)
+        hf_model = HFObjects(None, None, None, tokenizer_config, transformer_config)
         wrapper = HFWrapper(
             hf_model,
             convert_inputs=_convert_transformer_inputs,
@@ -109,12 +109,13 @@ def set_logger(model, out_file):
     model.attrs["logger"] = logging.getLogger(__name__)
 
 
-def set_pytorch_transformer(model, transformer, tokenizer):
+def set_pytorch_transformer(model, transformer, tokenizer, vocab_file_contents):
     if model.attrs["has_transformer"]:
         raise ValueError("Cannot set second transformer.")
     model.layers[0].shims[0]._model = transformer
     model.layers[0].shims[0]._hfmodel.transformer = transformer
     model.layers[0].shims[0]._hfmodel.tokenizer = tokenizer
+    model.layers[0].shims[0]._hfmodel.vocab_file_contents = vocab_file_contents
     model.attrs["has_transformer"] = True
     model.set_dim("nO", transformer.config.hidden_size)
 
@@ -125,8 +126,10 @@ def init(model: Model, X=None, Y=None):
     name = model.attrs["name"]
     tok_cfg = model._init_tokenizer_config
     trf_cfg = model._init_transformer_config
-    tokenizer, transformer = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
-    model.attrs["set_transformer"](model, transformer, tokenizer)
+    tokenizer, transformer, vocab_file_contents = huggingface_from_pretrained(
+        name, tok_cfg, trf_cfg
+    )
+    model.attrs["set_transformer"](model, transformer, tokenizer, vocab_file_contents)
     tokenizer = model.tokenizer
     # Call the model with a batch of inputs to infer the width
     if X:

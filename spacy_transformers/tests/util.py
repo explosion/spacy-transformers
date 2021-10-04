@@ -127,7 +127,7 @@ def DummyTransformer(
     depth: int = 2, width: int = 4, get_spans=get_doc_spans
 ) -> Model[List[Doc], FullTransformerBatch]:
     """Create a test model that produces a FullTransformerBatch object."""
-    hf_model = HFObjects(DummyTokenizer(), None)
+    hf_model = HFObjects(DummyTokenizer(), None, None)
 
     return DummyModel(
         "dummy-transformer",

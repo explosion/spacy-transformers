@@ -35,13 +35,17 @@ def huggingface_from_pretrained(
     else:
         str_path = source
     tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
+    vocab_file_contents = None
+    if hasattr(tokenizer, "vocab_file"):
+        with open(tokenizer.vocab_file, "rb") as fileh:
+            vocab_file_contents = fileh.read()
     trf_config["return_dict"] = True
     config = AutoConfig.from_pretrained(str_path, **trf_config)
     transformer = AutoModel.from_pretrained(str_path, config=config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
-    return tokenizer, transformer
+    return tokenizer, transformer, vocab_file_contents
 
 
 def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
