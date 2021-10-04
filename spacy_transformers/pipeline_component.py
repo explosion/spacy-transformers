@@ -6,7 +6,7 @@ from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.training import Example, validate_examples, validate_get_examples
 from spacy import util
-from spacy.util import minibatch
+from spacy.util import minibatch, get_package_version, get_minor_version
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
 import torch
@@ -388,6 +388,17 @@ class Transformer(TrainablePipe):
 
         def load_model(p):
             p = Path(p).absolute()
+            if p.is_file():
+                error_msg = "Unable to load transformer model."
+                version = get_package_version("spacy_transformers")
+                if get_minor_version(version) == "1.0":
+                    error_msg += (
+                        " It looks like this pipeline was created with "
+                        "spacy-transformers v1.1+ but you currently have "
+                        "spacy-transformers v1.0. Upgrade spacy-transformers "
+                        "to load this pipeline."
+                    )
+                raise ValueError(error_msg)
             tokenizer, transformer = huggingface_from_pretrained(
                 p, self.model.attrs["tokenizer_config"]
             )
