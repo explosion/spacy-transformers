@@ -1,15 +1,17 @@
 import copy
-from typing import List, Tuple, Callable
+from pathlib import Path
+from typing import List, Tuple, Callable, Union, Dict
 from transformers.file_utils import ModelOutput
+from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from spacy.tokens import Doc
-from thinc.api import Model, xp2torch
+from thinc.api import Model, xp2torch, get_current_ops, CupyOps
 from thinc.types import ArgsKwargs
 
 import logging
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch
-from ..util import huggingface_tokenize, huggingface_from_pretrained
+from ..util import huggingface_tokenize
 from ..util import maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
 from ..layers._util import replace_listener, replace_listener_cfg
@@ -109,15 +111,15 @@ def set_logger(model, out_file):
     model.attrs["logger"] = logging.getLogger(__name__)
 
 
-def set_pytorch_transformer(model, transformer, tokenizer, vocab_file_contents):
+def set_pytorch_transformer(model, hf_model: HFObjects):
     if model.attrs["has_transformer"]:
         raise ValueError("Cannot set second transformer.")
-    model.layers[0].shims[0]._model = transformer
-    model.layers[0].shims[0]._hfmodel.transformer = transformer
-    model.layers[0].shims[0]._hfmodel.tokenizer = tokenizer
-    model.layers[0].shims[0]._hfmodel.vocab_file_contents = vocab_file_contents
+    model.layers[0].shims[0]._model = hf_model.transformer
+    model.layers[0].shims[0]._hfmodel.tokenizer = hf_model.tokenizer
+    model.layers[0].shims[0]._hfmodel.transformer = hf_model.transformer
+    model.layers[0].shims[0]._hfmodel.vocab_file_contents = hf_model.vocab_file_contents
     model.attrs["has_transformer"] = True
-    model.set_dim("nO", transformer.config.hidden_size)
+    model.set_dim("nO", hf_model.transformer.config.hidden_size)
 
 
 def init(model: Model, X=None, Y=None):
@@ -126,10 +128,8 @@ def init(model: Model, X=None, Y=None):
     name = model.attrs["name"]
     tok_cfg = model._init_tokenizer_config
     trf_cfg = model._init_transformer_config
-    tokenizer, transformer, vocab_file_contents = huggingface_from_pretrained(
-        name, tok_cfg, trf_cfg
-    )
-    model.attrs["set_transformer"](model, transformer, tokenizer, vocab_file_contents)
+    hf_model = huggingface_from_pretrained(name, tok_cfg, trf_cfg)
+    model.attrs["set_transformer"](model, hf_model)
     tokenizer = model.tokenizer
     # Call the model with a batch of inputs to infer the width
     if X:
@@ -231,3 +231,33 @@ def _convert_transformer_outputs(model, inputs_outputs, is_train):
         )
 
     return model_output, backprop
+
+
+def huggingface_from_pretrained(
+    source: Union[Path, str], tok_config: Dict, trf_config: Dict
+):
+    """Create a Huggingface transformer model from pretrained weights. Will
+    download the model if it is not already downloaded.
+
+    source (Union[str, Path]): The name of the model or a path to it, such as
+        'bert-base-cased'.
+    tok_config (dict): Settings to pass to the tokenizer.
+    trf_config (dict): Settings to pass to the transformer.
+    """
+    if hasattr(source, "absolute"):
+        str_path = str(source.absolute())
+    else:
+        str_path = source
+    tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
+    vocab_file_contents = None
+    if hasattr(tokenizer, "vocab_file"):
+        with open(tokenizer.vocab_file, "rb") as fileh:
+            vocab_file_contents = fileh.read()
+    trf_config["return_dict"] = True
+    config = AutoConfig.from_pretrained(str_path, **trf_config)
+    transformer = AutoModel.from_pretrained(str_path, config=config)
+    ops = get_current_ops()
+    if isinstance(ops, CupyOps):
+        transformer.cuda()
+    hf_model = HFObjects(tokenizer, transformer, vocab_file_contents)
+    return hf_model

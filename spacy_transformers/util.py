@@ -1,12 +1,10 @@
-from typing import List, Dict, Union
+from typing import List
 from pathlib import Path
 import random
-from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
-from thinc.api import get_current_ops, CupyOps
 import torch.cuda
 import tempfile
 import shutil
@@ -17,35 +15,6 @@ import contextlib
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
 registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
 # fmt: on
-
-
-def huggingface_from_pretrained(
-    source: Union[Path, str], tok_config: Dict, trf_config: Dict
-):
-    """Create a Huggingface transformer model from pretrained weights. Will
-    download the model if it is not already downloaded.
-
-    source (Union[str, Path]): The name of the model or a path to it, such as
-        'bert-base-cased'.
-    tok_config (dict): Settings to pass to the tokenizer.
-    trf_config (dict): Settings to pass to the transformer.
-    """
-    if hasattr(source, "absolute"):
-        str_path = str(source.absolute())
-    else:
-        str_path = source
-    tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
-    vocab_file_contents = None
-    if hasattr(tokenizer, "vocab_file"):
-        with open(tokenizer.vocab_file, "rb") as fileh:
-            vocab_file_contents = fileh.read()
-    trf_config["return_dict"] = True
-    config = AutoConfig.from_pretrained(str_path, **trf_config)
-    transformer = AutoModel.from_pretrained(str_path, config=config)
-    ops = get_current_ops()
-    if isinstance(ops, CupyOps):
-        transformer.cuda()
-    return tokenizer, transformer, vocab_file_contents
 
 
 def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
