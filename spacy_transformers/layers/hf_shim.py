@@ -67,7 +67,7 @@ class HFShim(PyTorchShim):
                     vocab_file_path = str((temp_dir / vocab_file_name).absolute())
                     with open(vocab_file_path, "wb") as fileh:
                         fileh.write(hf_model.vocab_file_contents)
-                    tokenizer.vocab_file = str((temp_dir / vocab_file_name).absolute())
+                    tokenizer.vocab_file = vocab_file_path
                 tokenizer.save_pretrained(str(temp_dir.absolute()))
                 for x in temp_dir.glob("**/*"):
                     if x.is_file():
