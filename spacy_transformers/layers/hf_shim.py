@@ -64,7 +64,8 @@ class HFShim(PyTorchShim):
             with make_tempdir() as temp_dir:
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
-                    with open(str((temp_dir / vocab_file_name).absolute()), "wb") as fileh:
+                    vocab_file_path = str((temp_dir / vocab_file_name).absolute())
+                    with open(vocab_file_path, "wb") as fileh:
                         fileh.write(hf_model.vocab_file_contents)
                     tokenizer.vocab_file = str((temp_dir / vocab_file_name).absolute())
                 tokenizer.save_pretrained(str(temp_dir.absolute()))
@@ -102,12 +103,17 @@ class HFShim(PyTorchShim):
                 vocab_file_contents = None
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
-                    with open(str((temp_dir / vocab_file_name).absolute()), "rb") as fileh:
+                    vocab_file_path = str((temp_dir / vocab_file_name).absolute())
+                    with open(vocab_file_path, "rb") as fileh:
                         vocab_file_contents = fileh.read()
 
             transformer = AutoModel.from_config(config)
             self._hfmodel = HFObjects(
-                tokenizer, transformer, vocab_file_contents, SimpleFrozenDict(), SimpleFrozenDict()
+                tokenizer,
+                transformer,
+                vocab_file_contents,
+                SimpleFrozenDict(),
+                SimpleFrozenDict(),
             )
             self._model = transformer
             filelike = BytesIO(msg["state"])
@@ -121,5 +127,11 @@ class HFShim(PyTorchShim):
             self._model.load_state_dict(torch.load(filelike, map_location=map_location))
             self._model.to(map_location)
         else:
-            self._hfmodel = HFObjects(None, None, msg["_init_tokenizer_config"], msg["_init_transformer_config"])
+            self._hfmodel = HFObjects(
+                None,
+                None,
+                None,
+                msg["_init_tokenizer_config"],
+                msg["_init_transformer_config"],
+            )
         return self
