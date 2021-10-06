@@ -235,7 +235,7 @@ def _convert_transformer_outputs(model, inputs_outputs, is_train):
 
 def huggingface_from_pretrained(
     source: Union[Path, str], tok_config: Dict, trf_config: Dict
-):
+) -> HFObjects:
     """Create a Huggingface transformer model from pretrained weights. Will
     download the model if it is not already downloaded.
 
@@ -259,5 +259,4 @@ def huggingface_from_pretrained(
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
-    hf_model = HFObjects(tokenizer, transformer, vocab_file_contents)
-    return hf_model
+    return HFObjects(tokenizer, transformer, vocab_file_contents)
