@@ -1,8 +1,6 @@
 from typing import List
 from pathlib import Path
 import random
-from transformers.tokenization_utils import BatchEncoding
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
 import torch.cuda
@@ -15,29 +13,6 @@ import contextlib
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
 registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
 # fmt: on
-
-
-def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
-    """Apply a Huggingface tokenizer to a batch of texts."""
-
-    # Use NumPy arrays rather than PyTorch tensors to avoid a lot of
-    # host <-> device transfers during tokenization and post-processing
-    # when a GPU is used.
-    token_data = tokenizer(
-        texts,
-        add_special_tokens=True,
-        return_attention_mask=True,
-        return_offsets_mapping=isinstance(tokenizer, PreTrainedTokenizerFast),
-        return_tensors="np",
-        return_token_type_ids=None,  # Sets to model default
-        padding="longest",
-    )
-    token_data["input_texts"] = []
-    for i in range(len(token_data["input_ids"])):
-        wp_texts = tokenizer.convert_ids_to_tokens(token_data["input_ids"][i])
-        token_data["input_texts"].append(wp_texts)
-    token_data["pad_token"] = tokenizer.pad_token
-    return token_data
 
 
 def maybe_flush_pytorch_cache(chance: float = 1.0):
