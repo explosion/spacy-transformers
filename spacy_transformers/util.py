@@ -1,18 +1,78 @@
-from typing import List
+from typing import List, Dict, Union
 from pathlib import Path
 import random
+from transformers import AutoModel, AutoTokenizer
+from transformers.tokenization_utils import BatchEncoding
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
+from thinc.api import get_current_ops, CupyOps
 import torch.cuda
 import tempfile
 import shutil
 import contextlib
+import warnings
 
 
 # fmt: off
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
 registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
 # fmt: on
+
+
+def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
+    """Create a Huggingface transformer model from pretrained weights. Will
+    download the model if it is not already downloaded.
+
+    source (Union[str, Path]): The name of the model or a path to it, such as
+        'bert-base-cased'.
+    config (dict): Settings to pass to the tokenizer.
+    """
+    warnings.warn(
+        "spacy_transformers.util.huggingface_from_pretrained has been moved to "
+        "spacy_transformers.layers.transformer_model.huggingface_from_pretrained "
+        "with an updated API:\n"
+        "huggingface_from_pretrained(source, tok_config, trf_config) -> HFObjects",
+        DeprecationWarning,
+    )
+    if hasattr(source, "absolute"):
+        str_path = str(source.absolute())
+    else:
+        str_path = source
+    tokenizer = AutoTokenizer.from_pretrained(str_path, **config)
+    transformer = AutoModel.from_pretrained(str_path)
+    ops = get_current_ops()
+    if isinstance(ops, CupyOps):
+        transformer.cuda()
+    return tokenizer, transformer
+
+
+def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
+    """Apply a Huggingface tokenizer to a batch of texts."""
+
+    # Use NumPy arrays rather than PyTorch tensors to avoid a lot of
+    # host <-> device transfers during tokenization and post-processing
+    # when a GPU is used.
+    warnings.warn(
+        "spacy_transformers.util.huggingface_tokenize has been moved to "
+        "spacy_transformers.layers.transformer_model.huggingface_tokenize.",
+        DeprecationWarning,
+    )
+    token_data = tokenizer(
+        texts,
+        add_special_tokens=True,
+        return_attention_mask=True,
+        return_offsets_mapping=isinstance(tokenizer, PreTrainedTokenizerFast),
+        return_tensors="np",
+        return_token_type_ids=None,  # Sets to model default
+        padding="longest",
+    )
+    token_data["input_texts"] = []
+    for i in range(len(token_data["input_ids"])):
+        wp_texts = tokenizer.convert_ids_to_tokens(token_data["input_ids"][i])
+        token_data["input_texts"].append(wp_texts)
+    token_data["pad_token"] = tokenizer.pad_token
+    return token_data
 
 
 def maybe_flush_pytorch_cache(chance: float = 1.0):
