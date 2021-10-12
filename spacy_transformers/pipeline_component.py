@@ -12,7 +12,7 @@ from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
 from pathlib import Path
 
-from .util import huggingface_from_pretrained
+from .layers.transformer_model import huggingface_from_pretrained
 from .util import batch_by_length
 from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
@@ -405,12 +405,12 @@ class Transformer(TrainablePipe):
                 )
                 warnings.warn(warn_msg)
                 p = Path(p).absolute()
-                tokenizer, transformer = huggingface_from_pretrained(
+                hf_model = huggingface_from_pretrained(
                     p,
                     self.model._init_tokenizer_config,
                     self.model._init_transformer_config,
                 )
-                self.model.attrs["set_transformer"](self.model, transformer, tokenizer)
+                self.model.attrs["set_transformer"](self.model, hf_model)
 
         deserialize = {
             "vocab": self.vocab.from_disk,
