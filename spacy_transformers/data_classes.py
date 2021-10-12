@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Union, Tuple
 import torch
 import numpy
@@ -348,3 +348,13 @@ class FullTransformerBatch:
             prev_tokens += doc_tokens.input_ids.size
             start += len(doc_spans)
         return outputs
+
+
+@dataclass
+class HFObjects:
+
+    tokenizer: Any
+    transformer: Any
+    vocab_file_contents: Any
+    _init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
+    _init_transformer_config: Dict[str, Any] = field(default_factory=dict)

@@ -216,20 +216,72 @@ def test_transformer_pipeline_tagger_senter_listener():
         file_path = d / "trained_nlp"
         nlp.to_disk(file_path)
         nlp2 = util.load_model_from_path(file_path)
-        doc = nlp2(text)
+        doc2 = nlp2(text)
         tagger2 = nlp2.get_pipe("tagger")
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
-        doc_tensor2 = tagger_trf2.predict([doc])
+        doc_tensor2 = tagger_trf2.predict([doc2])
         assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
+
+        # make sure that this can be saved to directory once more
+        file_path_2 = d / "trained_nlp_2"
+        nlp2.to_disk(file_path_2)
 
     # ensure to_bytes / from_bytes works
     nlp_bytes = nlp.to_bytes()
     nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     nlp3.from_bytes(nlp_bytes)
-    doc = nlp3(text)
+    doc3 = nlp3(text)
     tagger3 = nlp3.get_pipe("tagger")
     tagger_trf3 = tagger3.model.get_ref("tok2vec").layers[0]
-    doc_tensor3 = tagger_trf3.predict([doc])
+    doc_tensor3 = tagger_trf3.predict([doc3])
+    assert_equal(doc_tensor3[0].tensors, doc_tensor[0].tensors)
+
+
+def test_transformer_sentencepiece_IO():
+    """Test that a transformer using sentencepiece trains + IO goes OK"""
+    orig_config = Config().from_str(cfg_string)
+    orig_config["components"]["transformer"]["model"]["name"] = "camembert-base"
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    tagger = nlp.get_pipe("tagger")
+    tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
+    train_examples = []
+    for t in TRAIN_DATA:
+        train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
+        for tag in t[1]["tags"]:
+            tagger.add_label(tag)
+
+    optimizer = nlp.initialize(lambda: train_examples)
+    for i in range(2):
+        losses = {}
+        nlp.update(train_examples, sgd=optimizer, losses=losses)
+
+    text = "We're interested at underwater basket weaving."
+    doc = nlp(text)
+    doc_tensor = tagger_trf.predict([doc])
+
+    # ensure IO goes OK
+    with make_tempdir() as d:
+        file_path = d / "trained_nlp"
+        nlp.to_disk(file_path)
+        nlp2 = util.load_model_from_path(file_path)
+        doc2 = nlp2(text)
+        tagger2 = nlp2.get_pipe("tagger")
+        tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
+        doc_tensor2 = tagger_trf2.predict([doc2])
+        assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
+
+        # make sure that this can be saved to directory once more
+        file_path_2 = d / "trained_nlp_2"
+        nlp2.to_disk(file_path_2)
+
+    # ensure to_bytes / from_bytes works
+    nlp_bytes = nlp.to_bytes()
+    nlp3 = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    nlp3.from_bytes(nlp_bytes)
+    doc3 = nlp3(text)
+    tagger3 = nlp3.get_pipe("tagger")
+    tagger_trf3 = tagger3.model.get_ref("tok2vec").layers[0]
+    doc_tensor3 = tagger_trf3.predict([doc3])
     assert_equal(doc_tensor3[0].tensors, doc_tensor[0].tensors)
 
 

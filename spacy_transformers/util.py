@@ -1,7 +1,7 @@
 from typing import List, Dict, Union
 from pathlib import Path
 import random
-from transformers import AutoConfig, AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
@@ -11,6 +11,7 @@ import torch.cuda
 import tempfile
 import shutil
 import contextlib
+import warnings
 
 
 # fmt: off
@@ -19,25 +20,27 @@ registry.annotation_setters = catalogue.create("spacy", "annotation_setters", en
 # fmt: on
 
 
-def huggingface_from_pretrained(
-    source: Union[Path, str], tok_config: Dict, trf_config: Dict
-):
+def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
     """Create a Huggingface transformer model from pretrained weights. Will
     download the model if it is not already downloaded.
 
     source (Union[str, Path]): The name of the model or a path to it, such as
         'bert-base-cased'.
-    tok_config (dict): Settings to pass to the tokenizer.
-    trf_config (dict): Settings to pass to the transformer.
+    config (dict): Settings to pass to the tokenizer.
     """
+    warnings.warn(
+        "spacy_transformers.util.huggingface_from_pretrained has been moved to "
+        "spacy_transformers.layers.transformer_model.huggingface_from_pretrained "
+        "with an updated API:\n"
+        "huggingface_from_pretrained(source, tok_config, trf_config) -> HFObjects",
+        DeprecationWarning,
+    )
     if hasattr(source, "absolute"):
         str_path = str(source.absolute())
     else:
         str_path = source
-    tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
-    trf_config["return_dict"] = True
-    config = AutoConfig.from_pretrained(str_path, **trf_config)
-    transformer = AutoModel.from_pretrained(str_path, config=config)
+    tokenizer = AutoTokenizer.from_pretrained(str_path, **config)
+    transformer = AutoModel.from_pretrained(str_path)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
@@ -50,6 +53,11 @@ def huggingface_tokenize(tokenizer, texts: List[str]) -> BatchEncoding:
     # Use NumPy arrays rather than PyTorch tensors to avoid a lot of
     # host <-> device transfers during tokenization and post-processing
     # when a GPU is used.
+    warnings.warn(
+        "spacy_transformers.util.huggingface_tokenize has been moved to "
+        "spacy_transformers.layers.transformer_model.huggingface_tokenize.",
+        DeprecationWarning,
+    )
     token_data = tokenizer(
         texts,
         add_special_tokens=True,
