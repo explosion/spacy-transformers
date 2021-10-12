@@ -6,8 +6,7 @@ from transformers.file_utils import ModelOutput
 from spacy.tokens import Doc
 from thinc.api import Model
 
-from ..data_classes import FullTransformerBatch
-from ..layers.hf_shim import HFObjects
+from ..data_classes import FullTransformerBatch, HFObjects
 from ..span_getters import get_doc_spans
 from ..layers.transformer_model import forward as transformer_forward
 

@@ -3,25 +3,15 @@ from io import BytesIO
 from pathlib import Path
 import srsly
 import torch
-from dataclasses import dataclass, field
 from spacy.util import SimpleFrozenDict
 from spacy.vectors import get_current_ops
 
+from ..data_classes import HFObjects
 from ..util import make_tempdir
 
 from thinc.api import PyTorchGradScaler, PyTorchShim
 
 from transformers import AutoModel, AutoConfig, AutoTokenizer
-
-
-@dataclass
-class HFObjects:
-
-    tokenizer: Any
-    transformer: Any
-    vocab_file_contents: Any
-    _init_tokenizer_config: Dict[str, Any] = field(default_factory=dict)
-    _init_transformer_config: Dict[str, Any] = field(default_factory=dict)
 
 
 class HFShim(PyTorchShim):

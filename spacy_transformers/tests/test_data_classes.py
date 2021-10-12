@@ -1,7 +1,7 @@
 import pytest
 import numpy
 from numpy.testing import assert_equal
-from ..data_classes import WordpieceBatch
+from spacy_transformers.data_classes import WordpieceBatch
 
 
 @pytest.fixture

@@ -12,14 +12,13 @@ from thinc.types import ArgsKwargs
 
 import logging
 
-from ..data_classes import FullTransformerBatch, WordpieceBatch
+from ..data_classes import FullTransformerBatch, WordpieceBatch, HFObjects
 from ..util import maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
 from ..layers._util import replace_listener, replace_listener_cfg
 from ..truncate import truncate_oversize_splits
 from ..align import get_alignment
 from .hf_wrapper import HFWrapper
-from .hf_shim import HFObjects
 
 
 class TransformerModel(Model):
