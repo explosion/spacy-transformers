@@ -1,4 +1,5 @@
 from typing import List, Callable, Iterable, Iterator, Optional, Dict, Union
+import warnings
 from spacy.language import Language
 from spacy.pipeline.trainable_pipe import TrainablePipe
 from spacy.pipeline.pipe import deserialize_config
@@ -11,6 +12,7 @@ from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
 from pathlib import Path
 
+from .layers.transformer_model import huggingface_from_pretrained
 from .util import batch_by_length
 from .annotation_setters import null_annotation_setter
 from .data_classes import FullTransformerBatch, TransformerData
@@ -392,6 +394,23 @@ class Transformer(TrainablePipe):
                     self.model.from_bytes(mfile.read())
             except AttributeError:
                 raise ValueError(Errors.E149) from None
+            except IsADirectoryError:
+                warn_msg = (
+                    "Automatically converting a transformer component "
+                    "from spacy-transformers v1.0 to v1.1+. If you see errors "
+                    "or degraded performance, download a newer compatible "
+                    "model or retrain your custom model with the current "
+                    "spacy-transformers version. For more details and "
+                    "available updates, run: python -m spacy validate"
+                )
+                warnings.warn(warn_msg)
+                p = Path(p).absolute()
+                hf_model = huggingface_from_pretrained(
+                    p,
+                    self.model._init_tokenizer_config,
+                    self.model._init_transformer_config,
+                )
+                self.model.attrs["set_transformer"](self.model, hf_model)
 
         deserialize = {
             "vocab": self.vocab.from_disk,
