@@ -159,15 +159,17 @@ def transformer_tok2vec_v3(
         `growth_interval` steps.
     """
     return chain(
-        TransformerModel(
-            name,
-            get_spans,
-            tokenizer_config,
-            transformer_config,
-            mixed_precision,
-            grad_scaler_config,
+        chain(
+            TransformerModel(
+                name,
+                get_spans,
+                tokenizer_config,
+                transformer_config,
+                mixed_precision,
+                grad_scaler_config,
+            ),
+            split_trf_batch(),
         ),
-        split_trf_batch(),
         trfs2arrays(pooling, grad_factor),
     )
 
