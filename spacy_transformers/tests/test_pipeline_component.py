@@ -388,6 +388,16 @@ def test_replace_listeners():
     assert doc2._.trf_data.model_output.pooler_output is not None
     assert doc2._.trf_data.model_output.attentions is not None
 
+    # ensure IO goes OK
+    with make_tempdir() as d:
+        file_path = d / "trained_nlp"
+        nlp.to_disk(file_path)
+        nlp2 = util.load_model_from_path(file_path)
+        doc3 = nlp2(text)
+        tagger2 = nlp2.get_pipe("tagger")
+        tagger_tok2vec2 = tagger2.model.get_ref("tok2vec")
+        assert_equal(doc_tensor, tagger_tok2vec2.predict([doc3]))
+
 
 def test_replace_listeners_invalid():
     orig_config = Config().from_str(cfg_string)
