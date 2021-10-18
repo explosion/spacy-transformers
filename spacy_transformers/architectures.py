@@ -82,8 +82,8 @@ def transformer_tok2vec_v2(
     get_spans,
     tokenizer_config: dict,
     pooling: Model[Ragged, Floats2d],
-    transformer_config: dict = {},
     grad_factor: float = 1.0,
+    transformer_config: dict = {},
 ) -> Model[List[Doc], List[Floats2d]]:
     """Use a transformer as a "Tok2Vec" layer directly. This does not allow
     multiple components to share the transformer weights, and does not allow
@@ -94,15 +94,15 @@ def transformer_tok2vec_v2(
         spans from the batch of Doc objects. See the "TransformerModel" layer
         for details.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
-    transformers_config (dict): Settings to pass to the transformers forward pass
-        of the transformer.
     pooling (Model[Ragged, Floats2d]): A reduction layer used to calculate
         the token vectors based on zero or more wordpiece vectors. If in doubt,
         mean pooling (see `thinc.layers.reduce_mean`) is usually a good choice.
-     grad_factor (float): Reweight gradients from the component before passing
+    grad_factor (float): Reweight gradients from the component before passing
         them to the transformer. You can set this to 0 to "freeze" the transformer
         weights with respect to the component, or to make it learn more slowly.
         Leaving it at 1.0 is usually fine.
+    transformers_config (dict): Settings to pass to the transformers forward pass
+        of the transformer.
     """
     return chain(
         TransformerModel(name, get_spans, tokenizer_config, transformer_config),
@@ -118,8 +118,8 @@ def transformer_tok2vec_v3(
     get_spans,
     tokenizer_config: dict,
     pooling: Model[Ragged, Floats2d],
-    transformer_config: dict = {},
     grad_factor: float = 1.0,
+    transformer_config: dict = {},
     mixed_precision: bool = False,
     grad_scaler_config: dict = {},
 ) -> Model[List[Doc], List[Floats2d]]:
@@ -132,8 +132,6 @@ def transformer_tok2vec_v3(
         spans from the batch of Doc objects. See the "TransformerModel" layer
         for details.
     tokenizer_config (dict): Settings to pass to the transformers tokenizer.
-    transformers_config (dict): Settings to pass to the transformers forward pass
-        of the transformer.
     pooling (Model[Ragged, Floats2d]): A reduction layer used to calculate
         the token vectors based on zero or more wordpiece vectors. If in doubt,
         mean pooling (see `thinc.layers.reduce_mean`) is usually a good choice.
@@ -141,6 +139,8 @@ def transformer_tok2vec_v3(
         them to the transformer. You can set this to 0 to "freeze" the transformer
         weights with respect to the component, or to make it learn more slowly.
         Leaving it at 1.0 is usually fine.
+    transformers_config (dict): Settings to pass to the transformers forward pass
+        of the transformer.
     mixed_precision (bool): Enable mixed-precision. Mixed-precision replaces
         whitelisted ops to half-precision counterparts. This speeds up training
         and prediction on modern GPUs and reduces GPU memory use.
