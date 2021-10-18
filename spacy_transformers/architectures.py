@@ -81,8 +81,8 @@ def transformer_tok2vec_v2(
     name: str,
     get_spans,
     tokenizer_config: dict,
-    transformer_config: dict,
     pooling: Model[Ragged, Floats2d],
+    transformer_config: dict = {},
     grad_factor: float = 1.0,
 ) -> Model[List[Doc], List[Floats2d]]:
     """Use a transformer as a "Tok2Vec" layer directly. This does not allow
@@ -117,8 +117,8 @@ def transformer_tok2vec_v3(
     name: str,
     get_spans,
     tokenizer_config: dict,
-    transformer_config: dict,
     pooling: Model[Ragged, Floats2d],
+    transformer_config: dict = {},
     grad_factor: float = 1.0,
     mixed_precision: bool = False,
     grad_scaler_config: dict = {},
