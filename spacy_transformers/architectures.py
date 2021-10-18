@@ -157,6 +157,8 @@ def transformer_tok2vec_v3(
         the scale should be increased when no overflows were found for
         `growth_interval` steps.
     """
+    # Note that this is a chain of chain on purpose, to match the structure of
+    # TransformerListener.v1 after it is run through replace_listener (cf PR #310)
     return chain(
         chain(
             TransformerModel(
@@ -170,7 +172,7 @@ def transformer_tok2vec_v3(
             split_trf_batch(),
         ),
         trfs2arrays(pooling, grad_factor),
-    )
+    )  # type: ignore
 
 
 @registry.architectures.register("spacy-transformers.TransformerModel.v1")
