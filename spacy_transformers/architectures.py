@@ -75,7 +75,6 @@ def transformer_tok2vec_v1(
     )
 
 
-# Note: when updating, also make sure to update 'replace_listener_cfg' in _util.py
 @registry.architectures.register("spacy-transformers.Tok2VecTransformer.v2")
 def transformer_tok2vec_v2(
     name: str,
@@ -158,18 +157,22 @@ def transformer_tok2vec_v3(
         the scale should be increased when no overflows were found for
         `growth_interval` steps.
     """
+    # Note that this is a chain of chain on purpose, to match the structure of
+    # TransformerListener.v1 after it is run through replace_listener (cf PR #310)
     return chain(
-        TransformerModel(
-            name,
-            get_spans,
-            tokenizer_config,
-            transformer_config,
-            mixed_precision,
-            grad_scaler_config,
+        chain(
+            TransformerModel(
+                name,
+                get_spans,
+                tokenizer_config,
+                transformer_config,
+                mixed_precision,
+                grad_scaler_config,
+            ),
+            split_trf_batch(),
         ),
-        split_trf_batch(),
         trfs2arrays(pooling, grad_factor),
-    )
+    )  # type: ignore
 
 
 @registry.architectures.register("spacy-transformers.TransformerModel.v1")

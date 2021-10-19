@@ -7,7 +7,7 @@ def replace_listener(model):
 
 
 def replace_listener_cfg(tok2vec_model_cfg, listener_model_cfg):
-    result = tok2vec_model_cfg
+    result = tok2vec_model_cfg.copy()
     if (
         "TransformerModel" in tok2vec_model_cfg["@architectures"]
         and "TransformerListener" in listener_model_cfg["@architectures"]
