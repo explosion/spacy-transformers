@@ -6,7 +6,7 @@ This package provides [spaCy](https://github.com/explosion/spaCy) components and
 architectures to use transformer models via
 [Hugging Face's `transformers`](https://github.com/huggingface/transformers) in
 spaCy. The result is convenient access to state-of-the-art transformer
-architectures, such as BERT, GPT-2, XLNet, etc.
+architectures, such as BERT, GPT-2, XLNet, etc. 
 
 > **This release requires [spaCy v3](https://spacy.io/usage/v3).** For
 > the previous version of this library, see the
