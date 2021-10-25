@@ -63,3 +63,8 @@ jobs:
       pip install -r requirements.txt
       python -m pytest spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
+
+  - script: |
+      pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
+      python -c 'import spacy; nlp = spacy.load("en_core_web_trf"); doc = nlp("test")'
+    displayName: 'Test backwards compatibility for v1.0 models'
