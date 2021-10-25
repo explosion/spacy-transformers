@@ -67,11 +67,6 @@ jobs:
       python -m pip install dist/$SDIST
     displayName: 'Install from sdist'
 
-  - task: DeleteFiles@1
-    inputs:
-      contents: "spacy_transformers"
-    displayName: "Delete source directory"
-
   - script: |
       pip install -r requirements.txt
       python -m pytest spacy_transformers --cov=spacy_transformers
