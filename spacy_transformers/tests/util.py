@@ -2,13 +2,22 @@ from typing import Dict, List, Union
 import torch
 import copy
 from transformers.file_utils import ModelOutput
+from numpy.testing import assert_array_equal
 
 from spacy.tokens import Doc
-from thinc.api import Model
+from thinc.api import Model, get_current_ops
 
 from ..data_classes import FullTransformerBatch, HFObjects
 from ..span_getters import get_doc_spans
 from ..layers.transformer_model import forward as transformer_forward
+
+
+def _assert_equal_tensors(tensors1, tensors2):
+    ops = get_current_ops()
+    for i in range(len(tensors1)):
+        t1 = ops.asarray(tensors1[i])
+        t2 = ops.asarray(tensors2[i])
+        assert_array_equal(ops.to_numpy(t1), ops.to_numpy(t2))
 
 
 class DummyTokenizer:

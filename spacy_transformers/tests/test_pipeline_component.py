@@ -7,10 +7,9 @@ from spacy.vocab import Vocab
 from spacy.tokens import Doc
 from spacy import util
 from thinc.api import Model, Config, get_current_ops, NumpyOps
-from numpy.testing import assert_equal
 from spacy.tests.util import assert_docs_equal
 
-from .util import DummyTransformer
+from .util import DummyTransformer, _assert_equal_tensors
 from .. import TransformerModel
 from ..pipeline_component import Transformer
 from ..layers import TransformerListener
@@ -209,7 +208,7 @@ def test_transformer_pipeline_tagger_senter_listener():
     text = "We're interested at underwater basket weaving."
     doc = nlp(text)
     doc_tensor = tagger_trf.predict([doc])
-    assert_equal(doc._.trf_data.tensors, doc_tensor[0].tensors)
+    _assert_equal_tensors(doc._.trf_data.tensors, doc_tensor[0].tensors)
 
     # ensure IO goes OK
     with make_tempdir() as d:
@@ -220,7 +219,7 @@ def test_transformer_pipeline_tagger_senter_listener():
         tagger2 = nlp2.get_pipe("tagger")
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
         doc_tensor2 = tagger_trf2.predict([doc2])
-        assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
+        _assert_equal_tensors(doc_tensor2[0].tensors, doc_tensor[0].tensors)
 
         # make sure that this can be saved to directory once more
         file_path_2 = d / "trained_nlp_2"
@@ -234,7 +233,7 @@ def test_transformer_pipeline_tagger_senter_listener():
     tagger3 = nlp3.get_pipe("tagger")
     tagger_trf3 = tagger3.model.get_ref("tok2vec").layers[0]
     doc_tensor3 = tagger_trf3.predict([doc3])
-    assert_equal(doc_tensor3[0].tensors, doc_tensor[0].tensors)
+    _assert_equal_tensors(doc_tensor3[0].tensors, doc_tensor[0].tensors)
 
 
 def test_transformer_sentencepiece_IO():
@@ -268,7 +267,7 @@ def test_transformer_sentencepiece_IO():
         tagger2 = nlp2.get_pipe("tagger")
         tagger_trf2 = tagger2.model.get_ref("tok2vec").layers[0]
         doc_tensor2 = tagger_trf2.predict([doc2])
-        assert_equal(doc_tensor2[0].tensors, doc_tensor[0].tensors)
+        _assert_equal_tensors(doc_tensor2[0].tensors, doc_tensor[0].tensors)
 
         # make sure that this can be saved to directory once more
         file_path_2 = d / "trained_nlp_2"
@@ -282,7 +281,7 @@ def test_transformer_sentencepiece_IO():
     tagger3 = nlp3.get_pipe("tagger")
     tagger_trf3 = tagger3.model.get_ref("tok2vec").layers[0]
     doc_tensor3 = tagger_trf3.predict([doc3])
-    assert_equal(doc_tensor3[0].tensors, doc_tensor[0].tensors)
+    _assert_equal_tensors(doc_tensor3[0].tensors, doc_tensor[0].tensors)
 
 
 def test_transformer_pipeline_empty():
@@ -376,7 +375,9 @@ def test_replace_listeners():
     )
     doc2 = nlp(text)
     assert preds == [t.tag_ for t in doc2]
-    assert_equal(doc_tensor, tagger_tok2vec.predict([doc2]))
+    pred_tensor = tagger_tok2vec.predict([doc2])
+    _assert_equal_tensors(doc_tensor, pred_tensor)
+
     # attempt training with the new pipeline
     optimizer = nlp.resume_training()
     for i in range(2):
@@ -397,7 +398,8 @@ def test_replace_listeners():
         doc3 = nlp2(text)
         tagger2 = nlp2.get_pipe("tagger")
         tagger_tok2vec2 = tagger2.model.get_ref("tok2vec")
-        assert_equal(doc_tensor_trained, tagger_tok2vec2.predict([doc3]))
+        pred_tensor = tagger_tok2vec2.predict([doc3])
+        _assert_equal_tensors(doc_tensor_trained, pred_tensor)
 
 
 def test_replace_listeners_invalid():
