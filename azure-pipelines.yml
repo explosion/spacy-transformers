@@ -22,11 +22,17 @@ jobs:
       Python37Mac:
         imageName: 'macos-10.14'
         python.version: '3.7'
+      Python37Windows:
+        imageName: 'vs2017-win2016'
+        python.version: '3.7'
       Python38Mac:
         imageName: 'macos-10.14'
         python.version: '3.8'
       Python39Linux:
         imageName: 'ubuntu-18.04'
+        python.version: '3.9'
+      Python39Windows:
+        imageName: 'vs2017-win2016'
         python.version: '3.9'
     maxParallel: 4
   pool:
