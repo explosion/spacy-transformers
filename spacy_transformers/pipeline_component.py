@@ -394,7 +394,7 @@ class Transformer(TrainablePipe):
                     self.model.from_bytes(mfile.read())
             except AttributeError:
                 raise ValueError(Errors.E149) from None
-            except IsADirectoryError:
+            except (IsADirectoryError, PermissionError):
                 warn_msg = (
                     "Automatically converting a transformer component "
                     "from spacy-transformers v1.0 to v1.1+. If you see errors "

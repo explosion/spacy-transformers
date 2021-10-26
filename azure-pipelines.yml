@@ -22,11 +22,17 @@ jobs:
       Python37Mac:
         imageName: 'macos-10.14'
         python.version: '3.7'
+      Python37Windows:
+        imageName: 'vs2017-win2016'
+        python.version: '3.7'
       Python38Mac:
         imageName: 'macos-10.14'
         python.version: '3.8'
       Python39Linux:
         imageName: 'ubuntu-18.04'
+        python.version: '3.9'
+      Python39Windows:
+        imageName: 'vs2017-win2016'
         python.version: '3.9'
     maxParallel: 4
   pool:
@@ -56,10 +62,17 @@ jobs:
     displayName: 'Install oldest supported torch for python 3.6'
     condition: eq(variables['python.version'], '3.6')
 
-  - script: pip install dist/*.tar.gz
+  - bash: |
+      SDIST=$(python -c "import os;print(os.listdir('./dist')[0])" 2>&1)
+      python -m pip install dist/$SDIST
     displayName: 'Install from sdist'
 
   - script: |
       pip install -r requirements.txt
       python -m pytest spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
+
+  - script: |
+      pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
+      python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
+    displayName: 'Test backwards compatibility for v1.0 models'
