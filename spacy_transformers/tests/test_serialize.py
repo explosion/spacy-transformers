@@ -7,7 +7,7 @@ from spacy.tokens import Doc
 from spacy.util import make_tempdir
 from spacy import util
 import srsly
-from thinc.api import Config
+from thinc.api import Config, get_current_ops
 from numpy.testing import assert_array_equal
 
 from .. import TransformerData
@@ -44,9 +44,11 @@ def test_serialize_transformer_data():
     reloaded_doc = Doc(nlp.vocab)
     reloaded_doc.from_bytes(b)
     assert_docs_equal(doc, reloaded_doc)
+    ops = get_current_ops()
     for key in doc._.trf_data.model_output:
         assert_array_equal(
-            doc._.trf_data.model_output[key], reloaded_doc._.trf_data.model_output[key]
+            ops.to_numpy(ops.asarray(doc._.trf_data.model_output[key])),
+            ops.to_numpy(ops.asarray(reloaded_doc._.trf_data.model_output[key])),
         )
 
 
