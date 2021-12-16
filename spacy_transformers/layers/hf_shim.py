@@ -3,8 +3,8 @@ from io import BytesIO
 from pathlib import Path
 import srsly
 import torch
+from thinc.api import get_current_ops
 from spacy.util import SimpleFrozenDict
-from spacy.vectors import get_current_ops
 
 from ..data_classes import HFObjects
 from ..util import make_tempdir
