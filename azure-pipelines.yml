@@ -58,7 +58,7 @@ jobs:
     displayName: "Uninstall all packages"
 
   - script: |
-      pip install "torch==1.6.0+cpu" -f https://download.pytorch.org/whl/torch_stable.html
+      pip install "torch==1.8.1+cpu" -f https://download.pytorch.org/whl/torch_stable.html
     displayName: 'Install oldest supported torch for python 3.6'
     condition: eq(variables['python.version'], '3.6')
 
