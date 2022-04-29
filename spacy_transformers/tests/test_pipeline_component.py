@@ -441,3 +441,29 @@ def test_multiprocessing(simple_nlp, texts):
 
         for doc, expected_doc in zip(docs, expecteds):
             assert_docs_equal(doc, expected_doc)
+
+
+def test_frozen_listener():
+    orig_config = Config().from_str(cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    text = "This is awesome"
+    examples = [Example.from_dict(nlp.make_doc(text), {"tags": ["A", "B", "C"]})]
+    optimizer = nlp.initialize(lambda: examples)
+    # train pipe before freezing listener
+    for i in range(2):
+        losses = {}
+        nlp.update(examples, sgd=optimizer, losses=losses)
+        doc = nlp(text)
+
+    transformer_bytes = nlp.get_pipe("transformer").to_bytes()
+    tagger_bytes = nlp.get_pipe("tagger").to_bytes()
+
+    # train further with frozen listener
+    for i in range(2):
+        losses = {}
+        nlp.update(examples, sgd=optimizer, losses=losses, exclude=["transformer"])
+        doc = nlp(text)
+
+    # only tagger was updated
+    assert nlp.get_pipe("transformer").to_bytes() == transformer_bytes
+    assert nlp.get_pipe("tagger").to_bytes() != tagger_bytes

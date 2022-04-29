@@ -36,7 +36,10 @@ class TransformerListener(Model):
         clears it. This saves memory, as otherwise we hold onto that callback
         until the next batch.
         """
-        result = self._backprop(*args, **kwargs)
+        if self._backprop is not None:
+            result = self._backprop(*args, **kwargs)
+        else:
+            result = None
         self._batch_id = None
         self._outputs = None
         self._backprop = None
