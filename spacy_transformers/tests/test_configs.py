@@ -32,15 +32,14 @@ cfg_string = """
     [components.tagger.model.tok2vec]
     @architectures = "spacy-transformers.TransformerListener.v1"
     grad_factor = 1.0
-    upstream = ${components.transformer.name}
+    upstream = "transformer"
 
     [components.tagger.model.tok2vec.pooling]
     @layers = "reduce_mean.v1"
 
     [components.transformer]
     factory = "transformer"
-    name = "custom_upstream"
-    
+
     [corpora]
     @readers = toy_tagger_data.v1
     

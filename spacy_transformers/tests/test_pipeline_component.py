@@ -145,7 +145,7 @@ cfg_string = """
     [components.senter.model.tok2vec]
     @architectures = "spacy-transformers.TransformerListener.v1"
     grad_factor = 1.0
-    upstream = ${components.transformer.name}
+    upstream = "transformer"
 
     [components.senter.model.tok2vec.pooling]
     @layers = "reduce_mean.v1"
@@ -160,14 +160,13 @@ cfg_string = """
     [components.tagger.model.tok2vec]
     @architectures = "spacy-transformers.TransformerListener.v1"
     grad_factor = 1.0
-    upstream = ${components.transformer.name}
+    upstream = "transformer"
 
     [components.tagger.model.tok2vec.pooling]
     @layers = "reduce_mean.v1"
 
     [components.transformer]
     factory = "transformer"
-    name = "custom_upstream"
 
     [components.transformer.model]
     @architectures = "spacy-transformers.TransformerModel.v3"
@@ -189,7 +188,6 @@ def test_transformer_pipeline_tagger_senter_listener():
     tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
     assert isinstance(transformer, Transformer)
     assert isinstance(tagger_trf, TransformerListener)
-    assert tagger_trf.upstream_name == "custom_upstream"
     train_examples = []
     for t in TRAIN_DATA:
         train_examples.append(Example.from_dict(nlp.make_doc(t[0]), t[1]))
