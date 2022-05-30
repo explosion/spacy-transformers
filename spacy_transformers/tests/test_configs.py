@@ -18,7 +18,7 @@ TRAIN_TAGGER_DATA = [
 cfg_string = """
     [nlp]
     lang = "en"
-    pipeline = ["transformer","tagger"]
+    pipeline = ["custom_transformer","tagger"]
 
     [components]
 
@@ -32,15 +32,14 @@ cfg_string = """
     [components.tagger.model.tok2vec]
     @architectures = "spacy-transformers.TransformerListener.v1"
     grad_factor = 1.0
-    upstream = ${components.transformer.name}
+    upstream = "custom_transformer"
 
     [components.tagger.model.tok2vec.pooling]
     @layers = "reduce_mean.v1"
 
-    [components.transformer]
+    [components.custom_transformer]
     factory = "transformer"
-    name = "custom_upstream"
-    
+
     [corpora]
     @readers = toy_tagger_data.v1
     
@@ -70,3 +69,9 @@ def test_init_nlp(config_string):
     config = Config(DEFAULT_CONFIG, section_order=CONFIG_SECTION_ORDER).merge(config)
     nlp = init_nlp(config, use_gpu=False)
     assert nlp is not None
+
+    tagger = nlp.get_pipe("tagger")
+    transformer = nlp.get_pipe("custom_transformer")
+    tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
+    assert tagger_trf.upstream_name == "custom_transformer"
+    assert transformer.listeners[0] == tagger_trf
