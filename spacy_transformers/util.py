@@ -6,7 +6,7 @@ from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
-from thinc.api import get_current_ops, CupyOps
+from thinc.util import get_torch_default_device
 import torch.cuda
 import tempfile
 import shutil
@@ -41,9 +41,8 @@ def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
         str_path = source
     tokenizer = AutoTokenizer.from_pretrained(str_path, **config)
     transformer = AutoModel.from_pretrained(str_path)
-    ops = get_current_ops()
-    if isinstance(ops, CupyOps):
-        transformer.cuda()
+    torch_device = get_torch_default_device()
+    transformer.to(torch_device)
     return tokenizer, transformer
 
 
@@ -130,14 +129,14 @@ def batch_by_length(seqs, max_words: int) -> List[List[int]]:
 
 
 def log_gpu_memory(logger, context):
-    mem = torch.cuda.memory_allocated() // 1024 ** 2
+    mem = torch.cuda.memory_allocated() // 1024**2
     logger.info(f"{mem:.1f}: {context}")
 
 
 def log_batch_size(logger, token_data, is_train):
     batch_size = token_data["input_ids"].shape[0]
     seq_len = token_data["input_ids"].shape[1]
-    squared = seq_len ** 2 * batch_size
+    squared = seq_len**2 * batch_size
 
     if is_train:
         logger.info(f"{batch_size} x {seq_len} ({squared}) update")

@@ -3,7 +3,7 @@ from io import BytesIO
 from pathlib import Path
 import srsly
 import torch
-from thinc.api import get_current_ops
+from thinc.util import get_torch_default_device
 from spacy.util import SimpleFrozenDict
 
 from ..data_classes import HFObjects
@@ -108,14 +108,14 @@ class HFShim(PyTorchShim):
             self._model = transformer
             filelike = BytesIO(msg["state"])
             filelike.seek(0)
-            ops = get_current_ops()
-            if ops.device_type == "cpu":
-                map_location = "cpu"
+            device = get_torch_default_device()
+            if device.type == "cuda":
+                map_location = str(device)
             else:  # pragma: no cover
-                device_id = torch.cuda.current_device()
-                map_location = f"cuda:{device_id}"
+                # MPS also uses 'cpu' as map location.
+                map_location = "cpu"
             self._model.load_state_dict(torch.load(filelike, map_location=map_location))
-            self._model.to(map_location)
+            self._model.to(device)
         else:
             self._hfmodel = HFObjects(
                 None,

@@ -7,7 +7,8 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from transformers.tokenization_utils import BatchEncoding
 
 from spacy.tokens import Doc
-from thinc.api import Model, xp2torch, get_current_ops, CupyOps
+from thinc.api import Model, xp2torch
+from thinc.util import get_torch_default_device
 from thinc.types import ArgsKwargs
 
 import logging
@@ -256,9 +257,8 @@ def huggingface_from_pretrained(
     trf_config["return_dict"] = True
     config = AutoConfig.from_pretrained(str_path, **trf_config)
     transformer = AutoModel.from_pretrained(str_path, config=config)
-    ops = get_current_ops()
-    if isinstance(ops, CupyOps):
-        transformer.cuda()
+    torch_device = get_torch_default_device()
+    transformer.to(torch_device)
     return HFObjects(tokenizer, transformer, vocab_file_contents)
 
 
