@@ -315,7 +315,7 @@ class FullTransformerBatch:
             flat_spans.extend(doc_spans)
         token_positions = get_token_positions(flat_spans)
 
-        # Convert all outputs to ops tensors.
+        # Convert all outputs to XP arrays.
         xp_model_output = ModelOutput()
         last_hidden_state = self.model_output.last_hidden_state
         for key, output in self.model_output.items():
@@ -328,7 +328,7 @@ class FullTransformerBatch:
             ):
                 xp_model_output[key] = [torch2xp(t) for t in output]
 
-        # Split outputs per doc.
+        # Split outputs per Doc.
         outputs = []
         start = 0
         prev_tokens = 0
@@ -344,8 +344,8 @@ class FullTransformerBatch:
             doc_align.data = doc_align.data - prev_tokens
             model_output = ModelOutput()
             for key, output in xp_model_output.items():
-                # After the torch2xp conversion above, we only XP arrays and
-                # lists of XP arrays.
+                # After the torch2xp conversion above, we only have XP arrays
+                # and lists of XP arrays.
                 if not isinstance(output, list):
                     model_output[key] = output[start:end]
                 else:
