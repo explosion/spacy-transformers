@@ -6,7 +6,6 @@ from transformers.tokenization_utils import BatchEncoding
 from transformers.file_utils import ModelOutput
 from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd, Ints2d
 from thinc.api import NumpyOps, get_array_module, xp2torch, torch2xp
-from thinc.util import is_xp_array
 from spacy.tokens import Span
 import srsly
 
