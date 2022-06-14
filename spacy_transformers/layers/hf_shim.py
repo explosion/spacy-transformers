@@ -3,7 +3,7 @@ from io import BytesIO
 from pathlib import Path
 import srsly
 import torch
-from thinc.util import get_torch_default_device
+from thinc.api import get_torch_default_device
 from spacy.util import SimpleFrozenDict
 
 from ..data_classes import HFObjects

@@ -6,7 +6,7 @@ from transformers.tokenization_utils import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
 from spacy.util import registry
-from thinc.util import get_torch_default_device
+from thinc.api import get_torch_default_device
 import torch.cuda
 import tempfile
 import shutil

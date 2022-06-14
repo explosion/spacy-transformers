@@ -7,8 +7,7 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from transformers.tokenization_utils import BatchEncoding
 
 from spacy.tokens import Doc
-from thinc.api import Model, xp2torch
-from thinc.util import get_torch_default_device
+from thinc.api import Model, get_torch_default_device, xp2torch
 from thinc.types import ArgsKwargs
 
 import logging
