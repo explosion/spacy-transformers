@@ -314,6 +314,21 @@ class FullTransformerBatch:
         for doc_spans in self.spans:
             flat_spans.extend(doc_spans)
         token_positions = get_token_positions(flat_spans)
+
+        # Convert all outputs to XP arrays.
+        xp_model_output = ModelOutput()
+        last_hidden_state = self.model_output.last_hidden_state
+        for key, output in self.model_output.items():
+            if isinstance(output, torch.Tensor):
+                xp_model_output[key] = torch2xp(output)
+            elif (
+                isinstance(output, tuple)
+                and all(isinstance(t, torch.Tensor) for t in output)
+                and all(t.shape[0] == last_hidden_state.shape[0] for t in output)
+            ):
+                xp_model_output[key] = [torch2xp(t) for t in output]
+
+        # Split outputs per Doc.
         outputs = []
         start = 0
         prev_tokens = 0
@@ -328,16 +343,13 @@ class FullTransformerBatch:
             doc_align = self.align[start_i:end_i]
             doc_align.data = doc_align.data - prev_tokens
             model_output = ModelOutput()
-            last_hidden_state = self.model_output.last_hidden_state
-            for key, output in self.model_output.items():
-                if isinstance(output, torch.Tensor):
-                    model_output[key] = torch2xp(output[start:end])
-                elif (
-                    isinstance(output, tuple)
-                    and all(isinstance(t, torch.Tensor) for t in output)
-                    and all(t.shape[0] == last_hidden_state.shape[0] for t in output)
-                ):
-                    model_output[key] = [torch2xp(t[start:end]) for t in output]
+            for key, output in xp_model_output.items():
+                # After the torch2xp conversion above, we only have XP arrays
+                # and lists of XP arrays.
+                if not isinstance(output, list):
+                    model_output[key] = output[start:end]
+                else:
+                    model_output[key] = [t[start:end] for t in output]
             outputs.append(
                 TransformerData(
                     wordpieces=doc_tokens,
