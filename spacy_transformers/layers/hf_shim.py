@@ -109,12 +109,7 @@ class HFShim(PyTorchShim):
             filelike = BytesIO(msg["state"])
             filelike.seek(0)
             device = get_torch_default_device()
-            if device.type == "cuda":
-                map_location = str(device)
-            else:  # pragma: no cover
-                # MPS also uses 'cpu' as map location.
-                map_location = "cpu"
-            self._model.load_state_dict(torch.load(filelike, map_location=map_location))
+            self._model.load_state_dict(torch.load(filelike, map_location=device))
             self._model.to(device)
         else:
             self._hfmodel = HFObjects(
