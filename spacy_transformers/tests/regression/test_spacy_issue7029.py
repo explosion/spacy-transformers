@@ -12,6 +12,9 @@ pipeline = ["transformer", "tagger"]
 [components.transformer]
 factory = "transformer"
 
+[components.transformer.model]
+name = "distilbert-base-uncased"
+
 [components.tagger]
 factory = "tagger"
 
