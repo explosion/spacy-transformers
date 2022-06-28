@@ -234,7 +234,12 @@ def _convert_transformer_outputs(model, inputs_outputs, is_train):
 
 
 def huggingface_from_pretrained(
-    source: Union[Path, str], tok_config: Dict, trf_config: Dict
+    source: Union[Path, str],
+    tok_config: Dict,
+    trf_config: Dict,
+    config_cls = AutoConfig,
+    model_cls = AutoModel,
+    tokenizer_cls = AutoTokenizer,
 ) -> HFObjects:
     """Create a Huggingface transformer model from pretrained weights. Will
     download the model if it is not already downloaded.
@@ -248,14 +253,14 @@ def huggingface_from_pretrained(
         str_path = str(source.absolute())
     else:
         str_path = source
-    tokenizer = AutoTokenizer.from_pretrained(str_path, **tok_config)
+    tokenizer = tokenizer_cls.from_pretrained(str_path, **tok_config)
     vocab_file_contents = None
     if hasattr(tokenizer, "vocab_file"):
         with open(tokenizer.vocab_file, "rb") as fileh:
             vocab_file_contents = fileh.read()
     trf_config["return_dict"] = True
-    config = AutoConfig.from_pretrained(str_path, **trf_config)
-    transformer = AutoModel.from_pretrained(str_path, config=config)
+    config = config_cls.from_pretrained(str_path, **trf_config)
+    transformer = model_cls.from_pretrained(str_path, config=config)
     ops = get_current_ops()
     if isinstance(ops, CupyOps):
         transformer.cuda()
