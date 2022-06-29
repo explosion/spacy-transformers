@@ -2,28 +2,25 @@ from typing import Callable
 from functools import partial
 import copy
 
-import spacy
-from spacy.util import make_tempdir
-
-from spacy_transformers.align import get_alignment
-from spacy_transformers.data_classes import HFObjects, WordpieceBatch
-from spacy_transformers.layers.hf_wrapper import HFWrapper
-from spacy_transformers.layers.transformer_model import (
-    _convert_transformer_inputs,
-    _convert_transformer_outputs,
-    forward,
-    huggingface_from_pretrained,
-    huggingface_tokenize,
-    set_pytorch_transformer,
-)
-from spacy_transformers.span_getters import get_strided_spans
-from spacy_transformers.truncate import truncate_oversize_splits
-from thinc.api import Model
-
 import torch
 from transformers import AutoModelForSequenceClassification
-from transformers.models.distilbert.modeling_distilbert import DistilBertForSequenceClassification
+from transformers.models.distilbert.modeling_distilbert import (
+    DistilBertForSequenceClassification,
+)
 from transformers.modeling_outputs import SequenceClassifierOutput
+
+import spacy
+from thinc.api import Model
+
+from spacy_transformers.data_classes import HFObjects, WordpieceBatch
+from spacy_transformers.layers.hf_wrapper import HFWrapper
+from spacy_transformers.layers.transformer_model import _convert_transformer_inputs
+from spacy_transformers.layers.transformer_model import _convert_transformer_outputs
+from spacy_transformers.layers.transformer_model import forward
+from spacy_transformers.layers.transformer_model import huggingface_from_pretrained
+from spacy_transformers.layers.transformer_model import huggingface_tokenize
+from spacy_transformers.layers.transformer_model import set_pytorch_transformer
+from spacy_transformers.span_getters import get_strided_spans
 
 
 def test_model_for_sequence_classification():
@@ -106,30 +103,9 @@ def test_model_for_sequence_classification():
         )
         model.attrs["set_transformer"](model, hf_model)
         tokenizer = model.tokenizer
-        # Call the model with a batch of inputs to infer the width
-        if X:
-            # If we're dealing with actual texts, do the work to setup the wordpieces
-            # batch properly
-            docs = X
-            get_spans = model.attrs["get_spans"]
-            nested_spans = get_spans(docs)
-            flat_spans = []
-            for doc_spans in nested_spans:
-                flat_spans.extend(doc_spans)
-            token_data = huggingface_tokenize(
-                tokenizer, [span.text for span in flat_spans]
-            )
-            wordpieces = WordpieceBatch.from_batch_encoding(token_data)
-            align = get_alignment(
-                flat_spans, wordpieces.strings, tokenizer.all_special_tokens
-            )
-            wordpieces, align = truncate_oversize_splits(
-                wordpieces, align, tokenizer.model_max_length
-            )
-        else:
-            texts = ["hello world", "foo bar"]
-            token_data = huggingface_tokenize(tokenizer, texts)
-            wordpieces = WordpieceBatch.from_batch_encoding(token_data)
+        texts = ["hello world", "foo bar"]
+        token_data = huggingface_tokenize(tokenizer, texts)
+        wordpieces = WordpieceBatch.from_batch_encoding(token_data)
         model.layers[0].initialize(X=wordpieces)
 
     model = ClassificationTransformerModel(
@@ -150,6 +126,9 @@ def test_model_for_sequence_classification():
     ).from_bytes(b)
     assert isinstance(model_re.transformer, DistilBertForSequenceClassification)
     assert isinstance(model_re.predict([doc]).model_output, SequenceClassifierOutput)
-    assert torch.equal(model.predict([doc]).model_output.logits, model_re.predict([doc]).model_output.logits)
+    assert torch.equal(
+        model.predict([doc]).model_output.logits,
+        model_re.predict([doc]).model_output.logits,
+    )
     # Note that model.to_bytes() != model_re.to_bytes(), but this is also not
     # true for the default models.
