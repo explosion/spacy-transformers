@@ -24,8 +24,14 @@ class HFShim(PyTorchShim):
         optimizer: Any = None,
         mixed_precision: bool = False,
         grad_scaler_config: dict = {},
+        config_cls = AutoConfig,
+        model_cls = AutoModel,
+        tokenizer_cls = AutoTokenizer,
     ):
         self._hfmodel = model
+        self.config_cls = config_cls
+        self.model_cls = model_cls
+        self.tokenizer_cls = tokenizer_cls
 
         # Enable gradient scaling when mixed precision is enabled and gradient
         # scaling is not explicitly disabled in the configuration.
@@ -86,10 +92,10 @@ class HFShim(PyTorchShim):
             with make_tempdir() as temp_dir:
                 config_file = temp_dir / "config.json"
                 srsly.write_json(config_file, config_dict)
-                config = AutoConfig.from_pretrained(config_file)
+                config = self.config_cls.from_pretrained(config_file)
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
-                tokenizer = AutoTokenizer.from_pretrained(str(temp_dir.absolute()))
+                tokenizer = self.tokenizer_cls.from_pretrained(str(temp_dir.absolute()))
                 vocab_file_contents = None
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
@@ -97,7 +103,7 @@ class HFShim(PyTorchShim):
                     with open(vocab_file_path, "rb") as fileh:
                         vocab_file_contents = fileh.read()
 
-            transformer = AutoModel.from_config(config)
+            transformer = self.model_cls.from_config(config)
             self._hfmodel = HFObjects(
                 tokenizer,
                 transformer,
