@@ -89,13 +89,15 @@ class HFShim(PyTorchShim):
         config_dict = msg["config"]
         tok_dict = msg["tokenizer"]
         if config_dict:
+            tok_config = msg.get("_init_tokenizer_config", {})
+            trf_config = msg.get("_init_transformer_config", {})
             with make_tempdir() as temp_dir:
                 config_file = temp_dir / "config.json"
                 srsly.write_json(config_file, config_dict)
-                config = self.config_cls.from_pretrained(config_file)
+                config = self.config_cls.from_pretrained(config_file, **trf_config)
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
-                tokenizer = self.tokenizer_cls.from_pretrained(str(temp_dir.absolute()))
+                tokenizer = self.tokenizer_cls.from_pretrained(str(temp_dir.absolute()), **tok_config)
                 vocab_file_contents = None
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
