@@ -33,6 +33,9 @@ cfg_string = """
 
     [components.transformer]
     factory = "transformer"
+
+    [components.transformer.model]
+    name = "distilbert-base-uncased"
     """
 
 
