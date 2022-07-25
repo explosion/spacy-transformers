@@ -19,24 +19,24 @@ jobs:
       Python36Linux:
         imageName: 'ubuntu-latest'
         python.version: '3.6'
-#      Python37Mac:
-#        imageName: 'macos-latest'
-#        python.version: '3.7'
-#      Python37Windows:
-#        imageName: 'windows-latest'
-#        python.version: '3.7'
-#      Python38Mac:
-#        imageName: 'macos-latest'
-#        python.version: '3.8'
-#      Python39Linux:
-#        imageName: 'ubuntu-latest'
-#        python.version: '3.9'
-#      Python39Windows:
-#        imageName: 'windows-latest'
-#        python.version: '3.9'
-#      Python310Mac:
-#        imageName: 'macos-latest'
-#        python.version: '3.10'
+      Python37Mac:
+        imageName: 'macos-latest'
+        python.version: '3.7'
+      Python37Windows:
+        imageName: 'windows-latest'
+        python.version: '3.7'
+      Python38Mac:
+        imageName: 'macos-latest'
+        python.version: '3.8'
+      Python39Linux:
+        imageName: 'ubuntu-latest'
+        python.version: '3.9'
+      Python39Windows:
+        imageName: 'windows-latest'
+        python.version: '3.9'
+      Python310Mac:
+        imageName: 'macos-latest'
+        python.version: '3.10'
     maxParallel: 4
   pool:
     vmImage: $(imageName)
