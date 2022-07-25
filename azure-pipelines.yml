@@ -34,6 +34,9 @@ jobs:
       Python39Windows:
         imageName: 'windows-latest'
         python.version: '3.9'
+      Python310Mac:
+        imageName: 'macos-latest'
+        python.version: '3.10'
     maxParallel: 4
   pool:
     vmImage: $(imageName)
@@ -46,33 +49,35 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip setuptools
-      pip install -r requirements.txt
+      python -m pip install -r requirements.txt
     displayName: 'Install dependencies'
 
-  - script: python setup.py sdist
+  - script: |
+      python setup.py build_ext --inplace
+      python setup.py sdist
     displayName: 'Build sdist'
 
   - script: |
-      pip freeze > installed.txt
-      pip uninstall -y -r installed.txt
+      python -m pip freeze > installed.txt
+      python -m pip uninstall -y -r installed.txt
     displayName: "Uninstall all packages"
 
   - script: |
-      pip install "torch==1.8.1+cpu" -f https://download.pytorch.org/whl/torch_stable.html
+      python -m pip install "torch==1.8.1+cpu" -f https://download.pytorch.org/whl/torch_stable.html
     displayName: 'Install oldest supported torch for python 3.6'
     condition: eq(variables['python.version'], '3.6')
 
   - bash: |
       SDIST=$(python -c "import os;print(os.listdir('./dist')[0])" 2>&1)
-      python -m pip install dist/$SDIST
+      python -m pip install dist/$SDIST --extra-index-url https://download.pytorch.org/whl/cpu
     displayName: 'Install from sdist'
 
   - script: |
-      pip install -r requirements.txt
+      python -m pip install -r requirements.txt
       python -m pytest spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
 
   - script: |
-      pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
+      python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
       python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
     displayName: 'Test backwards compatibility for v1.0 models'
