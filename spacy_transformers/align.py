@@ -81,6 +81,31 @@ def get_token_positions(spans: List[Span]) -> Dict[Token, int]:
     return token_positions
 
 
+def get_alignment_via_offset_mapping(
+    spans: List[Span],
+    offset_mapping,
+) -> Ragged:
+    # Tokens can occur more than once, and we need the alignment of each token
+    # to its place in the concatenated wordpieces array.
+    token_positions = get_token_positions(spans)
+    alignment: List[Set[int]] = [set() for _ in range(len(token_positions))]
+    wp_start = 0
+    for i, span in enumerate(spans):
+        span_mapping = offset_mapping[i]
+        span2wp = get_span2wp_from_offset_mapping(span, span_mapping.flatten())
+        for token, wp_js in zip(span, span2wp):
+            position = token_positions[token]
+            alignment[position].update(wp_start + j for j in wp_js)
+        wp_start += span_mapping.shape[0]
+    lengths: List[int] = []
+    flat: List[int] = []
+    for a in alignment:
+        lengths.append(len(a))
+        flat.extend(sorted(a))
+    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
+    return align
+
+
 def get_alignment(
     spans: List[Span],
     wordpieces: List[List[str]],
@@ -144,31 +169,6 @@ def get_alignment(
             position = token_positions[token]
             alignment[position].update(wp_start + j for j in wp_js)
         wp_start += len(wp_toks)
-    lengths: List[int] = []
-    flat: List[int] = []
-    for a in alignment:
-        lengths.append(len(a))
-        flat.extend(sorted(a))
-    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
-    return align
-
-
-def get_alignment_via_offset_mapping(
-    spans: List[Span],
-    offset_mapping,
-) -> Ragged:
-    # Tokens can occur more than once, and we need the alignment of each token
-    # to its place in the concatenated wordpieces array.
-    token_positions = get_token_positions(spans)
-    alignment: List[Set[int]] = [set() for _ in range(len(token_positions))]
-    wp_start = 0
-    for i, span in enumerate(spans):
-        span_mapping = offset_mapping[i]
-        span2wp = get_span2wp_from_offset_mapping(span, span_mapping.flatten())
-        for token, wp_js in zip(span, span2wp):
-            position = token_positions[token]
-            alignment[position].update(wp_start + j for j in wp_js)
-        wp_start += span_mapping.shape[0]
     lengths: List[int] = []
     flat: List[int] = []
     for a in alignment:
