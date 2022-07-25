@@ -68,8 +68,8 @@ jobs:
     condition: eq(variables['python.version'], '3.6')
 
   - script: |
-      python -m pip install -U pip setuptools
-      python -m pip install -r requirements.txt
+      python -m pip install -U pip setuptools wheel
+      python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
     displayName: "Install dependencies"
 
   - bash: |
