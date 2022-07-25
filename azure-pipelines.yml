@@ -77,6 +77,11 @@ jobs:
       python -m pip install dist/$SDIST --extra-index-url https://download.pytorch.org/whl/cpu
     displayName: 'Install from sdist'
 
+  - task: DeleteFiles@1
+    inputs:
+      contents: "spacy-transformers"
+    displayName: "Delete source directory"
+
   - script: |
       python -m pip freeze --exclude torch > installed.txt
       python -m pip uninstall -y -r installed.txt

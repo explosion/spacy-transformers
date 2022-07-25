@@ -14,9 +14,19 @@ ctypedef unordered_set[uint32_t]* unordered_set_uint32_t_ptr
 
 
 cpdef get_span2wp_from_offset_mapping(span, span_mapping):
-    char_to_token = _get_char_to_token(span)
+    cdef int span_idx = span[0].idx
+    cdef int span_i = span[0].i
+    cdef int i, rel_token_i
+    # size is +1 so that we don't have to check whether there's a final trailing    # space
+    char_to_token = numpy.empty((len(span.text) + 1,), dtype="int32")
+    char_to_token.fill(-1)
+    for token in span:
+        rel_token_i = token.i - span_i
+        for i in range(token.idx - span_idx, token.idx - span_idx + len(token) + 1):
+            char_to_token[i] = rel_token_i
+
     cdef vector[unordered_set_uint32_t_ptr] alignment
-    for token_i in range(len(span)):
+    for i in range(len(span)):
         alignment.push_back(new unordered_set[uint32_t]())
     _get_span2wp_alignment(
         &alignment,
@@ -25,6 +35,7 @@ cpdef get_span2wp_from_offset_mapping(span, span_mapping):
         span_mapping.size,
         numpy.ascontiguousarray(char_to_token),
     )
+
     cdef unordered_set_uint32_t_ptr s
     cdef vector[unordered_set_uint32_t_ptr].iterator it_v = alignment.begin()
     cdef unordered_set[uint32_t].iterator it_s
@@ -48,8 +59,8 @@ cdef void _get_span2wp_alignment(
         int span_mapping_length,
         int32_t[::1] char_to_token,
     ) nogil:
-    cdef uint32_t char_idx, start_idx, end_idx, token_i, wp_j
-    for _ in range(span_length):
+    cdef uint32_t char_idx, start_idx, end_idx, token_i, wp_j, i
+    for i in range(span_length):
         wp_j = 0
         while wp_j < span_mapping_length / 2:
             start_idx = span_mapping[wp_j*2]
@@ -57,20 +68,8 @@ cdef void _get_span2wp_alignment(
             char_idx = start_idx
             while char_idx < end_idx:
                 token_i = char_to_token[char_idx]
+                # TODO: add a warning if not mapped?
                 if token_i >= 0:
                     deref(alignment.at(token_i)).insert(wp_j)
                 char_idx += 1
             wp_j += 1
-
-
-def _get_char_to_token(span):
-    cdef int span_idx = span[0].idx
-    cdef int span_i = span[0].i
-    cdef int i, rel_token_i
-    char_to_token = numpy.empty((len(span.text) + 1,), dtype="int32")
-    char_to_token.fill(-1)
-    for token in span:
-        rel_token_i = token.i - span_i
-        for i in range(token.idx - span_idx, token.idx - span_idx + len(token) + 1):
-            char_to_token[i] = rel_token_i
-    return char_to_token
