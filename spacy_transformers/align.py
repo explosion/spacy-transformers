@@ -91,12 +91,12 @@ def get_alignment_via_offset_mapping(
     alignment: List[Set[int]] = [set() for _ in range(len(token_positions))]
     wp_start = 0
     for i, span in enumerate(spans):
-        span_mapping = offset_mapping[i]
-        span2wp = get_span2wp_from_offset_mapping(span, span_mapping.flatten())
+        span_offset_mapping = offset_mapping[i]
+        span2wp = get_span2wp_from_offset_mapping(span, span_offset_mapping)
         for token, wp_js in zip(span, span2wp):
             position = token_positions[token]
             alignment[position].update(wp_start + j for j in wp_js)
-        wp_start += span_mapping.shape[0]
+        wp_start += span_offset_mapping.shape[0]
     lengths: List[int] = []
     flat: List[int] = []
     for a in alignment:
