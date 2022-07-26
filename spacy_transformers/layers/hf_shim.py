@@ -64,7 +64,7 @@ class HFShim(PyTorchShim):
                     with open(vocab_file_path, "wb") as fileh:
                         fileh.write(hf_model.vocab_file_contents)
                     tokenizer.vocab_file = vocab_file_path
-                tok_dict["use_fast"] = tokenizer.is_fast
+                tok_dict["kwargs"] = {"use_fast": tokenizer.is_fast}
                 tokenizer.save_pretrained(str(temp_dir.absolute()))
                 for x in temp_dir.glob("**/*"):
                     if x.is_file():
@@ -94,10 +94,7 @@ class HFShim(PyTorchShim):
                 config_file = temp_dir / "config.json"
                 srsly.write_json(config_file, config_dict)
                 config = self.config_cls.from_pretrained(config_file)
-                tok_kwargs = {}
-                use_fast = tok_dict.pop("use_fast", None)
-                if use_fast is not None:
-                    tok_kwargs["use_fast"] = use_fast
+                tok_kwargs = tok_dict.pop("kwargs", {})
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
                 tokenizer = self.tokenizer_cls.from_pretrained(str(temp_dir.absolute()), **tok_kwargs)
