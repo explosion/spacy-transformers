@@ -350,7 +350,6 @@ class Transformer(TrainablePipe):
 
         DOCS: https://spacy.io/api/transformer#initialize
         """
-        validate_get_examples(get_examples, "Transformer.initialize")
         docs = [Doc(Vocab(), words=["hello"])]
         self.model.initialize(X=docs)
         if nlp is not None:
