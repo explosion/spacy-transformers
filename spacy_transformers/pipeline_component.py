@@ -5,7 +5,7 @@ from spacy.pipeline.trainable_pipe import TrainablePipe
 from spacy.pipeline.pipe import deserialize_config
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
-from spacy.training import Example, validate_examples, validate_get_examples
+from spacy.training import Example, validate_examples
 from spacy import util, Errors
 from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
