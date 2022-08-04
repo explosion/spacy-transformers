@@ -55,6 +55,8 @@ def make_transformer(
     model: Model[List[Doc], FullTransformerBatch],
     set_extra_annotations: Callable[[List[Doc], FullTransformerBatch], None],
     max_batch_items: int,
+    *,
+    update_listeners_in_predict: bool = True,
 ):
     """Construct a Transformer component, which lets you plug a model from the
     Huggingface transformers library into spaCy so you can use it in your
@@ -69,6 +71,9 @@ def make_transformer(
         callback to set additional information onto the batch of `Doc` objects.
         The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
+    update_listeners_in_predict (bool): set whether listeners should receive
+        data during prediction. This should be turned off when using the
+        transformer as a non-frozen annotating component.
     """
     return Transformer(
         nlp.vocab,
@@ -76,6 +81,7 @@ def make_transformer(
         set_extra_annotations,
         max_batch_items=max_batch_items,
         name=name,
+        update_listeners_in_predict=update_listeners_in_predict,
     )
 
 
@@ -102,6 +108,9 @@ class Transformer(TrainablePipe):
         callback to set additional information onto the batch of `Doc` objects.
         The doc._.trf_data attribute is set prior to calling the callback.
         By default, no additional annotations are set.
+    update_listeners_in_predict (bool): set whether listeners should receive
+        data during prediction. This should be turned off when using the
+        transformer as a non-frozen annotating component.
     """
 
     def __init__(
@@ -112,6 +121,7 @@ class Transformer(TrainablePipe):
         *,
         name: str = "transformer",
         max_batch_items: int = 128 * 32,  # Max size of padded batch
+        update_listeners_in_predict: bool = True,
     ):
         """Initialize the transformer component."""
         self.name = name
@@ -120,6 +130,7 @@ class Transformer(TrainablePipe):
         if not isinstance(self.model, Model):
             raise ValueError(f"Expected Thinc Model, got: {type(self.model)}")
         self.set_extra_annotations = set_extra_annotations
+        self.update_listeners_in_predict = update_listeners_in_predict
         self.cfg = {"max_batch_items": max_batch_items}
         self.listener_map: Dict[str, List[TransformerListener]] = {}
         install_extensions()
@@ -227,8 +238,9 @@ class Transformer(TrainablePipe):
         else:
             activations = self.model.predict(docs)
         batch_id = TransformerListener.get_batch_id(docs)
-        for listener in self.listeners:
-            listener.receive(batch_id, activations.doc_data, None)
+        if self.update_listeners_in_predict:
+            for listener in self.listeners:
+                listener.receive(batch_id, activations.doc_data, None)
         return activations
 
     def set_annotations(
@@ -305,7 +317,7 @@ class Transformer(TrainablePipe):
             for i, d_trf_data in enumerate(d_trf_datas):
                 for d_tensor in d_trf_data.tensors:
                     # type: ignore
-                    losses[self.name] += float((d_tensor ** 2).sum())
+                    losses[self.name] += float((d_tensor**2).sum())
                 if i >= len(d_tensors):
                     d_tensors.append(list(d_trf_data.tensors))
                 else:
