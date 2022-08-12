@@ -28,7 +28,7 @@ cpdef get_span2wp_from_offset_mapping(span, wp_char_offsets):
         ):
             char_to_sp_token[char_idx] = rel_token_i
 
-    # align all wordpiece tokens to one or more spacy token indicies
+    # align all wordpiece tokens to one or more spacy token indices
     cdef vector[unordered_set_uint32_t_ptr] alignment
     for _ in range(len(span)):
         alignment.push_back(new unordered_set[uint32_t]())
