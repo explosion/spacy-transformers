@@ -45,8 +45,8 @@ class build_ext_subclass(build_ext, build_ext_options):
 def setup_package():
     ext_modules = [
         Extension(
-            "spacy_transformers._align",
-            ["spacy_transformers/_align.pyx"],
+            "spacy_transformers.align",
+            ["spacy_transformers/align.pyx"],
             language="c++",
             include_dirs=[numpy.get_include()],
             extra_compile_args=["-std=c++11"],
