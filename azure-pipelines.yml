@@ -52,6 +52,14 @@ jobs:
   - script: python setup.py sdist
     displayName: 'Build sdist'
 
+  - script: python -m mypy spacy_transformers
+    displayName: 'Run mypy'
+
+  - task: DeleteFiles@1
+    inputs:
+      contents: "spacy_transformers"
+    displayName: "Delete source directory"
+
   - script: |
       pip freeze > installed.txt
       pip uninstall -y -r installed.txt
