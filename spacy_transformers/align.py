@@ -81,6 +81,8 @@ def get_alignment_via_offset_mapping(
     spans: List[Span],
     offset_mapping,
 ) -> Ragged:
+    if len(spans) != len(offset_mapping):
+        raise ValueError("Cannot align batches of different sizes.")
     # Tokens can occur more than once, and we need the alignment of each token
     # to its place in the concatenated wordpieces array.
     token_positions = get_token_positions(spans)
