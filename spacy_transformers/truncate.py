@@ -1,7 +1,9 @@
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Union, TypeVar
 import numpy
-from thinc.types import Ragged, Ints2d
+from thinc.types import Ragged, Ints2d, Floats2d
 from .data_classes import WordpieceBatch
+
+ArrayT = TypeVar("ArrayT", bound=Union[Ints2d, Floats2d])
 
 
 def truncate_oversize_splits(
@@ -58,28 +60,28 @@ def _truncate_tokens(wordpieces: WordpieceBatch, mask: numpy.ndarray) -> Wordpie
     n_seq = len(wordpieces)
     mask1d = mask.ravel()
     mask = mask.reshape((n_seq, -1))
-    n_wp = mask.size
-    n_keep = mask.sum()
 
-    strings = []
+    strings: List[List[str]] = []
     for i, seq in enumerate(wordpieces.strings):
         strings.append([])
         for j, token in enumerate(seq):
             if mask[i, j]:
                 strings[-1].append(token)
 
-    def filter_array(data: Optional[Ints2d]) -> Optional[Ints2d]:
-        if data is None:
-            return None
+    def filter_array(data: ArrayT) -> ArrayT:
         data1d = data.reshape((-1,))
-        return data1d[mask1d].reshape((n_seq, -1))
+        return data1d[mask1d].reshape((n_seq, -1))  # type: ignore
+
+    filtered_token_type_ids = None
+    if wordpieces.token_type_ids is not None:
+        filtered_token_type_ids = filter_array(wordpieces.token_type_ids)
 
     return WordpieceBatch(
         strings=strings,
         input_ids=filter_array(wordpieces.input_ids),
         attention_mask=filter_array(wordpieces.attention_mask),
-        lengths=numpy.array([len(seq) for seq in strings], dtype="i"),
-        token_type_ids=filter_array(wordpieces.token_type_ids),
+        lengths=[len(seq) for seq in strings],
+        token_type_ids=filtered_token_type_ids,
     )
 
 

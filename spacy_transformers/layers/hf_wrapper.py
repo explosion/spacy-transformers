@@ -1,23 +1,25 @@
 from typing import Callable, Optional, Any
 from thinc.layers.pytorchwrapper import forward as pt_forward
-from thinc.layers.pytorchwrapper import convert_pytorch_default_inputs, convert_pytorch_default_outputs
+from thinc.layers.pytorchwrapper import convert_pytorch_default_inputs
+from thinc.layers.pytorchwrapper import convert_pytorch_default_outputs
 from thinc.api import registry, Model
 
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 
+from ..data_classes import HFObjects
 from .hf_shim import HFShim
 
 
 @registry.layers("HFWrapper.v1")
 def HFWrapper(
-    hf_model: "HFObjects",
+    hf_model: HFObjects,
     convert_inputs: Optional[Callable] = None,
     convert_outputs: Optional[Callable] = None,
     mixed_precision: bool = False,
     grad_scaler_config: dict = {},
-    config_cls = AutoConfig,
-    model_cls = AutoModel,
-    tokenizer_cls = AutoTokenizer,
+    config_cls=AutoConfig,
+    model_cls=AutoModel,
+    tokenizer_cls=AutoTokenizer,
 ) -> Model[Any, Any]:
     """Wrap a PyTorch HF model, so that it has the same API as Thinc models.
     To optimize the model, you'll need to create a PyTorch optimizer and call

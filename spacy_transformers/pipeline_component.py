@@ -212,7 +212,7 @@ class Transformer(TrainablePipe):
                 self.set_annotations(subbatch, self.predict(subbatch))
             yield from outer_batch
 
-    def predict(self, docs: Iterable[Doc]) -> FullTransformerBatch:
+    def predict(self, docs: List[Doc]) -> FullTransformerBatch:
         """Apply the pipeline's model to a batch of docs, without modifying them.
         Returns the extracted features as the FullTransformerBatch dataclass.
 
@@ -232,7 +232,7 @@ class Transformer(TrainablePipe):
         return activations
 
     def set_annotations(
-        self, docs: Iterable[Doc], predictions: FullTransformerBatch
+        self, docs: List[Doc], predictions: FullTransformerBatch
     ) -> None:
         """Assign the extracted features to the Doc objects. By default, the
         TransformerData object is written to the doc._.trf_data attribute. Your
@@ -294,7 +294,7 @@ class Transformer(TrainablePipe):
             return losses
         set_dropout_rate(self.model, drop)
         trf_full, bp_trf_full = self.model.begin_update(docs)
-        d_tensors = []
+        d_tensors: List = []
         losses.setdefault(self.name, 0.0)
 
         def accumulate_gradient(d_trf_datas: List[TransformerData]):
@@ -304,8 +304,7 @@ class Transformer(TrainablePipe):
             nonlocal d_tensors
             for i, d_trf_data in enumerate(d_trf_datas):
                 for d_tensor in d_trf_data.tensors:
-                    # type: ignore
-                    losses[self.name] += float((d_tensor ** 2).sum())
+                    losses[self.name] += float((d_tensor**2).sum())  # type:ignore
                 if i >= len(d_tensors):
                     d_tensors.append(list(d_trf_data.tensors))
                 else:
@@ -317,7 +316,7 @@ class Transformer(TrainablePipe):
             nonlocal d_tensors
             accumulate_gradient(d_trf_datas)
             d_trf_full = trf_full.unsplit_by_doc(d_tensors)
-            d_docs = bp_trf_full(d_trf_full)
+            d_docs = bp_trf_full(d_trf_full)  # type: ignore
             if sgd is not None:
                 self.model.finish_update(sgd)
             d_tensors = []
@@ -416,5 +415,5 @@ class Transformer(TrainablePipe):
             "cfg": lambda p: self.cfg.update(deserialize_config(p)),
             "model": load_model,
         }
-        util.from_disk(path, deserialize, exclude)
+        util.from_disk(path, deserialize, exclude)  # type: ignore
         return self

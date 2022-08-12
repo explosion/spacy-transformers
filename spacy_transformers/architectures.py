@@ -6,6 +6,7 @@ from spacy.tokens import Doc
 from .layers import TransformerModel, TransformerListener
 from .layers import trfs2arrays, split_trf_batch
 from .util import registry
+from .data_classes import FullTransformerBatch
 
 
 @registry.architectures.register("spacy-transformers.TransformerListener.v1")
@@ -38,7 +39,7 @@ def transformer_listener_tok2vec_v1(
         string will almost always be fine.
     """
     listener = TransformerListener(upstream_name=upstream)
-    model = chain(listener, trfs2arrays(pooling, grad_factor))
+    model: Model = chain(listener, trfs2arrays(pooling, grad_factor))
     model.set_ref("listener", listener)
     return model
 
@@ -180,7 +181,7 @@ def create_TransformerModel_v1(
     name: str,
     get_spans: Callable,
     tokenizer_config: dict = {},
-) -> Model[List[Doc], "FullTransformerBatch"]:
+) -> Model[List[Doc], FullTransformerBatch]:
     model = TransformerModel(name, get_spans, tokenizer_config)
     return model
 
@@ -191,7 +192,7 @@ def create_TransformerModel_v2(
     get_spans: Callable,
     tokenizer_config: dict = {},
     transformer_config: dict = {},
-) -> Model[List[Doc], "FullTransformerBatch"]:
+) -> Model[List[Doc], FullTransformerBatch]:
     model = TransformerModel(name, get_spans, tokenizer_config, transformer_config)
     return model
 
@@ -204,7 +205,7 @@ def create_TransformerModel_v3(
     transformer_config: dict = {},
     mixed_precision: bool = False,
     grad_scaler_config: dict = {},
-) -> Model[List[Doc], "FullTransformerBatch"]:
+) -> Model[List[Doc], FullTransformerBatch]:
     """Pretrained transformer model that can be finetuned for downstream tasks.
 
     name (str): Name of the pretrained Huggingface model to use.

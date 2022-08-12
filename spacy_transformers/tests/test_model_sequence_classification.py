@@ -92,7 +92,7 @@ def test_model_for_sequence_classification():
                 copied.set_grad(name, self.get_grad(name).copy())
             return copied
 
-    def init(model: Model, X=None, Y=None):
+    def init(model: ClassificationTransformerModel, X=None, Y=None):
         if model.attrs["has_transformer"]:
             return
         name = model.attrs["name"]

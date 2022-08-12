@@ -122,7 +122,7 @@ def set_pytorch_transformer(model, hf_model: HFObjects):
     model.set_dim("nO", hf_model.transformer.config.hidden_size)
 
 
-def init(model: Model, X=None, Y=None):
+def init(model: TransformerModel, X=None, Y=None):
     if model.attrs["has_transformer"]:
         return
     name = model.attrs["name"]
@@ -237,9 +237,9 @@ def huggingface_from_pretrained(
     source: Union[Path, str],
     tok_config: Dict,
     trf_config: Dict,
-    config_cls = AutoConfig,
-    model_cls = AutoModel,
-    tokenizer_cls = AutoTokenizer,
+    config_cls=AutoConfig,
+    model_cls=AutoModel,
+    tokenizer_cls=AutoTokenizer,
 ) -> HFObjects:
     """Create a Huggingface transformer model from pretrained weights. Will
     download the model if it is not already downloaded.
@@ -249,7 +249,7 @@ def huggingface_from_pretrained(
     tok_config (dict): Settings to pass to the tokenizer.
     trf_config (dict): Settings to pass to the transformer.
     """
-    if hasattr(source, "absolute"):
+    if isinstance(source, Path):
         str_path = str(source.absolute())
     else:
         str_path = source
