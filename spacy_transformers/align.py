@@ -70,7 +70,11 @@ def _apply_empty_alignment(ops, align, X):
 
 def get_token_positions(spans: List[Span]) -> Dict[Token, int]:
     token_positions: Dict[Token, int] = {}
+    seen_docs = set()
     for span in spans:
+        if span.doc in seen_docs:
+            continue
+        seen_docs.add(span.doc)
         for token in span.doc:
             if token not in token_positions:
                 token_positions[token] = len(token_positions)
