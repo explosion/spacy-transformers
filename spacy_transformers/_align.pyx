@@ -18,8 +18,7 @@ cpdef get_span2wp_from_offset_mapping(span, wp_char_offsets):
     cdef int span_i = span[0].i
     cdef int char_idx, rel_token_i
     # size is +1 so we don't have to check whether the text has a trailing space
-    char_to_sp_token = numpy.empty((len(span.text) + 1,), dtype="int32")
-    char_to_sp_token.fill(-1)
+    char_to_sp_token = numpy.full((len(span.text) + 1,), -1, dtype="int32")
     for token in span:
         rel_token_i = token.i - span_i
         for char_idx in range(
