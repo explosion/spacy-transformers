@@ -188,7 +188,7 @@ def get_alignment(
     return align
 
 
-cpdef get_span2wp_from_offset_mapping(span, wp_char_offsets):
+def get_span2wp_from_offset_mapping(span, wp_char_offsets):
     # create a mapping of char indices to spacy token indices
     cdef int span_idx = span[0].idx
     cdef int span_i = span[0].i
