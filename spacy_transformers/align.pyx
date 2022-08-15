@@ -91,7 +91,7 @@ def get_token_positions(spans: List[Span]) -> Dict[Token, int]:
 
 def get_alignment_via_offset_mapping(
     spans: List[Span],
-    offset_mapping,
+    offset_mapping: List[Tuple[int]],
 ) -> Ragged:
     if len(spans) != len(offset_mapping):
         raise ValueError("Cannot align batches of different sizes.")
