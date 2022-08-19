@@ -212,7 +212,7 @@ class Transformer(TrainablePipe):
                 self.set_annotations(subbatch, self.predict(subbatch))
             yield from outer_batch
 
-    def predict(self, docs: List[Doc]) -> FullTransformerBatch:
+    def predict(self, docs: Iterable[Doc]) -> FullTransformerBatch:
         """Apply the pipeline's model to a batch of docs, without modifying them.
         Returns the extracted features as the FullTransformerBatch dataclass.
 
@@ -221,6 +221,7 @@ class Transformer(TrainablePipe):
 
         DOCS: https://spacy.io/api/transformer#predict
         """
+        docs = list(docs)
         if not any(len(doc) for doc in docs):
             # Handle cases where there are no tokens in any docs.
             activations = FullTransformerBatch.empty(len(docs))
@@ -246,7 +247,7 @@ class Transformer(TrainablePipe):
         doc_data = list(predictions.doc_data)
         for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
-        self.set_extra_annotations(docs, predictions)
+        self.set_extra_annotations(list(docs), predictions)
 
     def update(
         self,
