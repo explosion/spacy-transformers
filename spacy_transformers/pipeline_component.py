@@ -233,7 +233,7 @@ class Transformer(TrainablePipe):
         return activations
 
     def set_annotations(
-        self, docs: List[Doc], predictions: FullTransformerBatch
+        self, docs: Iterable[Doc], predictions: FullTransformerBatch
     ) -> None:
         """Assign the extracted features to the Doc objects. By default, the
         TransformerData object is written to the doc._.trf_data attribute. Your
