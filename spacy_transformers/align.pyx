@@ -112,7 +112,10 @@ def get_alignment_via_offset_mapping(
     for a in alignment:
         lengths.append(len(a))
         flat.extend(sorted(a))
-    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
+    align = Ragged(
+        cast(Ints1d, numpy.array(flat, dtype="i")),
+        cast(Ints1d, numpy.array(lengths, dtype="i")),
+    )
     return align
 
 
@@ -184,7 +187,10 @@ def get_alignment(
     for a in alignment:
         lengths.append(len(a))
         flat.extend(sorted(a))
-    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
+    align = Ragged(
+        cast(Ints1d, numpy.array(flat, dtype="i")),
+        cast(Ints1d, numpy.array(lengths, dtype="i")),
+    )
     return align
 
 

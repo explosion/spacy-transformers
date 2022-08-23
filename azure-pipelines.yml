@@ -56,6 +56,14 @@ jobs:
     displayName: 'Install oldest supported torch for python 3.6'
     condition: eq(variables['python.version'], '3.6')
 
+  - script: python -m mypy spacy_transformers
+    displayName: 'Run mypy'
+
+  - task: DeleteFiles@1
+    inputs:
+      contents: "spacy_transformers"
+    displayName: "Delete source directory"
+
   - script: |
       python -m pip install -r requirements.txt
     displayName: 'Install dependencies'
@@ -82,10 +90,17 @@ jobs:
 
   - script: |
       python -m pip install -r requirements.txt
-      python -m pytest spacy_transformers --cov=spacy_transformers
+      python -m pytest --pyargs spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
 
   - script: |
       python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
       python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
     displayName: 'Test backwards compatibility for v1.0 models'
+    condition: and(startsWith(variables['imageName'], 'ubuntu'), eq(variables['python.version'], '3.9'))
+
+  - script: |
+      pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.0/en_core_web_trf-3.4.0-py3-none-any.whl --no-deps
+      python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
+    displayName: 'Test backwards compatibility for v1.1 models'
+    condition: and(startsWith(variables['imageName'], 'ubuntu'), eq(variables['python.version'], '3.9'))

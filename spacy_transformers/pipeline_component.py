@@ -221,6 +221,7 @@ class Transformer(TrainablePipe):
 
         DOCS: https://spacy.io/api/transformer#predict
         """
+        docs = list(docs)
         if not any(len(doc) for doc in docs):
             # Handle cases where there are no tokens in any docs.
             activations = FullTransformerBatch.empty(len(docs))
@@ -246,7 +247,7 @@ class Transformer(TrainablePipe):
         doc_data = list(predictions.doc_data)
         for doc, data in zip(docs, doc_data):
             doc._.trf_data = data
-        self.set_extra_annotations(docs, predictions)
+        self.set_extra_annotations(list(docs), predictions)
 
     def update(
         self,
@@ -294,7 +295,7 @@ class Transformer(TrainablePipe):
             return losses
         set_dropout_rate(self.model, drop)
         trf_full, bp_trf_full = self.model.begin_update(docs)
-        d_tensors = []
+        d_tensors: List = []
         losses.setdefault(self.name, 0.0)
 
         def accumulate_gradient(d_trf_datas: List[TransformerData]):
@@ -304,8 +305,7 @@ class Transformer(TrainablePipe):
             nonlocal d_tensors
             for i, d_trf_data in enumerate(d_trf_datas):
                 for d_tensor in d_trf_data.tensors:
-                    # type: ignore
-                    losses[self.name] += float((d_tensor ** 2).sum())
+                    losses[self.name] += float((d_tensor**2).sum())  # type:ignore
                 if i >= len(d_tensors):
                     d_tensors.append(list(d_trf_data.tensors))
                 else:
@@ -317,7 +317,7 @@ class Transformer(TrainablePipe):
             nonlocal d_tensors
             accumulate_gradient(d_trf_datas)
             d_trf_full = trf_full.unsplit_by_doc(d_tensors)
-            d_docs = bp_trf_full(d_trf_full)
+            d_docs = bp_trf_full(d_trf_full)  # type: ignore
             if sgd is not None:
                 self.model.finish_update(sgd)
             d_tensors = []
@@ -416,5 +416,5 @@ class Transformer(TrainablePipe):
             "cfg": lambda p: self.cfg.update(deserialize_config(p)),
             "model": load_model,
         }
-        util.from_disk(path, deserialize, exclude)
+        util.from_disk(path, deserialize, exclude)  # type: ignore
         return self

@@ -10,7 +10,7 @@ SpannerT = Callable[[List[Doc]], List[List[Span]]]
 def get_strided_spans(
     docs: Iterable[Doc], window: int, stride: int
 ) -> List[List[Span]]:
-    spans = []
+    spans: List[List[Span]] = []
     for doc in docs:
         start = 0
         spans.append([])
@@ -25,7 +25,7 @@ def get_strided_spans(
     return spans
 
 
-@registry.span_getters("spacy-transformers.strided_spans.v1")
+@registry.span_getters("spacy-transformers.strided_spans.v1")  # type: ignore
 def configure_strided_spans(window: int, stride: int) -> SpannerT:
     """
     Set the 'window' and 'stride' options for getting strided spans.
@@ -42,7 +42,7 @@ def get_sent_spans(docs: Iterable[Doc]) -> List[List[Span]]:
     return [list(doc.sents) for doc in docs]
 
 
-@registry.span_getters("spacy-transformers.sent_spans.v1")
+@registry.span_getters("spacy-transformers.sent_spans.v1")  # type: ignore
 def configure_get_sent_spans() -> Callable:
     """
     Create a `span_getter` that uses sentence boundary markers to extract
@@ -57,7 +57,7 @@ def get_doc_spans(docs: Iterable[Doc]) -> List[List[Span]]:
     return [[doc[:]] for doc in docs]
 
 
-@registry.span_getters("spacy-transformers.doc_spans.v1")
+@registry.span_getters("spacy-transformers.doc_spans.v1")  # type: ignore
 def configure_get_doc_spans() -> Callable:
     """
     Create a `span_getter` that uses the whole document as its spans. This is
@@ -65,10 +65,6 @@ def configure_get_doc_spans() -> Callable:
     texts.
     """
     return get_doc_spans
-
-
-get_sent_spans = configure_get_sent_spans()
-get_doc_spans = configure_get_doc_spans()
 
 
 __all__ = [

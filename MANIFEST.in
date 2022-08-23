@@ -3,3 +3,4 @@ recursive-exclude spacy_transformers *.cpp
 include LICENSE
 include README.md
 include pyproject.toml
+include spacy_transformers/py.typed
