@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, cast
 from transformers.file_utils import ModelOutput
+from transformers.modeling_outputs import BaseModelOutput
 from thinc.api import Model
 from thinc.types import Ragged, Floats2d
 from ..data_classes import TransformerData
@@ -22,12 +23,12 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     backprops = []
     for trf_data in trf_datas:
         if "last_hidden_state" in trf_data.model_output:
-            tensor_t_i = trf_data.model_output.last_hidden_state
+            tensor_t_i = cast(BaseModelOutput, trf_data.model_output).last_hidden_state
             if tensor_t_i.size == 0:
                 # account for empty trf_data in the batch
                 outputs.append(model.ops.alloc2f(0, 0))
             else:
-                src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)
+                src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)  # type: ignore
                 dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
                 output, get_d_dst = pooling(dst, is_train)
                 outputs.append(output)
@@ -41,15 +42,15 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
             d_model_output = ModelOutput(
                 last_hidden_state=model.ops.alloc(
-                    trf_data.model_output.last_hidden_state.shape,
-                    dtype=trf_data.model_output.last_hidden_state.dtype,
+                    trf_data.model_output.last_hidden_state.shape,  # type: ignore
+                    dtype=trf_data.model_output.last_hidden_state.dtype,  # type: ignore
                 )
             )
             d_dst = get_d_dst(d_output)
             d_src = get_d_src(d_dst)
             d_src *= grad_factor
             d_model_output["last_hidden_state"] = d_src.reshape(
-                trf_data.model_output.last_hidden_state.shape
+                cast(BaseModelOutput, trf_data.model_output).last_hidden_state.shape
             )
             d_trf_datas.append(
                 TransformerData(

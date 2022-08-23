@@ -12,7 +12,6 @@ from thinc.api import Config, get_current_ops
 from numpy.testing import assert_array_equal
 
 from .. import TransformerData
-from ..util import make_tempdir
 
 
 DEFAULT_CONFIG = {

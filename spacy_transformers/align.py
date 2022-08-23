@@ -9,10 +9,10 @@ from thinc.types import Ragged, Floats2d, Ints1d
 def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Callable]:
     """Align wordpiece data (X) to match tokens, and provide a callback to
     reverse it.
- 
+
     This function returns a Ragged array, which represents the fact that one
     token may be aligned against multiple wordpieces. It's a nested list,
-    concatenated with a lengths array to indicate the nested structure. 
+    concatenated with a lengths array to indicate the nested structure.
 
     The alignment is also a Ragged array, where the lengths indicate how many
     wordpieces each token is aligned against. The output ragged therefore has
@@ -26,7 +26,7 @@ def apply_alignment(ops: Ops, align: Ragged, X: Floats2d) -> Tuple[Ragged, Calla
             Y[i] = X[index]
 
     Which is vectorized via numpy advanced indexing:
-        
+
         Y = X[align.data]
 
     The inverse operation, for the backward pass, uses the 'scatter_add' op
@@ -100,7 +100,10 @@ def get_alignment_via_offset_mapping(spans: List[Span], token_data) -> Ragged:
     for a in alignment:
         lengths.append(len(a))
         flat.extend(sorted(a))
-    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
+    align = Ragged(
+        cast(Ints1d, numpy.array(flat, dtype="i")),
+        cast(Ints1d, numpy.array(lengths, dtype="i")),
+    )
     return align
 
 
@@ -112,7 +115,7 @@ def get_alignment(
     """Compute a ragged alignment array that records, for each unique token in
     `spans`, the corresponding indices in the flattened `wordpieces` array.
     For instance, imagine you have two overlapping spans:
-    
+
         [[I, like, walking], [walking, outdoors]]
 
     And their wordpieces are:
@@ -172,5 +175,8 @@ def get_alignment(
     for a in alignment:
         lengths.append(len(a))
         flat.extend(sorted(a))
-    align = Ragged(numpy.array(flat, dtype="i"), numpy.array(lengths, dtype="i"))
+    align = Ragged(
+        cast(Ints1d, numpy.array(flat, dtype="i")),
+        cast(Ints1d, numpy.array(lengths, dtype="i")),
+    )
     return align

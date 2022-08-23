@@ -1,10 +1,11 @@
+from typing import Optional, List, Dict, Any, Union, Tuple, cast
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Union, Tuple
 import torch
 import numpy
 from transformers.tokenization_utils import BatchEncoding
 from transformers.file_utils import ModelOutput
-from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd, Ints2d
+from transformers.modeling_outputs import BaseModelOutput
+from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd, Ints1d, Ints2d
 from thinc.api import NumpyOps, get_array_module, xp2torch, torch2xp
 from spacy.tokens import Span
 import srsly
@@ -158,7 +159,10 @@ class TransformerData:
 
     @classmethod
     def empty(cls) -> "TransformerData":
-        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
+        align = Ragged(
+            cast(Ints1d, numpy.zeros((0,), dtype="i")),
+            cast(Ints1d, numpy.zeros((0,), dtype="i")),
+        )
         return cls(
             wordpieces=WordpieceBatch.empty(), model_output=ModelOutput(), align=align
         )
@@ -172,7 +176,10 @@ class TransformerData:
             model_output=ModelOutput(
                 last_hidden_state=xp.zeros((1, length, width), dtype="f")
             ),
-            align=Ragged(numpy.arange(length), numpy.ones((length,), dtype="i")),
+            align=Ragged(
+                cast(Ints1d, numpy.arange(length)),
+                cast(Ints1d, numpy.ones((length,), dtype="i")),
+            ),
         )
 
     @property
@@ -187,7 +194,7 @@ class TransformerData:
     @property
     def width(self) -> int:
         if "last_hidden_state" in self.model_output:
-            return self.model_output.last_hidden_state.shape[-1]
+            return cast(BaseModelOutput, self.model_output).last_hidden_state.shape[-1]
         else:
             raise ValueError("Cannot find last hidden state")
 
@@ -258,9 +265,12 @@ class FullTransformerBatch:
 
     @classmethod
     def empty(cls, nr_docs) -> "FullTransformerBatch":
-        spans = [[] for _ in range(nr_docs)]
+        spans: List[List[Span]] = [[] for _ in range(nr_docs)]
         doc_data = [TransformerData.empty() for _ in range(nr_docs)]
-        align = Ragged(numpy.zeros((0,), dtype="i"), numpy.zeros((0,), dtype="i"))
+        align = Ragged(
+            cast(Ints1d, numpy.zeros((0,), dtype="i")),
+            cast(Ints1d, numpy.zeros((0,), dtype="i")),
+        )
         return cls(
             spans=spans,
             wordpieces=WordpieceBatch.empty(),
@@ -317,7 +327,7 @@ class FullTransformerBatch:
 
         # Convert all outputs to XP arrays.
         xp_model_output = ModelOutput()
-        last_hidden_state = self.model_output.last_hidden_state
+        last_hidden_state = cast(BaseModelOutput, self.model_output).last_hidden_state
         for key, output in self.model_output.items():
             if isinstance(output, torch.Tensor):
                 xp_model_output[key] = torch2xp(output)

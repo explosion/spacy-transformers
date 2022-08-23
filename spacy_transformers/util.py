@@ -1,4 +1,4 @@
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Set
 from pathlib import Path
 import random
 from transformers import AutoModel, AutoTokenizer
@@ -15,8 +15,8 @@ import warnings
 
 
 # fmt: off
-registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)
-registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)
+registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)  # type: ignore
+registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)  # type: ignore
 # fmt: on
 
 
@@ -35,7 +35,7 @@ def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
         "huggingface_from_pretrained(source, tok_config, trf_config) -> HFObjects",
         DeprecationWarning,
     )
-    if hasattr(source, "absolute"):
+    if isinstance(source, Path):
         str_path = str(source.absolute())
     else:
         str_path = source
@@ -119,7 +119,7 @@ def batch_by_length(seqs, max_words: int) -> List[List[int]]:
     # Check lengths match
     assert sum(len(b) for b in batches) == len(seqs)
     # Check no duplicates
-    seen = set()
+    seen: Set[int] = set()
     for b in batches:
         seen.update(id(item) for item in b)
     assert len(seen) == len(seqs)

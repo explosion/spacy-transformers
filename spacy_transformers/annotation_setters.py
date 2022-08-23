@@ -10,14 +10,11 @@ def null_annotation_setter(docs: List[Doc], trf_data: FullTransformerBatch) -> N
     pass
 
 
-@registry.annotation_setters("spacy-transformers.null_annotation_setter.v1")
+@registry.annotation_setters("spacy-transformers.null_annotation_setter.v1")  # type: ignore
 def configure_null_annotation_setter() -> Callable[
     [List[Doc], FullTransformerBatch], None
 ]:
     return null_annotation_setter
-
-
-null_annotation_setter = configure_null_annotation_setter()
 
 
 __all__ = ["null_annotation_setter", "configure_null_annotation_setter"]
