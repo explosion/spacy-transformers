@@ -248,11 +248,11 @@ cdef void _get_span2wp_alignment(
         end_idx = wp_char_offsets[wp_j][1]
         char_idx = start_idx
         while char_idx < end_idx:
-            if char_idx >= 0 and char_idx < char_to_sp_token_length:
+            if 0 <= char_idx < char_to_sp_token_length:
                 token_i = char_to_sp_token[char_idx]
             else:
                 token_i = -1
-            if token_i >= 0 and token_i < alignment_size:
+            if 0 <= token_i < alignment_size:
                 deref(alignment.at(token_i)).insert(wp_j)
             char_idx += 1
         wp_j += 1
