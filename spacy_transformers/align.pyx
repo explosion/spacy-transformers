@@ -4,7 +4,7 @@ import numpy
 from spacy_alignments.tokenizations import get_alignments
 from spacy.tokens import Span, Token
 from thinc.api import Ops
-from thinc.types import Ragged, Floats2d, Ints1d
+from thinc.types import Ragged, Floats2d, Ints1d, Ints2d
 
 from cython.operator cimport dereference as deref
 from cython.operator cimport preincrement as preinc
@@ -91,7 +91,7 @@ def get_token_positions(spans: List[Span]) -> Dict[Token, int]:
 
 def get_alignment_via_offset_mapping(
     spans: List[Span],
-    offset_mapping: List[Tuple[int]],
+    offset_mapping: Ints2d,
 ) -> Ragged:
     if len(spans) != len(offset_mapping):
         raise ValueError("Cannot align batches of different sizes.")
