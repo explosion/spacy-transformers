@@ -58,16 +58,32 @@ class TransformerListener(Model):
 
 def forward(model: TransformerListener, docs, is_train):
     if is_train:
-        model.verify_inputs(docs)
-        return model._outputs, model.backprop_and_clear
+        # This might occur during training when the tok2vec layer is frozen / hasn't been updated.
+        # In that case, it should be set to "annotating" so we can retrieve the embeddings from the doc.
+        if model._batch_id is None:
+            outputs = []
+            for doc in docs:
+                if doc._.trf_data is None:
+                    # TODO move to errors.py
+                    raise ValueError(
+                        "If the embedding layer is not updated during training, include it in 'annotating components'"
+                    )
+                else:
+                    outputs.append(doc._.trf_data)
+            return outputs, _empty_backprop
+        else:
+            model.verify_inputs(docs)
+            return model._outputs, model.backprop_and_clear
     else:
         width = model.get_dim("nO")
         outputs = []
         for doc in docs:
             if doc._.trf_data is None:
-                outputs.append(
-                    TransformerData.zeros(len(doc), width, xp=model.ops.xp)
-                )
+                outputs.append(TransformerData.zeros(len(doc), width, xp=model.ops.xp))
             else:
                 outputs.append(doc._.trf_data)
         return outputs, lambda d_data: []
+
+
+def _empty_backprop(dX):
+    return []
