@@ -31,9 +31,9 @@ jobs:
       Python39Linux:
         imageName: 'ubuntu-latest'
         python.version: '3.9'
-      Python39Windows:
+      Python310Windows:
         imageName: 'windows-latest'
-        python.version: '3.9'
+        python.version: '3.10'
     maxParallel: 4
   pool:
     vmImage: $(imageName)
@@ -51,6 +51,11 @@ jobs:
 
   - script: python setup.py sdist
     displayName: 'Build sdist'
+
+  - task: DeleteFiles@1
+    inputs:
+      contents: "spacy_transformers"
+    displayName: "Delete source directory"
 
   - script: |
       pip freeze > installed.txt
