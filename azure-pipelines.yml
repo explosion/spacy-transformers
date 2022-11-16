@@ -31,9 +31,9 @@ jobs:
       Python39Linux:
         imageName: 'ubuntu-latest'
         python.version: '3.9'
-      Python39Windows:
+      Python310Windows:
         imageName: 'windows-latest'
-        python.version: '3.9'
+        python.version: '3.10'
     maxParallel: 4
   pool:
     vmImage: $(imageName)
@@ -54,6 +54,7 @@ jobs:
 
   - script: python -m mypy spacy_transformers
     displayName: 'Run mypy'
+    condition: ne(variables['python.version'], '3.6')
 
   - task: DeleteFiles@1
     inputs:
