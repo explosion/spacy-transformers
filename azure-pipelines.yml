@@ -70,6 +70,11 @@ jobs:
     displayName: 'Install oldest supported torch for python 3.6'
     condition: eq(variables['python.version'], '3.6')
 
+  - script: |
+      pip install "torch<1.13.0+cpu" --extra-index-url https://download.pytorch.org/whl/cpu
+    displayName: 'Install newest working torch for python 3.7+'
+    condition: ne(variables['python.version'], '3.6')
+
   - bash: |
       SDIST=$(python -c "import os;print(os.listdir('./dist')[0])" 2>&1)
       python -m pip install dist/$SDIST
