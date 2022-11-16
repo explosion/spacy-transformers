@@ -54,7 +54,7 @@ jobs:
 
   - script: python -m mypy spacy_transformers
     displayName: 'Run mypy'
-    condition: eq(variables['python.version'], '3.6')
+    condition: ne(variables['python.version'], '3.6')
 
   - task: DeleteFiles@1
     inputs:
