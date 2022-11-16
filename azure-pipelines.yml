@@ -71,7 +71,7 @@ jobs:
     condition: eq(variables['python.version'], '3.6')
 
   - script: |
-      pip install "torch==1.12.1+cpu" --extra-index-url https://download.pytorch.org/whl/cpu
+      pip install "torch<1.13.0+cpu" --extra-index-url https://download.pytorch.org/whl/cpu
     displayName: 'Install newest working torch for python 3.7+'
     condition: ne(variables['python.version'], '3.6')
 
