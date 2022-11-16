@@ -79,7 +79,7 @@ jobs:
 
   - script: |
       pip install -r requirements.txt
-      python -m pytest spacy_transformers --cov=spacy_transformers
+      python -m pytest --pyargs spacy_transformers --cov=spacy_transformers
     displayName: 'Run tests'
 
   - script: |
