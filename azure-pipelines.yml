@@ -22,17 +22,14 @@ jobs:
       Python37Mac:
         imageName: 'macos-latest'
         python.version: '3.7'
-      Python37Windows:
+      Python38Windows:
         imageName: 'windows-latest'
-        python.version: '3.7'
-      Python38Mac:
-        imageName: 'macos-latest'
         python.version: '3.8'
       Python39Linux:
         imageName: 'ubuntu-latest'
         python.version: '3.9'
-      Python310Windows:
-        imageName: 'windows-latest'
+      Python310Mac:
+        imageName: 'macos-latest'
         python.version: '3.10'
     maxParallel: 4
   pool:
