@@ -6,7 +6,11 @@ from ..data_classes import FullTransformerBatch
 from ..span_getters import get_doc_spans
 
 
-MODEL_NAMES = ["distilbert-base-uncased", "gpt2", "xlnet-base-cased"]
+MODEL_NAMES = [
+    "distilbert-base-uncased",
+    "hf-internal-testing/tiny-random-gpt2",
+    "hf-internal-testing/tiny-random-xlnet",
+]
 
 
 @pytest.fixture
@@ -37,7 +41,7 @@ def output_hidden_states(request):
 
 @pytest.fixture(scope="module")
 def trf_model(name, output_attentions, output_hidden_states):
-    if name == "gpt2":
+    if "gpt2" in name:
         model = TransformerModel(
             name,
             get_doc_spans,
