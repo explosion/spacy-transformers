@@ -1,5 +1,4 @@
 import pytest
-import copy
 import spacy
 from spacy import Language
 from spacy.lang.en import English
@@ -19,7 +18,6 @@ DEFAULT_CONFIG = {
     "model": {
         "@architectures": "spacy-transformers.TransformerModel.v3",
         "name": "distilbert-base-uncased",
-        "tokenizer_config": {"use_fast": False},
     }
 }
 
@@ -74,8 +72,6 @@ def test_initialized_transformer_tobytes():
     trf2 = nlp2.add_pipe("transformer", config=DEFAULT_CONFIG)
     trf2.from_bytes(trf_bytes)
 
-    assert trf2.model.tokenizer.is_fast is False
-
 
 def test_initialized_transformer_todisk():
     nlp = Language()
@@ -86,21 +82,6 @@ def test_initialized_transformer_todisk():
         nlp2 = Language()
         trf2 = nlp2.add_pipe("transformer", config=DEFAULT_CONFIG)
         trf2.from_disk(d)
-
-        assert trf2.model.tokenizer.is_fast is False
-
-    fast_config = copy.deepcopy(DEFAULT_CONFIG)
-    fast_config["model"]["tokenizer_config"]["use_fast"] = True
-    nlp = Language()
-    trf = nlp.add_pipe("transformer", config=fast_config)
-    nlp.initialize()
-    with make_tempdir() as d:
-        trf.to_disk(d)
-        nlp2 = Language()
-        trf2 = nlp2.add_pipe("transformer", config=fast_config)
-        trf2.from_disk(d)
-
-        assert trf2.model.tokenizer.is_fast is True
 
 
 def test_transformer_pipeline_tobytes():
