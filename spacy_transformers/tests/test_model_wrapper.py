@@ -47,18 +47,11 @@ def trf_model(name, output_attentions, output_hidden_states):
                 "output_hidden_states": output_hidden_states,
             },
         )
-
     else:
-        # test slow tokenizers with distilbert-base-uncased (parameterizing
-        # for all models blows up the memory usage during the test suite)
-        if name == "distilbert-base-uncased":
-            use_fast = False
-        else:
-            use_fast = True
         model = TransformerModel(
             name,
             get_doc_spans,
-            {"use_fast": use_fast},
+            {"use_fast": True},
             {
                 "output_attentions": output_attentions,
                 "output_hidden_states": output_hidden_states,
@@ -70,10 +63,6 @@ def trf_model(name, output_attentions, output_hidden_states):
 
 def test_model_init(name, trf_model):
     assert isinstance(trf_model, Model)
-    if name == "distilbert-base-uncased":
-        assert not trf_model.tokenizer.is_fast
-    else:
-        assert trf_model.tokenizer.is_fast
 
 
 def test_model_predict(docs, trf_model):
