@@ -34,13 +34,14 @@ cfg_string = """
     """
 # fmt: on
 
+
 def test_textcatcnn():
     orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     assert nlp.pipe_names == ["textcat"]
 
     textcat = nlp.get_pipe("textcat")
-    
+
     train_examples = []
     doc = nlp.make_doc("ok")
     doc.cats["X"] = 1.0
@@ -48,4 +49,3 @@ def test_textcatcnn():
     train_examples.append(Example(doc, doc))
 
     nlp.initialize(lambda: train_examples)
-
