@@ -134,9 +134,12 @@ def test_transformer_pipeline_todisk_settings():
     assert trf.model.transformer.config.output_attentions is False
     assert "attentions" not in nlp("test")._.trf_data.model_output
     # modify model_max_length (note that modifications to
-    # tokenizer.model_max_length are not serialized by save_pretrained
-    # see: https://github.com/explosion/spaCy/discussions/7393)
+    # tokenizer.model_max_length for transformers<4.25 are not serialized by
+    # save_pretrained, see: https://github.com/explosion/spaCy/discussions/7393)
     trf.model.tokenizer.init_kwargs["model_max_length"] = 499
+    # transformer>=4.25, model_max_length is saved and init_kwargs changes are
+    # clobbered, so do both for this test
+    trf.model.tokenizer.model_max_length = 499
     # add attentions on-the-fly
     trf.model.transformer.config.output_attentions = True
     assert nlp("test")._.trf_data.model_output.attentions is not None
