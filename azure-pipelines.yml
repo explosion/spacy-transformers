@@ -31,8 +31,8 @@ jobs:
       Python310Mac:
         imageName: 'macos-latest'
         python.version: '3.10'
-      Python311Windows:
-        imageName: 'windows-latest'
+      Python311Linux:
+        imageName: 'ubuntu-latest'
         python.version: '3.11'
     maxParallel: 4
   pool:
