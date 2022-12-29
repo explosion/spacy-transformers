@@ -5,6 +5,8 @@ torch>=1.6.0
 srsly>=2.4.0,<3.0.0
 dataclasses>=0.6,<1.0; python_version < "3.7"
 spacy-alignments>=0.7.2,<1.0.0
+# TODO for PR, remove before merge
+git+https://github.com/polm/thinc.git@fix/resizable-initialized-check
 # Development dependencies
 cython>=0.25
 pytest>=5.2.0
