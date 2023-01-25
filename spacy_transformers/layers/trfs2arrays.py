@@ -1,4 +1,5 @@
 from typing import List, cast
+from spacy.util import all_equal
 from transformers.file_utils import ModelOutput
 from transformers.modeling_outputs import BaseModelOutput
 from thinc.api import Model
@@ -35,19 +36,34 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         if "last_hidden_state" in trf_data.model_output:
             tensor_t_i = cast(BaseModelOutput, trf_data.model_output).last_hidden_state
             if tensor_t_i.size == 0:
+                # This can happen during prediction/initialization if the transformer pipe was disabled/not executed and one of the inputs
+                # was of length zero. This causes the listenener to generate a zero-sized (in the sequence length dim) TransformerData
+                # output and pass it downstream.
+                #
+                # We also don't have to ensure that the backprops list stays in sync with the outputs as zero-length documents
+                # are filtered out very early in the corpus generation stage of the training loop.
+                assert not is_train
                 outputs.append(model.ops.alloc2f(0, width))
             else:
+                # This is the general case for non-zero length documents.
                 src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)  # type: ignore
                 dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
                 output, get_d_dst = pooling(dst, is_train)
                 outputs.append(output)
                 backprops.append((get_d_dst, get_d_src))
         else:
+            # This can happen during prediciton for zero-length documents. Since zero-length docs
+            # are implicitly ignored in the span generation stage, the transformer model does not return any
+            # predictions for them and subsequently, FullTransformerBatch.split_by_doc() generates an empty
+            # TransformerData.
+            assert not is_train
             outputs.append(model.ops.alloc2f(0, width))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
         d_trf_datas = []
-        zipped = zip(trf_datas, d_outputs, backprops)
+        to_zip = (trf_datas, d_outputs, backprops)
+        assert all_equal(len(x) for x in to_zip)
+        zipped = zip(*to_zip)
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
             d_model_output = ModelOutput(
                 last_hidden_state=model.ops.alloc(
