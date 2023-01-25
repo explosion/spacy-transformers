@@ -21,12 +21,21 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     grad_factor = model.attrs["grad_factor"]
     outputs = []
     backprops = []
+
+    # Cache the width of the model outputs from a non-empty output, if possible.
+    width = 0
+    for trf_data in trf_datas:
+        if "last_hidden_state" in trf_data.model_output:
+            last_hidden_state = trf_data.model_output.last_hidden_state
+            assert len(last_hidden_state.shape) == 3  # [batch, seq_len, width]
+            width = last_hidden_state.shape[2]
+            break
+
     for trf_data in trf_datas:
         if "last_hidden_state" in trf_data.model_output:
             tensor_t_i = cast(BaseModelOutput, trf_data.model_output).last_hidden_state
             if tensor_t_i.size == 0:
-                # account for empty trf_data in the batch
-                outputs.append(model.ops.alloc2f(0, 0))
+                outputs.append(model.ops.alloc2f(0, width))
             else:
                 src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)  # type: ignore
                 dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
@@ -34,7 +43,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
                 outputs.append(output)
                 backprops.append((get_d_dst, get_d_src))
         else:
-            outputs.append(model.ops.alloc2f(0, 0))
+            outputs.append(model.ops.alloc2f(0, width))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
         d_trf_datas = []
