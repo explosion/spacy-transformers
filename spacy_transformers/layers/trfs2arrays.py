@@ -27,7 +27,9 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     width = 0
     for trf_data in trf_datas:
         if "last_hidden_state" in trf_data.model_output:
-            last_hidden_state = trf_data.model_output.last_hidden_state
+            last_hidden_state = cast(
+                BaseModelOutput, trf_data.model_output
+            ).last_hidden_state
             assert len(last_hidden_state.shape) == 3  # [batch, seq_len, width]
             width = last_hidden_state.shape[2]
             break
@@ -62,7 +64,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
         d_trf_datas = []
         to_zip = (trf_datas, d_outputs, backprops)
-        assert all_equal(len(x) for x in to_zip)
+        assert all_equal(len(x) for x in to_zip)  # type: ignore
         zipped = zip(*to_zip)
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
             d_model_output = ModelOutput(
