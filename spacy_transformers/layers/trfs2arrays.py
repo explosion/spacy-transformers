@@ -23,15 +23,15 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     outputs = []
     backprops = []
 
-    # Cache the width of the model outputs from a non-empty output, if possible.
-    width = 0
+    # If possible, cache the width for allocating zero-length tensors.
+    output_width = 0
     for trf_data in trf_datas:
         if "last_hidden_state" in trf_data.model_output:
             last_hidden_state = cast(
                 BaseModelOutput, trf_data.model_output
             ).last_hidden_state
             assert len(last_hidden_state.shape) == 3  # [batch, seq_len, width]
-            width = last_hidden_state.shape[2]
+            output_width = last_hidden_state.shape[2]
             break
 
     for trf_data in trf_datas:
@@ -41,25 +41,22 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
                 # This can happen during prediction/initialization if the transformer pipe was disabled/not executed and one of the inputs
                 # was of length zero. This causes the listenener to generate a zero-sized (in the sequence length dim) TransformerData
                 # output and pass it downstream.
-                #
-                # We also don't have to ensure that the backprops list stays in sync with the outputs as zero-length documents
-                # are filtered out very early in the corpus generation stage of the training loop.
-                assert not is_train
-                outputs.append(model.ops.alloc2f(0, width))
+                outputs.append(model.ops.alloc2f(0, output_width))
+                backprops.append((None, None))
             else:
                 # This is the general case for non-zero length documents.
                 src = model.ops.reshape2f(tensor_t_i, -1, trf_data.width)  # type: ignore
                 dst, get_d_src = apply_alignment(model.ops, trf_data.align, src)
                 output, get_d_dst = pooling(dst, is_train)
                 outputs.append(output)
-                backprops.append((get_d_dst, get_d_src))
+                backprops.append((get_d_dst, get_d_src))  # type: ignore
         else:
-            # This can happen during prediciton for zero-length documents. Since zero-length docs
+            # This can happen during prediciton/training for zero-length documents. Since zero-length docs
             # are implicitly ignored in the span generation stage, the transformer model does not return any
             # predictions for them and subsequently, FullTransformerBatch.split_by_doc() generates an empty
             # TransformerData.
-            assert not is_train
-            outputs.append(model.ops.alloc2f(0, width))
+            outputs.append(model.ops.alloc2f(0, output_width))
+            backprops.append((None, None))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
         d_trf_datas = []
@@ -67,14 +64,23 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
         assert all_equal(len(x) for x in to_zip)  # type: ignore
         zipped = zip(*to_zip)
         for trf_data, d_output, (get_d_dst, get_d_src) in zipped:
+            if "last_hidden_state" not in trf_data.model_output:
+                # This gradient belongs to a zero-length doc and must be ignored as it doesn't have a corresponding
+                # output from the transformer model (due to empty documents being skipped during the span generation
+                # stage in the forward pass).
+                assert len(d_output) == 0
+                assert get_d_src is None
+                assert get_d_dst is None
+                continue
+
             d_model_output = ModelOutput(
                 last_hidden_state=model.ops.alloc(
                     trf_data.model_output.last_hidden_state.shape,  # type: ignore
                     dtype=trf_data.model_output.last_hidden_state.dtype,  # type: ignore
                 )
             )
-            d_dst = get_d_dst(d_output)
-            d_src = get_d_src(d_dst)
+            d_dst = get_d_dst(d_output)  # type: ignore
+            d_src = get_d_src(d_dst)  # type: ignore
             d_src *= grad_factor
             d_model_output["last_hidden_state"] = d_src.reshape(
                 cast(BaseModelOutput, trf_data.model_output).last_hidden_state.shape
