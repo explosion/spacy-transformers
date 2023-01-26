@@ -1,5 +1,6 @@
 from typing import Optional, Callable, List
 from thinc.api import Model
+from spacy.errors import Errors
 from spacy.tokens import Doc
 from ..data_classes import TransformerData
 
