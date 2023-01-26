@@ -301,6 +301,9 @@ def test_transformer_pipeline_empty():
     nlp.update([empty_train_example], sgd=optimizer, losses=losses)
     train_examples.append(empty_train_example)
     nlp.update(train_examples, sgd=optimizer, losses=losses)
+    # Interleave an empty doc between non-empty ones
+    train_examples.insert(1, Example.from_dict(nlp.make_doc(""), {}))
+    nlp.update(train_examples, sgd=optimizer, losses=losses)
 
     # predict empty doc
     doc = nlp("")
