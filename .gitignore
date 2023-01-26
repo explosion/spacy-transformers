@@ -12,6 +12,12 @@ __pycache__/
 # vim
 .*.sw*
 
+# Cython / C extensions
+cythonize.json
+spacy/*.html
+*.cpp
+*.so
+
 # Distribution / packaging
 .Python
 build/

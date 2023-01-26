@@ -55,7 +55,6 @@ class DummyTokenizer:
             "input_ids": [],
             "attention_mask": [],
             "token_type_ids": [],
-            "offset_mapping": [],
         }  # type: ignore
 
         for text in texts:
@@ -64,7 +63,6 @@ class DummyTokenizer:
             output["input_ids"].append(ids)
             output["attention_mask"].append(mask)
             output["token_type_ids"].append(type_ids)
-            output["offset_mapping"].append(offsets)
         if padding:
             output = self._pad(output)
         if return_tensors == "pt":
@@ -87,7 +85,6 @@ class DummyTokenizer:
             batch["attention_mask"][i] = [1] * length + [0] * difference
             batch["input_ids"][i].extend([0] * difference)
             batch["token_type_ids"][i].extend([2] * difference)
-            batch["offset_mapping"][i].extend([None] * difference)
         return batch
 
     def _tokenize(self, text):

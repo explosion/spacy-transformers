@@ -1,6 +1,6 @@
+from typing import List, Tuple, Callable, Union, Dict
 import copy
 from pathlib import Path
-from typing import List, Tuple, Callable, Union, Dict
 from transformers.file_utils import ModelOutput
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
@@ -17,7 +17,7 @@ from ..util import maybe_flush_pytorch_cache
 from ..util import log_gpu_memory, log_batch_size
 from ..layers._util import replace_listener, replace_listener_cfg
 from ..truncate import truncate_oversize_splits
-from ..align import get_alignment
+from ..align import get_alignment, get_alignment_via_offset_mapping
 from .hf_wrapper import HFWrapper
 
 
@@ -143,9 +143,15 @@ def init(model: TransformerModel, X=None, Y=None):
             flat_spans.extend(doc_spans)
         token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
-        align = get_alignment(
-            flat_spans, wordpieces.strings, tokenizer.all_special_tokens
-        )
+        if "offset_mapping" in token_data:
+            align = get_alignment_via_offset_mapping(
+                flat_spans,
+                token_data["offset_mapping"],
+            )
+        else:
+            align = get_alignment(
+                flat_spans, wordpieces.strings, tokenizer.all_special_tokens
+            )
         wordpieces, align = truncate_oversize_splits(
             wordpieces, align, tokenizer.model_max_length
         )
@@ -178,7 +184,15 @@ def forward(
     wordpieces = WordpieceBatch.from_batch_encoding(batch_encoding)
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], wordpieces, is_train)
-    align = get_alignment(flat_spans, wordpieces.strings, tokenizer.all_special_tokens)
+    if "offset_mapping" in batch_encoding:
+        align = get_alignment_via_offset_mapping(
+            flat_spans,
+            batch_encoding["offset_mapping"],
+        )
+    else:
+        align = get_alignment(
+            flat_spans, wordpieces.strings, tokenizer.all_special_tokens
+        )
     wordpieces, align = truncate_oversize_splits(
         wordpieces, align, tokenizer.model_max_length
     )

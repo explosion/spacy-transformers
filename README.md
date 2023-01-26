@@ -37,7 +37,7 @@ install the models. Also note that this package requires **Python 3.6+**,
 **PyTorch v1.5+** and **spaCy v3.0+**.
 
 ```bash
-pip install spacy[transformers]
+pip install 'spacy[transformers]'
 ```
 
 For GPU installation, find your CUDA version using `nvcc --version` and add the

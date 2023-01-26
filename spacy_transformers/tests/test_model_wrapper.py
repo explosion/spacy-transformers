@@ -6,7 +6,11 @@ from ..data_classes import FullTransformerBatch
 from ..span_getters import get_doc_spans
 
 
-MODEL_NAMES = ["distilbert-base-uncased", "gpt2", "xlnet-base-cased"]
+MODEL_NAMES = [
+    "distilbert-base-uncased",
+    "hf-internal-testing/tiny-random-gpt2",
+    "hf-internal-testing/tiny-random-xlnet",
+]
 
 
 @pytest.fixture
@@ -37,7 +41,7 @@ def output_hidden_states(request):
 
 @pytest.fixture(scope="module")
 def trf_model(name, output_attentions, output_hidden_states):
-    if name == "gpt2":
+    if "gpt2" in name:
         model = TransformerModel(
             name,
             get_doc_spans,
@@ -76,7 +80,7 @@ def test_model_init(name, trf_model):
         assert trf_model.tokenizer.is_fast
 
 
-def test_model_predict(docs, trf_model):
+def test_model_predict(nlp, docs, trf_model):
     outputs = trf_model.predict(docs)
     shape = outputs.model_output.last_hidden_state.shape
     if trf_model.transformer.config.output_attentions is True:
@@ -90,3 +94,15 @@ def test_model_predict(docs, trf_model):
     else:
         assert outputs.model_output.hidden_states is None
     assert isinstance(outputs, FullTransformerBatch)
+
+    # for a fast tokenizer check that all non-special wordpieces are aligned
+    # (which is not necessarily true for the slow tokenizers)
+    if trf_model.tokenizer.is_fast:
+        outputs = trf_model.predict([nlp.make_doc("\tÁaaa  \n\n")])
+        aligned_wps = outputs.align.data.flatten()
+        for i in range(len(outputs.wordpieces.strings[0])):
+            if (
+                outputs.wordpieces.strings[0][i]
+                not in trf_model.tokenizer.all_special_tokens
+            ):
+                assert i in aligned_wps
