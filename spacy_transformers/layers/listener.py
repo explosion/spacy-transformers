@@ -64,10 +64,7 @@ def forward(model: TransformerListener, docs, is_train):
             outputs = []
             for doc in docs:
                 if doc._.trf_data is None:
-                    # TODO move to errors.py
-                    raise ValueError(
-                        "If the embedding layer is not updated during training, include it in 'annotating components'"
-                    )
+                    raise ValueError(Errors.E203.format(name="transformer"))
                 else:
                     outputs.append(doc._.trf_data)
             return outputs, _empty_backprop
