@@ -227,9 +227,6 @@ class Transformer(TrainablePipe):
             activations = FullTransformerBatch.empty(len(docs))
         else:
             activations = self.model.predict(docs)
-        batch_id = TransformerListener.get_batch_id(docs)
-        for listener in self.listeners:
-            listener.receive(batch_id, activations.doc_data, None)
         return activations
 
     def set_annotations(
