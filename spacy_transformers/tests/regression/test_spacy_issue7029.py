@@ -33,13 +33,13 @@ grad_factor = 1.0
 
 TRAIN_DATA = [
     ("I like green eggs", {"tags": ["N", "V", "J", "N"]}),
+    ("", {}),
     ("Eat blue ham", {"tags": ["V", "J", "N"]}),
 ]
 
 
 def test_empty_doc():
-    """Test that an empty document gets processed correctly
-    """
+    """Test that an empty document gets processed correctly"""
     nlp = English.from_config(load_config_from_str(CONFIG))
     train_examples = []
     for t in TRAIN_DATA:
