@@ -48,7 +48,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
                 outputs.append(output)
                 backprops.append((get_d_dst, get_d_src))  # type: ignore
         else:
-            # This can happen during prediciton/training for zero-length documents. Since zero-length docs
+            # This can happen during prediction/training for zero-length documents. Since zero-length docs
             # are implicitly ignored in the span generation stage, the transformer model does not return any
             # predictions for them and subsequently, FullTransformerBatch.split_by_doc() generates an empty
             # TransformerData.
