@@ -23,16 +23,13 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     outputs = []
     backprops = []
 
-    # If possible, cache the width for allocating zero-length tensors.
+    # For zero-length documents, we could cache the output width by iterating
+    # through the batch outputs and retrieving the shape of a non-zero length
+    # Doc. This, however, is not fool-proof as one can pass an entire batch of
+    # zero-length Docs to the transformer model (at least during prediction).
+    # Instead of being conditionally correct, we'll explicitly leave the width as
+    # zero in these cases as the effective length of the resultant tensor is zero anyway.
     output_width = 0
-    for trf_data in trf_datas:
-        if "last_hidden_state" in trf_data.model_output:
-            last_hidden_state = cast(
-                BaseModelOutput, trf_data.model_output
-            ).last_hidden_state
-            assert len(last_hidden_state.shape) == 3  # [batch, seq_len, width]
-            output_width = last_hidden_state.shape[2]
-            break
 
     for trf_data in trf_datas:
         if "last_hidden_state" in trf_data.model_output:
@@ -59,7 +56,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             backprops.append((None, None))
 
     def backprop_trf_to_tensor(d_outputs: List[Floats2d]) -> List[TransformerData]:
-        d_trf_datas = []
+        d_trf_datas: List[TransformerData] = []
         to_zip = (trf_datas, d_outputs, backprops)
         assert all_equal(len(x) for x in to_zip)  # type: ignore
         zipped = zip(*to_zip)
@@ -73,14 +70,16 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
                 assert get_d_dst is None
                 continue
 
+            assert get_d_src is not None
+            assert get_d_dst is not None
             d_model_output = ModelOutput(
                 last_hidden_state=model.ops.alloc(
                     trf_data.model_output.last_hidden_state.shape,  # type: ignore
                     dtype=trf_data.model_output.last_hidden_state.dtype,  # type: ignore
                 )
             )
-            d_dst = get_d_dst(d_output)  # type: ignore
-            d_src = get_d_src(d_dst)  # type: ignore
+            d_dst = cast(Floats2d, get_d_dst(d_output))
+            d_src = cast(Floats2d, get_d_src(d_dst))
             d_src *= grad_factor
             d_model_output["last_hidden_state"] = d_src.reshape(
                 cast(BaseModelOutput, trf_data.model_output).last_hidden_state.shape
