@@ -102,15 +102,17 @@ class WordpieceBatch:
         # The following tensors are intentionally allocated on the CPU to reduce
         # host-to-device copies.
         numpy_ops = NumpyOps()
+        input_ids = token_data["input_ids"]
+        token_type_ids = token_data.get("token_type_ids")
 
         return cls(
             strings=token_data["input_texts"],
-            input_ids=numpy_ops.asarray(token_data["input_ids"], dtype="int64"),
+            input_ids=numpy_ops.asarray(input_ids, dtype=input_ids.dtype),
             attention_mask=numpy_ops.asarray2f(token_data["attention_mask"]),
             lengths=lengths,
             token_type_ids=(
-                numpy_ops.asarray(token_data["token_type_ids"], dtype="int64")
-                if "token_type_ids" in token_data
+                numpy_ops.asarray(token_type_ids, dtype=token_type_ids.dtype)
+                if token_type_ids is not None
                 else None
             ),
         )
