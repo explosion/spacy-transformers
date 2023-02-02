@@ -16,13 +16,13 @@ def trfs2arrays(
     return Model(
         "trfs2arrays",
         forward,
-        layers=[concat_pooling(pooling)],
+        layers=[pooling],
         attrs={"grad_factor": grad_factor},
     )
 
 
 def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
-    pooling: Model[List[Ragged], List[Floats2d]] = model.layers[0]
+    pooling: Model[Ragged, Floats2d] = model.layers[0]
     grad_factor = model.attrs["grad_factor"]
     zero_outputs: List[Tuple[int, Floats2d]] = []
     backprops_alignment: List[Optional[Callable]] = []
@@ -59,8 +59,8 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             zero_outputs.append((i, model.ops.alloc2f(0, output_width)))
             backprops_alignment.append(None)
 
-    pooling_outputs, backprop_pooling = pooling(
-        [dst for _, dst in aligned_outputs], is_train
+    pooling_outputs, backprop_pooling = concat_pooling_forward(
+        pooling, [dst for _, dst in aligned_outputs], is_train
     )
 
     # Interleave the zero and non-zero outputs into the final result.
@@ -117,17 +117,10 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     return outputs, backprop_trf_to_tensor
 
 
-def concat_pooling(
-    pooling: Model[Ragged, Floats2d],
-) -> Model[List[Ragged], List[Floats2d]]:
-    return Model("concat_pooling", concat_pooling_forward, layers=[pooling])
-
-
 def concat_pooling_forward(
-    model: Model[List[Ragged], List[Floats2d]], X: List[Ragged], is_train: bool
+    pooling: Model[Ragged, Floats2d], X: List[Ragged], is_train: bool
 ):
-    pooling: Model[Ragged, Floats2d] = model.layers[0]
-    xp = model.ops.xp
+    xp = pooling.ops.xp
 
     datas = []
     lens = []
