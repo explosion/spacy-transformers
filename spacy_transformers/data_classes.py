@@ -103,15 +103,19 @@ class WordpieceBatch:
         # host-to-device copies.
         numpy_ops = NumpyOps()
         input_ids = token_data["input_ids"]
+        input_ids_dtype = input_ids.dtype if hasattr(input_ids, "dtype") else None
         token_type_ids = token_data.get("token_type_ids")
+        token_type_ids_dtype = (
+            token_type_ids.dtype if hasattr(token_type_ids, "dtype") else None  # type: ignore
+        )
 
         return cls(
             strings=token_data["input_texts"],
-            input_ids=numpy_ops.asarray(input_ids, dtype=input_ids.dtype),
+            input_ids=numpy_ops.asarray(input_ids, dtype=input_ids_dtype),
             attention_mask=numpy_ops.asarray2f(token_data["attention_mask"]),
             lengths=lengths,
             token_type_ids=(
-                numpy_ops.asarray(token_type_ids, dtype=token_type_ids.dtype)
+                numpy_ops.asarray(token_type_ids, dtype=token_type_ids_dtype)
                 if token_type_ids is not None
                 else None
             ),
