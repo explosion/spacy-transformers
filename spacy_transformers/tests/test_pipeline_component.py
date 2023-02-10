@@ -301,6 +301,9 @@ def test_transformer_pipeline_empty():
     nlp.update([empty_train_example], sgd=optimizer, losses=losses)
     train_examples.append(empty_train_example)
     nlp.update(train_examples, sgd=optimizer, losses=losses)
+    # Interleave an empty doc between non-empty ones
+    train_examples.insert(1, Example.from_dict(nlp.make_doc(""), {}))
+    nlp.update(train_examples, sgd=optimizer, losses=losses)
 
     # predict empty doc
     doc = nlp("")
@@ -459,9 +462,33 @@ def test_frozen_listener():
     # train further with frozen listener
     for i in range(2):
         losses = {}
-        nlp.update(examples, sgd=optimizer, losses=losses, exclude=["transformer"])
+        nlp.update(
+            examples,
+            sgd=optimizer,
+            losses=losses,
+            exclude=["transformer"],
+            annotates=["transformer"],
+        )
         doc = nlp(text)
 
     # only tagger was updated
     assert nlp.get_pipe("transformer").to_bytes() == transformer_bytes
     assert nlp.get_pipe("tagger").to_bytes() != tagger_bytes
+
+
+def test_no_update_listener_in_predict():
+    orig_config = Config().from_str(cfg_string)
+    nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
+    listener = nlp.get_pipe("tagger").model.get_ref("tok2vec").get_ref("listener")
+    transformer = nlp.get_pipe("transformer")
+
+    text = "This is awesome"
+    examples = [Example.from_dict(nlp.make_doc(text), {"tags": ["A", "B", "C"]})]
+    docs = [eg.predicted for eg in examples]
+    nlp.initialize(lambda: examples)
+
+    transformer.update(examples)
+    assert listener._backprop is not None
+
+    transformer.predict(docs)
+    assert listener._backprop is not None
