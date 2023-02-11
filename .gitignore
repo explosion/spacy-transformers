@@ -14,7 +14,7 @@ __pycache__/
 
 # Cython / C extensions
 cythonize.json
-spacy/*.html
+spacy_transformers/*.html
 *.cpp
 *.so
 
