@@ -1,4 +1,5 @@
 from typing import Dict, List, Union
+import numpy
 import torch
 import copy
 from transformers.file_utils import ModelOutput
@@ -69,6 +70,10 @@ class DummyTokenizer:
             output["input_ids"] = torch.tensor(output["input_ids"])  # type: ignore
             output["attention_mask"] = torch.tensor(output["attention_mask"])  # type: ignore
             output["token_type_ids"] = torch.tensor(output["token_type_ids"])  # type: ignore
+        elif return_tensors == "np":
+            output["input_ids"] = numpy.asarray(output["input_ids"])  # type: ignore
+            output["attention_mask"] = numpy.asarray(output["attention_mask"])  # type: ignore
+            output["token_type_ids"] = numpy.asarray(output["token_type_ids"])  # type: ignore
         if return_length:
             output["length"] = torch.tensor([len(x) for x in output["input_ids"]])  # type: ignore
         return output
