@@ -234,7 +234,7 @@ def get_span2wp_from_offset_mapping(span, wp_char_offsets):
         while it_s != s.end():
             result[-1].append(deref(it_s))
             preinc(it_s)
-        free(s)
+        del s
         preinc(it_v)
     return result
 
