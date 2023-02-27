@@ -41,6 +41,7 @@ def test_textcatcnn():
     assert nlp.pipe_names == ["textcat"]
 
     textcat = nlp.get_pipe("textcat")
+    assert textcat.is_resizable is True
 
     train_examples = []
     doc = nlp.make_doc("ok")
