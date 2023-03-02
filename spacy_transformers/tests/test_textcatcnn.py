@@ -1,5 +1,9 @@
+import pytest
+from packaging.version import Version
+
 from spacy.training.example import Example
 from spacy import util
+import thinc
 from thinc.api import Model, Config
 
 # fmt: off
@@ -35,6 +39,11 @@ cfg_string = """
 # fmt: on
 
 
+# TODO: remove skip after requiring spacy>=3.5.1 or at the very latest, after
+# dropping python 3.7 switch to importlib.metadata.version("thinc")
+@pytest.mark.skipif(
+    Version(thinc.__version__) < Version("8.1.8"), reason="Requires thinc>=8.1.8"
+)
 def test_textcatcnn():
     orig_config = Config().from_str(cfg_string)
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
