@@ -1,0 +1,93 @@
+name: tests
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  tests:
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python_version: ["3.11"]
+        include:
+          - os: ubuntu-20.04
+            python_version: "3.6"
+          - os: macos-latest
+            python_version: "3.7"
+          - os: windows-latest
+            python_version: "3.8"
+          - os: ubuntu-latest
+            python_version: "3.9"
+          - os: macos-latest
+            python_version: "3.10"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      - name: Configure Python version
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python_version }}
+          architecture: x64
+
+      - name: Install oldest supported torch for python 3.6
+        run: |
+          python -m pip install "torch==1.8.1+cpu" -f https://download.pytorch.org/whl/torch_stable.html
+        if: matrix.python_version == '3.6'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U build pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Build sdist
+        run: |
+          python -m build --sdist
+
+      - name: Run mypy
+        run: python -m mypy spacy_transformers
+        if: matrix.python_version != '3.6'
+
+      - name: Delete source directory
+        run: rm -rf spacy_transformers
+        shell: bash
+
+      - name: Uninstall all packages
+        run: |
+          python -m pip freeze --exclude pywin32 --exclude torch
+          python -m pip freeze --exclude pywin32 --exclude torch > installed.txt
+          python -m pip uninstall -y -r installed.txt
+
+      - name: Install from sdist
+        run: |
+          SDIST=$(python -c "import os;print(os.listdir('./dist')[-1])" 2>&1)
+          PIP_CONSTRAINT="build-constraints.txt" python -m pip install dist/$SDIST --extra-index-url https://download.pytorch.org/whl/cpu
+        shell: bash
+
+      - name: Run tests
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pytest --pyargs spacy_transformers --cov=spacy_transformers
+
+      - name: Test backwards compatibility for v1.0 models
+        run: |
+          python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
+          python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
+        if: matrix.python_version == '3.9'
+
+      - name: Test backwards compatibility for v1.1 models
+        run: |
+          python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.0/en_core_web_trf-3.4.0-py3-none-any.whl --no-deps
+          python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
+        if: matrix.python_version == '3.9'
