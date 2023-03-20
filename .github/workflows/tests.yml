@@ -82,7 +82,7 @@ jobs:
       - name: Install from sdist
         run: |
           SDIST=$(python -c "import os;print(os.listdir('./dist')[-1])" 2>&1)
-          PIP_CONSTRAINT="build-constraints.txt" python -m pip install dist/$SDIST
+          python -m pip install dist/$SDIST
         shell: bash
 
       - name: Run tests
