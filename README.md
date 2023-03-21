@@ -75,9 +75,7 @@ pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.
   [Transformer architectures](https://spacy.io/api/architectures#transformers):
   Architectures and registered functions
 
-## Issue tracker
+## 🐛 Issue tracker
 
 Use [spaCy's GitHub issue tracker](https://github.com/explosion/spaCy/issues)
 to file bug reports and improvement suggestions, i.e. everything that’s likely spaCy’s fault.
-
-This also includes problems with the trained pipelines beyond statistical imprecisions, like patterns that point to a bug.
