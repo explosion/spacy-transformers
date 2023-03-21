@@ -35,7 +35,7 @@ cfg_string = """
     factory = "transformer"
 
     [components.transformer.model]
-    name = "hf-internal-testing/tiny-random-DistilBertModel"
+    name = "distilbert-base-uncased"
     """
 
 
