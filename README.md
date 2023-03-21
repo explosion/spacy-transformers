@@ -77,5 +77,6 @@ pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.
 
 ## 🐛 Issue tracker
 
-Use [spaCy's GitHub issue tracker](https://github.com/explosion/spaCy/issues)
-to file bug reports and improvement suggestions, i.e. everything that’s likely spaCy’s fault.
+Please use [spaCy's issue tracker](https://github.com/explosion/spaCy/issues) or open a new thread on the
+[discussion board](https://github.com/explosion/spaCy/discussions)
+to file bug reports and improvement suggestions.
