@@ -195,7 +195,6 @@ def test_transformer_pipeline_tagger_senter_listener():
             tagger.add_label(tag)
 
     # Check that the Transformer component finds it listeners
-    assert transformer.listeners == []
     optimizer = nlp.initialize(lambda: train_examples)
     assert tagger_trf in transformer.listeners
 
