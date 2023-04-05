@@ -17,7 +17,7 @@ from .. import TransformerData
 DEFAULT_CONFIG = {
     "model": {
         "@architectures": "spacy-transformers.TransformerModel.v3",
-        "name": "distilbert-base-uncased",
+        "name": "hf-internal-testing/tiny-random-DistilBertModel",
         "tokenizer_config": {"use_fast": False},
     }
 }
@@ -34,7 +34,7 @@ def test_serialize_transformer_data():
         "transformer",
         config={
             "model": {
-                "name": "distilbert-base-uncased",
+                "name": "hf-internal-testing/tiny-random-DistilBertModel",
                 "transformer_config": {"output_attentions": True},
             }
         },
@@ -186,7 +186,7 @@ inline_cfg_string = """
 
     [components.tagger.model.tok2vec]
     @architectures = "spacy-transformers.Tok2VecTransformer.v3"
-    name = "distilbert-base-uncased"
+    name = "hf-internal-testing/tiny-random-DistilBertModel"
     tokenizer_config = {"use_fast": true}
     transformer_config = {"output_attentions": false}
     grad_factor = 1.0
