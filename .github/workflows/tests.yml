@@ -62,6 +62,7 @@ jobs:
 
       - name: Run mypy
         if: env.RUN_MYPY == 'true' && matrix.python_version != '3.6'
+        shell: bash
         run: |
           python -m mypy $MODULE_NAME
 
