@@ -8,11 +8,11 @@ architectures to use transformer models via
 spaCy. The result is convenient access to state-of-the-art transformer
 architectures, such as BERT, GPT-2, XLNet, etc.
 
-> **This release requires [spaCy v3](https://spacy.io/usage/v3).** For
-> the previous version of this library, see the
+> **This release requires [spaCy v3](https://spacy.io/usage/v3).** For the
+> previous version of this library, see the
 > [`v0.6.x` branch](https://github.com/explosion/spacy-transformers/tree/v0.6.x).
 
-[![Azure Pipelines](https://img.shields.io/azure-devops/build/explosion-ai/public/18/master.svg?logo=azure-pipelines&style=flat-square)](https://dev.azure.com/explosion-ai/public/_build?definitionId=18)
+[![tests](https://github.com/explosion/spacy-transformers/actions/workflows/tests.yml/badge.svg)](https://github.com/explosion/spacy-transformers/actions/workflows/tests.yml)
 [![PyPi](https://img.shields.io/pypi/v/spacy-transformers.svg?style=flat-square&logo=pypi&logoColor=white)](https://pypi.python.org/pypi/spacy-transformers)
 [![GitHub](https://img.shields.io/github/release/explosion/spacy-transformers/all.svg?style=flat-square&logo=github)](https://github.com/explosion/spacy-transformers/releases)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square)](https://github.com/ambv/black)
@@ -56,27 +56,28 @@ pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.
 ## 📖 Documentation
 
 > ⚠️ **Important note:** This package has been extensively refactored to take
-> advantage of [spaCy v3.0](https://spacy.io). Previous versions that
-> were built for [spaCy v2.x](https://v2.spacy.io) worked considerably
-> differently. Please see previous tagged versions of this README for
-> documentation on prior versions.
+> advantage of [spaCy v3.0](https://spacy.io). Previous versions that were built
+> for [spaCy v2.x](https://v2.spacy.io) worked considerably differently. Please
+> see previous tagged versions of this README for documentation on prior
+> versions.
 
 - 📘
   [Embeddings, Transformers and Transfer Learning](https://spacy.io/usage/embeddings-transformers):
   How to use transformers in spaCy
-- 📘 [Training Pipelines and Models](https://spacy.io/usage/training):
-  Train and update components on your own data and integrate custom models
+- 📘 [Training Pipelines and Models](https://spacy.io/usage/training): Train and
+  update components on your own data and integrate custom models
 - 📘
   [Layers and Model Architectures](https://spacy.io/usage/layers-architectures):
   Power spaCy components with custom neural networks
-- 📗 [`Transformer`](https://spacy.io/api/transformer): Pipeline
-  component API reference
+- 📗 [`Transformer`](https://spacy.io/api/transformer): Pipeline component API
+  reference
 - 📗
   [Transformer architectures](https://spacy.io/api/architectures#transformers):
   Architectures and registered functions
 
 ## Bug reports and other issues
 
-Please use [spaCy's issue tracker](https://github.com/explosion/spaCy/issues) to report a bug, or open a new thread on the
-[discussion board](https://github.com/explosion/spaCy/discussions)
-for any other issue.
+Please use [spaCy's issue tracker](https://github.com/explosion/spaCy/issues) to
+report a bug, or open a new thread on the
+[discussion board](https://github.com/explosion/spaCy/discussions) for any other
+issue.
