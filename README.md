@@ -47,11 +47,7 @@ CUDA10.0.
 
 If you are having trouble installing PyTorch, follow the
 [instructions](https://pytorch.org/get-started/locally/) on the official website
-for your specific operating system and requirements, or try the following:
-
-```bash
-pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.html
-```
+for your specific operating system and requirements.
 
 ## 📖 Documentation
 
@@ -74,6 +70,19 @@ pip install spacy-transformers -f https://download.pytorch.org/whl/torch_stable.
 - 📗
   [Transformer architectures](https://spacy.io/api/architectures#transformers):
   Architectures and registered functions
+
+## Applying pretrained text and token classification models
+
+Note that the `transformer` component from `spacy-transformers` does not support
+task-specific heads like token or text classification. A task-specific
+transformer model can be used as a source of features to train spaCy components
+like `ner` or `textcat`, but the `transformer` component does not provide access
+to task-specific heads for training or inference.
+
+Alternatively, if you only want use to the **predictions** from an existing
+Hugging Face text or token classification model, you can use the wrappers from
+[`spacy-huggingface-pipelines`](https://github.com/explosion/spacy-huggingface-pipelines)
+to incorporate task-specific transformer models into your spaCy pipelines.
 
 ## Bug reports and other issues
 
