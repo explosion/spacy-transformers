@@ -135,7 +135,8 @@ class HFShim(PyTorchShim):
                 )
                 warnings.warn(warn_msg)
                 self._model.load_state_dict(
-                    torch.load(filelike, strict=False, map_location=device)
+                    torch.load(filelike, map_location=device),
+                    strict=False,
                 )
             self._model.to(device)
         else:
