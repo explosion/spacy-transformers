@@ -25,9 +25,9 @@ class HFShim(PyTorchShim):
         optimizer: Any = None,
         mixed_precision: bool = False,
         grad_scaler_config: dict = {},
-        config_cls = AutoConfig,
-        model_cls = AutoModel,
-        tokenizer_cls = AutoTokenizer,
+        config_cls=AutoConfig,
+        model_cls=AutoModel,
+        tokenizer_cls=AutoTokenizer,
     ):
         self._hfmodel = model
         self.config_cls = config_cls
@@ -98,7 +98,9 @@ class HFShim(PyTorchShim):
                 tok_kwargs = tok_dict.pop("kwargs", {})
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
-                tokenizer = self.tokenizer_cls.from_pretrained(str(temp_dir.absolute()), **tok_kwargs)
+                tokenizer = self.tokenizer_cls.from_pretrained(
+                    str(temp_dir.absolute()), **tok_kwargs
+                )
                 vocab_file_contents = None
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
