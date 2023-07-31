@@ -3,6 +3,7 @@ from io import BytesIO
 from pathlib import Path
 import srsly
 import torch
+import warnings
 from thinc.api import get_torch_default_device
 from spacy.util import SimpleFrozenDict
 
@@ -24,9 +25,9 @@ class HFShim(PyTorchShim):
         optimizer: Any = None,
         mixed_precision: bool = False,
         grad_scaler_config: dict = {},
-        config_cls = AutoConfig,
-        model_cls = AutoModel,
-        tokenizer_cls = AutoTokenizer,
+        config_cls=AutoConfig,
+        model_cls=AutoModel,
+        tokenizer_cls=AutoTokenizer,
     ):
         self._hfmodel = model
         self.config_cls = config_cls
@@ -97,7 +98,9 @@ class HFShim(PyTorchShim):
                 tok_kwargs = tok_dict.pop("kwargs", {})
                 for x, x_bytes in tok_dict.items():
                     Path(temp_dir / x).write_bytes(x_bytes)
-                tokenizer = self.tokenizer_cls.from_pretrained(str(temp_dir.absolute()), **tok_kwargs)
+                tokenizer = self.tokenizer_cls.from_pretrained(
+                    str(temp_dir.absolute()), **tok_kwargs
+                )
                 vocab_file_contents = None
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
@@ -117,7 +120,21 @@ class HFShim(PyTorchShim):
             filelike = BytesIO(msg["state"])
             filelike.seek(0)
             device = get_torch_default_device()
-            self._model.load_state_dict(torch.load(filelike, map_location=device))
+            try:
+                self._model.load_state_dict(torch.load(filelike, map_location=device))
+            except RuntimeError as ex:
+                warn_msg = (
+                    "Error loading saved torch model. If the error is related "
+                    "to unexpected key(s) in state_dict, a possible workaround "
+                    "is to load this model with 'transformers<4.31'. "
+                    "Alternatively, download a newer compatible model or "
+                    "retrain your custom model with the current "
+                    "transformers and spacy-transformers versions. For more "
+                    "details and available updates, run: python -m spacy "
+                    "validate"
+                )
+                warnings.warn(warn_msg)
+                raise ex
             self._model.to(device)
         else:
             self._hfmodel = HFObjects(
