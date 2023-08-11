@@ -52,7 +52,7 @@ def test_alignments_match(words1, words2):
     assert len(unique_tokens) == align.lengths.shape[0]
     flat_words1, flat_words2 = flatten_strings(words1, words2)
     for i, word in enumerate(flat_words1):
-        wp_word = "".join([flat_words2[int(j)] for j in align[i].data])
+        wp_word = "".join([flat_words2[int(j[0])] for j in align[i].data])
         if len(word) < len(wp_word):
             assert word in wp_word
         elif len(word) > len(wp_word):
