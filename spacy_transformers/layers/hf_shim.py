@@ -122,19 +122,22 @@ class HFShim(PyTorchShim):
             device = get_torch_default_device()
             try:
                 self._model.load_state_dict(torch.load(filelike, map_location=device))
-            except RuntimeError as ex:
+            except RuntimeError:
                 warn_msg = (
-                    "Error loading saved torch model. If the error is related "
-                    "to unexpected key(s) in state_dict, a possible workaround "
-                    "is to load this model with 'transformers<4.31'. "
-                    "Alternatively, download a newer compatible model or "
-                    "retrain your custom model with the current "
-                    "transformers and spacy-transformers versions. For more "
-                    "details and available updates, run: python -m spacy "
-                    "validate"
+                    "Error loading saved torch state_dict with strict=True, "
+                    "likely due to differences between 'transformers' "
+                    "versions. Attempting to load with strict=False as a "
+                    "fallback...\n\n"
+                    "If you see errors or degraded performance, download a "
+                    "newer compatible model or retrain your custom model with "
+                    "the current 'transformers' and 'spacy-transformers' "
+                    "versions. For more details and available updates, run: "
+                    "python -m spacy validate"
                 )
                 warnings.warn(warn_msg)
-                raise ex
+                filelike.seek(0)
+                b = torch.load(filelike, map_location=device)
+                self._model.load_state_dict(b, strict=False)
             self._model.to(device)
         else:
             self._hfmodel = HFObjects(
