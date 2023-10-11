@@ -238,7 +238,8 @@ def test_transformer_pipeline_tagger_senter_listener():
 def test_transformer_sentencepiece_IO():
     """Test that a transformer using sentencepiece trains + IO goes OK"""
     orig_config = Config().from_str(cfg_string)
-    orig_config["components"]["transformer"]["model"]["name"] = "camembert-base"
+    orig_config["components"]["transformer"]["model"]["name"] = "hf-internal-testing/tiny-xlm-roberta"
+    orig_config["components"]["transformer"]["model"]["tokenizer_config"] = {"use_fast": False}
     nlp = util.load_model_from_config(orig_config, auto_fill=True, validate=True)
     tagger = nlp.get_pipe("tagger")
     tagger_trf = tagger.model.get_ref("tok2vec").layers[0]
