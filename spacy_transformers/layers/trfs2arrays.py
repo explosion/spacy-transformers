@@ -37,6 +37,13 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
     output_width = 0
 
     for i, trf_data in enumerate(trf_datas):
+        if not isinstance(trf_data, TransformerData):
+            raise ValueError(
+                "Expected spacy_transformers.data_classes.TransformerData "
+                f"in trf_data, got: {type(trf_data)}\n"
+                "Check that your pipeline contains a transformer component "
+                "with a spacy-transformers TransformerModel architecture."
+            )
         if "last_hidden_state" in trf_data.model_output:
             tensor_t_i = cast(BaseModelOutput, trf_data.model_output).last_hidden_state
             if tensor_t_i.size == 0:
