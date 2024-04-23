@@ -1,4 +1,4 @@
-spacy>=3.5.0,<4.0.0
+spacy>=3.5.0,<4.1.0
 numpy>=1.15.0
 transformers[sentencepiece]>=3.4.0,<4.37.0
 torch>=1.8.0
