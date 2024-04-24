@@ -239,7 +239,7 @@ def get_span2wp_from_offset_mapping(span, wp_char_offsets):
     return result
 
 
-cdef void _get_span2wp_alignment(
+cdef int _get_span2wp_alignment(
         vector[unordered_set_uint32_t_ptr]* alignment,
         int32_t[::1] char_to_sp_token,
         int char_to_sp_token_length,
@@ -262,3 +262,4 @@ cdef void _get_span2wp_alignment(
                 deref(alignment.at(token_i)).insert(wp_j)
             char_idx += 1
         wp_j += 1
+    return 0
