@@ -86,6 +86,8 @@ jobs:
         shell: bash
         run: |
           python -m pip install -r requirements.txt --force-reinstall
+          # The version of pytorch being used here requires numpy v2, but because of the way we're doing the
+          # requirements installation here it's not being resolved that way. So just install numpy 1 here.
           python -m pip install "numpy<2"
           python -m pytest --pyargs $MODULE_NAME --cov=$MODULE_NAME
 
