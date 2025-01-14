@@ -86,6 +86,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install -r requirements.txt --force-reinstall
+          python -m pip install "numpy<2"
           python -m pytest --pyargs $MODULE_NAME --cov=$MODULE_NAME
 
       - name: Test backwards compatibility for v1.0 models
