@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U build pip setuptools wheel
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.txt --force-reinstall
 
       - name: Build sdist
         run: |
@@ -74,7 +74,7 @@ jobs:
       - name: Install newest torch for python 3.7+
         if: matrix.python_version != '3.6'
         run: |
-          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu --force-reinstall
 
       - name: Install from sdist
         shell: bash
@@ -85,7 +85,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.txt --force-reinstall
           python -m pytest --pyargs $MODULE_NAME --cov=$MODULE_NAME
 
       - name: Test backwards compatibility for v1.0 models
