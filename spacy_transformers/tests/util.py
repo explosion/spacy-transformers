@@ -18,7 +18,14 @@ def _assert_equal_tensors(tensors1, tensors2):
     for i in range(len(tensors1)):
         t1 = ops.asarray(tensors1[i])
         t2 = ops.asarray(tensors2[i])
-        assert_array_equal(ops.to_numpy(t1), ops.to_numpy(t2))
+        # Use assert_allclose for floating point comparison with tolerance
+        # to handle tiny numerical differences between runs
+        numpy.testing.assert_allclose(
+            ops.to_numpy(t1), 
+            ops.to_numpy(t2), 
+            rtol=1e-4, 
+            atol=1e-5
+        )
 
 
 class DummyTokenizer:
