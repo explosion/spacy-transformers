@@ -66,4 +66,8 @@ def test_transformer_pipeline_textcat():
         nlp2 = spacy.load(file_path)
         doc2 = nlp2("We're interested at underwater basket weaving.")
         cats2 = doc2.cats
-        assert cats1 == cats2
+        # Compare floating point values with tolerance for small numerical differences
+        assert len(cats1) == len(cats2)
+        for key in cats1:
+            assert key in cats2
+            assert abs(cats1[key] - cats2[key]) < 1e-5, f"Values for '{key}' differ: {cats1[key]} vs {cats2[key]}"

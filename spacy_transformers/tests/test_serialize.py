@@ -141,6 +141,8 @@ def test_transformer_pipeline_todisk_settings():
     # clobbered, so do both for this test
     trf.model.tokenizer.model_max_length = 499
     # add attentions on-the-fly
+    # Need to set attn_implementation to "eager" to support output_attentions=True
+    trf.model.transformer.config._attn_implementation = "eager"
     trf.model.transformer.config.output_attentions = True
     assert nlp("test")._.trf_data.model_output.attentions is not None
     with make_tempdir() as d:
