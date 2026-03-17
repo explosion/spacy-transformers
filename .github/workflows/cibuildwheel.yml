@@ -22,6 +22,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.21.3
         env:
           CIBW_SOME_OPTION: value
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           package-dir: .
           output-dir: wheelhouse
