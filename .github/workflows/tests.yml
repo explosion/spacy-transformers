@@ -9,6 +9,12 @@ on:
     paths-ignore:
       - "*.md"
 
+# When this workflow is queued, automatically cancel any previous running
+# or pending jobs from the same branch
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   MODULE_NAME: "spacy_transformers"
   RUN_MYPY: "true"
@@ -38,10 +44,10 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure Python version
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python_version }}
 
