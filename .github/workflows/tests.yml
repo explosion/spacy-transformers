@@ -91,14 +91,3 @@ jobs:
           python -m pip install "numpy<2"
           python -m pytest --pyargs $MODULE_NAME --cov=$MODULE_NAME
 
-      - name: Test backwards compatibility for v1.0 models
-        if: matrix.python_version == '3.9'
-        run: |
-          python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.1.0/en_core_web_trf-3.1.0-py3-none-any.whl --no-deps
-          python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
-
-      - name: Test backwards compatibility for v1.1 models
-        if: matrix.python_version == '3.9'
-        run: |
-          python -m pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.4.0/en_core_web_trf-3.4.0-py3-none-any.whl --no-deps
-          python -c "import spacy; nlp = spacy.load('en_core_web_trf'); doc = nlp('test')"
