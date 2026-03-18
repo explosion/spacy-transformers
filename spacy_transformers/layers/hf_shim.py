@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, cast
 from io import BytesIO
 from pathlib import Path
 import srsly
@@ -87,7 +87,7 @@ class HFShim(PyTorchShim):
         return srsly.msgpack_dumps(msg)
 
     def from_bytes(self, bytes_data):
-        msg = srsly.msgpack_loads(bytes_data)
+        msg: Dict[str, Any] = cast(Dict[str, Any], srsly.msgpack_loads(bytes_data))
         config_dict = msg["config"]
         tok_dict = msg["tokenizer"]
         if config_dict:

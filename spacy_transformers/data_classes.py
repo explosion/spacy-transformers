@@ -2,8 +2,8 @@ from typing import Optional, List, Dict, Any, Union, Tuple, cast
 from dataclasses import dataclass, field
 import torch
 import numpy
-from transformers.tokenization_utils import BatchEncoding
-from transformers.file_utils import ModelOutput
+from transformers.tokenization_utils_base import BatchEncoding
+from transformers.utils.generic import ModelOutput
 from transformers.modeling_outputs import BaseModelOutput
 from thinc.types import Ragged, Floats2d, Floats3d, FloatsXd, Ints1d, Ints2d
 from thinc.api import NumpyOps, get_array_module, xp2torch, torch2xp
@@ -93,20 +93,21 @@ class WordpieceBatch:
     @classmethod
     def from_batch_encoding(cls, token_data: BatchEncoding) -> "WordpieceBatch":
         assert isinstance(token_data, BatchEncoding) or isinstance(token_data, dict)
-        pad_token = token_data.get("pad_token", "[PAD]")
+        pad_token: Any = token_data.get("pad_token", "[PAD]")
+        input_texts: Any = token_data["input_texts"]
         lengths = [
             len([tok for tok in tokens if tok != pad_token])
-            for tokens in token_data["input_texts"]
+            for tokens in input_texts
         ]
 
         # The following tensors are intentionally allocated on the CPU to reduce
         # host-to-device copies.
         numpy_ops = NumpyOps()
-        input_ids = token_data["input_ids"]
-        token_type_ids = token_data.get("token_type_ids")
+        input_ids: Any = token_data["input_ids"]
+        token_type_ids: Any = token_data.get("token_type_ids")
 
         return cls(
-            strings=token_data["input_texts"],
+            strings=input_texts,
             input_ids=numpy_ops.asarray(input_ids, dtype=input_ids.dtype),
             attention_mask=numpy_ops.asarray2f(token_data["attention_mask"]),
             lengths=lengths,
@@ -198,7 +199,9 @@ class TransformerData:
     @property
     def width(self) -> int:
         if "last_hidden_state" in self.model_output:
-            return cast(BaseModelOutput, self.model_output).last_hidden_state.shape[-1]
+            last_hidden = cast(BaseModelOutput, self.model_output).last_hidden_state
+            assert last_hidden is not None
+            return last_hidden.shape[-1]
         else:
             raise ValueError("Cannot find last hidden state")
 
@@ -219,7 +222,7 @@ class TransformerData:
         return srsly.msgpack_dumps(self.to_dict())
 
     def from_bytes(self, byte_string: bytes) -> "TransformerData":
-        msg = srsly.msgpack_loads(byte_string)
+        msg: Any = srsly.msgpack_loads(byte_string)
         self.from_dict(msg)
         return self
 
@@ -312,7 +315,7 @@ class FullTransformerBatch:
         # construct a dummy ModelOutput with the tensor values
         model_output = ModelOutput()
         for i, x in enumerate(transpose_list(arrays)):
-            model_output[f"output_{i}"] = xp2torch(xp.vstack(x))
+            model_output[f"output_{i}"] = xp2torch(cast(FloatsXd, xp.vstack(x)))
         return FullTransformerBatch(
             spans=self.spans,
             wordpieces=self.wordpieces,
@@ -331,7 +334,9 @@ class FullTransformerBatch:
 
         # Convert all outputs to XP arrays.
         xp_model_output = ModelOutput()
-        last_hidden_state = cast(BaseModelOutput, self.model_output).last_hidden_state
+        _lhs = cast(BaseModelOutput, self.model_output).last_hidden_state
+        assert _lhs is not None
+        last_hidden_state = _lhs
         for key, output in self.model_output.items():
             if isinstance(output, torch.Tensor):
                 xp_model_output[key] = torch2xp(output)

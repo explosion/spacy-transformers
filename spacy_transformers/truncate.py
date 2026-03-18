@@ -1,6 +1,6 @@
-from typing import Tuple, List, Union, TypeVar
+from typing import Tuple, List, Union, TypeVar, cast
 import numpy
-from thinc.types import Ragged, Ints2d, Floats2d
+from thinc.types import Ragged, Ints1d, Ints2d, Floats2d
 from .data_classes import WordpieceBatch
 
 ArrayT = TypeVar("ArrayT", bound=Union[Ints2d, Floats2d])
@@ -112,4 +112,4 @@ def _truncate_alignment(align: Ragged, mask: numpy.ndarray) -> Ragged:
     for i in range(len(align.lengths)):
         drops = ~mask[align[i].data.ravel()]
         new_lengths[i] -= drops.sum()
-    return Ragged(new_align, new_lengths)
+    return Ragged(cast(Ints1d, new_align), cast(Ints1d, new_lengths))

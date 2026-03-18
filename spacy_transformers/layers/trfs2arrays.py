@@ -1,7 +1,7 @@
 from typing import Callable, List, Optional, Tuple, cast
 import numpy
 from spacy.util import all_equal
-from transformers.file_utils import ModelOutput
+from transformers.utils.generic import ModelOutput
 from transformers.modeling_outputs import BaseModelOutput
 from thinc.api import Model
 from thinc.types import Ragged, Floats2d
@@ -46,6 +46,7 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             )
         if "last_hidden_state" in trf_data.model_output:
             tensor_t_i = cast(BaseModelOutput, trf_data.model_output).last_hidden_state
+            assert tensor_t_i is not None
             if tensor_t_i.size == 0:
                 # This can happen during prediction/initialization if the transformer pipe was disabled/not executed and one of the inputs
                 # was of length zero. This causes the listenener to generate a zero-sized (in the sequence length dim) TransformerData
@@ -108,9 +109,9 @@ def forward(model: Model, trf_datas: List[TransformerData], is_train: bool):
             )
             d_src = get_d_src(d_output)
             d_src *= grad_factor
-            d_model_output["last_hidden_state"] = d_src.reshape(
-                cast(BaseModelOutput, trf_data.model_output).last_hidden_state.shape
-            )
+            _lhs = cast(BaseModelOutput, trf_data.model_output).last_hidden_state
+            assert _lhs is not None
+            d_model_output["last_hidden_state"] = d_src.reshape(_lhs.shape)
             d_trf_datas.append(
                 TransformerData(
                     model_output=d_model_output,

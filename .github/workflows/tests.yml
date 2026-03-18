@@ -17,7 +17,7 @@ concurrency:
 
 env:
   MODULE_NAME: "spacy_transformers"
-  RUN_MYPY: "true"
+  RUN_PYRIGHT: "true"
 
 jobs:
   tests:
@@ -60,11 +60,11 @@ jobs:
         run: |
           python -m build --sdist
 
-      - name: Run mypy
-        if: env.RUN_MYPY == 'true' && matrix.python_version != '3.6'
+      - name: Run pyright
+        if: env.RUN_PYRIGHT == 'true' && matrix.python_version != '3.6'
         shell: bash
         run: |
-          python -m mypy $MODULE_NAME
+          python -m pyright $MODULE_NAME
 
       - name: Delete source directory
         shell: bash
