@@ -1,6 +1,8 @@
 from typing import Any, Dict, cast
+from io import BytesIO
 from pathlib import Path
 import srsly
+import torch
 from safetensors.torch import save, load as safetensors_load
 from thinc.api import get_torch_default_device
 from spacy.util import SimpleFrozenDict
@@ -113,7 +115,20 @@ class HFShim(PyTorchShim):
             )
             self._model = transformer
             device = get_torch_default_device()
-            state_dict = safetensors_load(msg["state"])
+            state_bytes = msg["state"]
+            if _is_safetensors(state_bytes):
+                state_dict = safetensors_load(state_bytes)
+            else:
+                state_dict = torch.load(
+                    BytesIO(state_bytes),
+                    map_location=device,
+                    weights_only=True,
+                )
+            # Filter out keys not present in the model to handle
+            # cross-version differences (e.g. position_ids added/removed
+            # between transformers versions).
+            model_keys = set(self._model.state_dict().keys())
+            state_dict = {k: v for k, v in state_dict.items() if k in model_keys}
             self._model.load_state_dict(state_dict)
             self._model.to(device)
         else:
@@ -125,3 +140,10 @@ class HFShim(PyTorchShim):
                 msg["_init_transformer_config"],
             )
         return self
+
+
+def _is_safetensors(data: bytes) -> bool:
+    """Check whether bytes are in safetensors format (vs torch pickle)."""
+    # Safetensors starts with a u64 LE header size; torch.save starts with
+    # the PK zip magic bytes.
+    return len(data) >= 8 and data[:2] != b"PK"
