@@ -277,7 +277,9 @@ def huggingface_from_pretrained(
             vocab_file_contents = fileh.read()
     trf_config["return_dict"] = True
     config = config_cls.from_pretrained(str_path, **trf_config)
-    transformer = model_cls.from_pretrained(str_path, config=config)
+    transformer = model_cls.from_pretrained(
+        str_path, config=config, weights_only=False
+    )
     torch_device = get_torch_default_device()
     transformer.to(torch_device)
     return HFObjects(tokenizer, transformer, vocab_file_contents)

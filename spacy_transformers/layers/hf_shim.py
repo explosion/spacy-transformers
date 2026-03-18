@@ -1,9 +1,7 @@
 from typing import Any, Dict, cast
-from io import BytesIO
 from pathlib import Path
 import srsly
-import torch
-import warnings
+from safetensors.torch import save, load as safetensors_load
 from thinc.api import get_torch_default_device
 from spacy.util import SimpleFrozenDict
 
@@ -70,10 +68,7 @@ class HFShim(PyTorchShim):
                 for x in temp_dir.glob("**/*"):
                     if x.is_file():
                         tok_dict[x.name] = x.read_bytes()
-            filelike = BytesIO()
-            torch.save(self._model.state_dict(), filelike)
-            filelike.seek(0)
-            weights_bytes = filelike.getvalue()
+            weights_bytes = save(self._model.state_dict())
         else:
             tok_cfg = hf_model._init_tokenizer_config
             trf_cfg = hf_model._init_transformer_config
@@ -117,27 +112,9 @@ class HFShim(PyTorchShim):
                 SimpleFrozenDict(),
             )
             self._model = transformer
-            filelike = BytesIO(msg["state"])
-            filelike.seek(0)
             device = get_torch_default_device()
-            try:
-                self._model.load_state_dict(torch.load(filelike, map_location=device))
-            except RuntimeError:
-                warn_msg = (
-                    "Error loading saved torch state_dict with strict=True, "
-                    "likely due to differences between 'transformers' "
-                    "versions. Attempting to load with strict=False as a "
-                    "fallback...\n\n"
-                    "If you see errors or degraded performance, download a "
-                    "newer compatible model or retrain your custom model with "
-                    "the current 'transformers' and 'spacy-transformers' "
-                    "versions. For more details and available updates, run: "
-                    "python -m spacy validate"
-                )
-                warnings.warn(warn_msg)
-                filelike.seek(0)
-                b = torch.load(filelike, map_location=device)
-                self._model.load_state_dict(b, strict=False)
+            state_dict = safetensors_load(msg["state"])
+            self._model.load_state_dict(state_dict)
             self._model.to(device)
         else:
             self._hfmodel = HFObjects(
