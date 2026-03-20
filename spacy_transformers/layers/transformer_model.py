@@ -1,10 +1,10 @@
-from typing import List, Tuple, Callable, Union, Dict
+from typing import Any, List, Tuple, Callable, Union, Dict, cast as typing_cast
 import copy
 from pathlib import Path
-from transformers.file_utils import ModelOutput
+from transformers.utils.generic import ModelOutput
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
-from transformers.tokenization_utils import BatchEncoding
+from transformers.tokenization_utils_base import BatchEncoding
 
 from spacy.tokens import Doc
 from thinc.api import Model, get_torch_default_device, xp2torch
@@ -18,6 +18,7 @@ from ..util import log_gpu_memory, log_batch_size
 from ..layers._util import replace_listener, replace_listener_cfg
 from ..truncate import truncate_oversize_splits
 from ..align import get_alignment, get_alignment_via_offset_mapping
+from .hf_shim import HFShim
 from .hf_wrapper import HFWrapper
 
 
@@ -66,21 +67,24 @@ class TransformerModel(Model):
             },
         )
 
+    def _get_shim(self) -> HFShim:
+        return typing_cast(HFShim, self.layers[0].shims[0])
+
     @property
     def tokenizer(self):
-        return self.layers[0].shims[0]._hfmodel.tokenizer
+        return self._get_shim()._hfmodel.tokenizer
 
     @property
     def transformer(self):
-        return self.layers[0].shims[0]._hfmodel.transformer
+        return self._get_shim()._hfmodel.transformer
 
     @property
     def _init_tokenizer_config(self):
-        return self.layers[0].shims[0]._hfmodel._init_tokenizer_config
+        return self._get_shim()._hfmodel._init_tokenizer_config
 
     @property
     def _init_transformer_config(self):
-        return self.layers[0].shims[0]._hfmodel._init_transformer_config
+        return self._get_shim()._hfmodel._init_transformer_config
 
     def copy(self):
         """
@@ -92,8 +96,8 @@ class TransformerModel(Model):
         params = {}
         for name in self.param_names:
             params[name] = self.get_param(name) if self.has_param(name) else None
-        copied.params = copy.deepcopy(params)
-        copied.dims = copy.deepcopy(self._dims)
+        copied.params = copy.deepcopy(params)  # type: ignore[attr-defined]
+        copied.dims = copy.deepcopy(self._dims)  # type: ignore[attr-defined]
         copied.layers[0] = copy.deepcopy(self.layers[0])
         for name in self.grad_names:
             copied.set_grad(name, self.get_grad(name).copy())
@@ -144,9 +148,10 @@ def init(model: TransformerModel, X=None, Y=None):
         token_data = huggingface_tokenize(tokenizer, [span.text for span in flat_spans])
         wordpieces = WordpieceBatch.from_batch_encoding(token_data)
         if "offset_mapping" in token_data:
+            offset_mapping: Any = token_data["offset_mapping"]
             align = get_alignment_via_offset_mapping(
                 flat_spans,
-                token_data["offset_mapping"],
+                offset_mapping,
             )
         else:
             align = get_alignment(
@@ -185,9 +190,10 @@ def forward(
     if "logger" in model.attrs:
         log_batch_size(model.attrs["logger"], wordpieces, is_train)
     if "offset_mapping" in batch_encoding:
+        offset_mapping: Any = batch_encoding["offset_mapping"]
         align = get_alignment_via_offset_mapping(
             flat_spans,
-            batch_encoding["offset_mapping"],
+            offset_mapping,
         )
     else:
         align = get_alignment(
@@ -271,7 +277,9 @@ def huggingface_from_pretrained(
             vocab_file_contents = fileh.read()
     trf_config["return_dict"] = True
     config = config_cls.from_pretrained(str_path, **trf_config)
-    transformer = model_cls.from_pretrained(str_path, config=config)
+    transformer = model_cls.from_pretrained(
+        str_path, config=config, weights_only=False
+    )
     torch_device = get_torch_default_device()
     transformer.to(torch_device)
     return HFObjects(tokenizer, transformer, vocab_file_contents)

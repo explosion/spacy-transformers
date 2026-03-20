@@ -2,10 +2,10 @@ from typing import List, Dict, Union, Set
 from pathlib import Path
 import random
 from transformers import AutoModel, AutoTokenizer
-from transformers.tokenization_utils import BatchEncoding
+from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 import catalogue
-from spacy.util import registry
+from spacy.util import registry as registry
 from thinc.api import get_torch_default_device
 import torch.cuda
 import tempfile

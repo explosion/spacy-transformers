@@ -1,0 +1,8 @@
+{
+  "include": ["spacy_transformers"],
+  "exclude": ["spacy_transformers/tests"],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false,
+  "pythonVersion": "3.10"
+}

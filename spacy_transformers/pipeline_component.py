@@ -6,7 +6,8 @@ from spacy.pipeline.pipe import deserialize_config
 from spacy.tokens import Doc
 from spacy.vocab import Vocab
 from spacy.training import Example, validate_examples
-from spacy import util, Errors
+from spacy import util
+from spacy.errors import Errors
 from spacy.util import minibatch
 from thinc.api import Model, Config, set_dropout_rate, Optimizer
 import srsly
@@ -284,9 +285,7 @@ class Transformer(TrainablePipe):
         validate_examples(examples, "Transformer.update")
         if losses is None:
             losses = {}
-        docs = [eg.predicted for eg in examples]
-        if isinstance(docs, Doc):
-            docs = [docs]
+        docs: List[Doc] = [eg.predicted for eg in examples]
         if not any(len(doc) for doc in docs):
             # Handle cases where there are no tokens in any docs.
             return losses
@@ -403,8 +402,8 @@ class Transformer(TrainablePipe):
                 p = Path(p).absolute()
                 hf_model = huggingface_from_pretrained(
                     p,
-                    self.model._init_tokenizer_config,
-                    self.model._init_transformer_config,
+                    self.model._init_tokenizer_config,  # type: ignore[attr-defined]
+                    self.model._init_transformer_config,  # type: ignore[attr-defined]
                 )
                 self.model.attrs["set_transformer"](self.model, hf_model)
 
