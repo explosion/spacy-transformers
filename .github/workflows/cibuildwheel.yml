@@ -9,7 +9,7 @@ on:
       - 'prerelease-v[0-9]+.[0-9]+.[0-9]+**'
 jobs:
   build_wheels:
-    uses: explosion/gha-cibuildwheel/.github/workflows/cibuildwheel.yml@main
+    uses: explosion/gha-cibuildwheel/.github/workflows/cibuildwheel.yml@d0d89c035a9cd4b9b847b179c88508d7cbee965f # main
     permissions:
       contents: write
       actions: read
