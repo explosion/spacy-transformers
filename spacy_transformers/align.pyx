@@ -205,7 +205,7 @@ def get_span2wp_from_offset_mapping(span, wp_char_offsets):
         rel_token_i = token.i - span_i
         for char_idx in range(
                 token.idx - span_idx,
-                token.idx - span_idx + len(token) + 1,
+                token.idx - span_idx + len(token),
         ):
             char_to_sp_token[char_idx] = rel_token_i
 
