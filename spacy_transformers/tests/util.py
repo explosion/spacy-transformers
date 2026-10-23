@@ -2,6 +2,7 @@ from typing import Dict, List, Union
 import numpy
 import torch
 import copy
+import transformers
 from transformers.file_utils import ModelOutput
 from numpy.testing import assert_array_equal
 
@@ -11,6 +12,9 @@ from thinc.api import Model, get_current_ops
 from ..data_classes import FullTransformerBatch, HFObjects
 from ..span_getters import get_doc_spans
 from ..layers.transformer_model import forward as transformer_forward
+
+# transformers v5 removed slow tokenizers, so use_fast=False is ignored.
+HAS_SLOW_TOKENIZERS = int(transformers.__version__.split(".")[0]) < 5
 
 
 def _assert_equal_tensors(tensors1, tensors2):

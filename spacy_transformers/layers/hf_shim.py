@@ -8,7 +8,7 @@ from thinc.api import get_torch_default_device
 from spacy.util import SimpleFrozenDict
 
 from ..data_classes import HFObjects
-from ..util import make_tempdir
+from ..util import make_tempdir, warn_if_slow_tokenizer_unavailable
 
 from thinc.api import PyTorchGradScaler, PyTorchShim
 
@@ -98,6 +98,7 @@ class HFShim(PyTorchShim):
                 tokenizer = self.tokenizer_cls.from_pretrained(
                     str(temp_dir.absolute()), **tok_kwargs
                 )
+                warn_if_slow_tokenizer_unavailable(tokenizer, tok_kwargs)
                 vocab_file_contents = None
                 if hasattr(tokenizer, "vocab_file"):
                     vocab_file_name = tokenizer.vocab_files_names["vocab_file"]
@@ -105,7 +106,13 @@ class HFShim(PyTorchShim):
                     with open(vocab_file_path, "rb") as fileh:
                         vocab_file_contents = fileh.read()
 
-            transformer = self.model_cls.from_config(config)
+            # from_pretrained switches to eager attention when attentions are
+            # requested, but from_config keeps the default (e.g. sdpa), which
+            # returns no attentions in transformers v5.
+            model_kwargs = {}
+            if getattr(config, "output_attentions", False):
+                model_kwargs["attn_implementation"] = "eager"
+            transformer = self.model_cls.from_config(config, **model_kwargs)
             self._hfmodel = HFObjects(
                 tokenizer,
                 transformer,
