@@ -12,6 +12,7 @@ from thinc.api import Config, get_current_ops
 from numpy.testing import assert_array_equal
 
 from .. import TransformerData
+from .util import HAS_SLOW_TOKENIZERS
 
 
 DEFAULT_CONFIG = {
@@ -73,7 +74,7 @@ def test_initialized_transformer_tobytes():
     trf2 = nlp2.add_pipe("transformer", config=DEFAULT_CONFIG)
     trf2.from_bytes(trf_bytes)
 
-    assert trf2.model.tokenizer.is_fast is False
+    assert trf2.model.tokenizer.is_fast is not HAS_SLOW_TOKENIZERS
 
 
 def test_initialized_transformer_todisk():
@@ -86,7 +87,7 @@ def test_initialized_transformer_todisk():
         trf2 = nlp2.add_pipe("transformer", config=DEFAULT_CONFIG)
         trf2.from_disk(d)
 
-        assert trf2.model.tokenizer.is_fast is False
+        assert trf2.model.tokenizer.is_fast is not HAS_SLOW_TOKENIZERS
 
     fast_config = copy.deepcopy(DEFAULT_CONFIG)
     fast_config["model"]["tokenizer_config"]["use_fast"] = True

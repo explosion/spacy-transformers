@@ -4,6 +4,7 @@ from thinc.api import Model
 from ..layers import TransformerModel
 from ..data_classes import FullTransformerBatch
 from ..span_getters import get_doc_spans
+from .util import HAS_SLOW_TOKENIZERS
 
 
 MODEL_NAMES = [
@@ -74,10 +75,23 @@ def trf_model(name, output_attentions, output_hidden_states):
 
 def test_model_init(name, trf_model):
     assert isinstance(trf_model, Model)
-    if name == "distilbert-base-uncased":
+    if name == "distilbert-base-uncased" and HAS_SLOW_TOKENIZERS:
         assert not trf_model.tokenizer.is_fast
     else:
         assert trf_model.tokenizer.is_fast
+
+
+@pytest.mark.skipif(HAS_SLOW_TOKENIZERS, reason="slow tokenizers are available")
+def test_model_init_warns_without_slow_tokenizer():
+    model = TransformerModel(
+        "hf-internal-testing/tiny-random-DistilBertModel",
+        get_doc_spans,
+        {"use_fast": False},
+        {},
+    )
+    with pytest.warns(UserWarning, match="use_fast=False"):
+        model.initialize()
+    assert model.tokenizer.is_fast
 
 
 def test_model_predict(nlp, docs, trf_model):

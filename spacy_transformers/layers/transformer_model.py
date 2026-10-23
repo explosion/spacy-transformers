@@ -13,7 +13,7 @@ from thinc.types import ArgsKwargs
 import logging
 
 from ..data_classes import FullTransformerBatch, WordpieceBatch, HFObjects
-from ..util import maybe_flush_pytorch_cache
+from ..util import maybe_flush_pytorch_cache, warn_if_slow_tokenizer_unavailable
 from ..util import log_gpu_memory, log_batch_size
 from ..layers._util import replace_listener, replace_listener_cfg
 from ..truncate import truncate_oversize_splits
@@ -271,15 +271,14 @@ def huggingface_from_pretrained(
     else:
         str_path = source
     tokenizer = tokenizer_cls.from_pretrained(str_path, **tok_config)
+    warn_if_slow_tokenizer_unavailable(tokenizer, tok_config)
     vocab_file_contents = None
     if hasattr(tokenizer, "vocab_file"):
         with open(tokenizer.vocab_file, "rb") as fileh:
             vocab_file_contents = fileh.read()
     trf_config["return_dict"] = True
     config = config_cls.from_pretrained(str_path, **trf_config)
-    transformer = model_cls.from_pretrained(
-        str_path, config=config, weights_only=False
-    )
+    transformer = model_cls.from_pretrained(str_path, config=config)
     torch_device = get_torch_default_device()
     transformer.to(torch_device)
     return HFObjects(tokenizer, transformer, vocab_file_contents)

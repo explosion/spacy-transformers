@@ -39,6 +39,12 @@ jobs:
             python_version: "3.12"
           - os: windows-latest
             python_version: "3.12"
+          # Keep testing transformers v4. v4.57 fails to load .bin-only
+          # checkpoints such as hf-internal-testing/tiny-random-xlnet (the
+          # weights stay on the meta device), so test the last good series.
+          - os: ubuntu-latest
+            python_version: "3.11"
+            transformers: "transformers[sentencepiece]>=4.45.0,<4.57.0"
 
     runs-on: ${{ matrix.os }}
 
@@ -89,7 +95,13 @@ jobs:
 
       - name: Run tests
         shell: bash
+        env:
+          TRANSFORMERS_REQ: ${{ matrix.transformers }}
         run: |
           python -m pip install -r requirements.txt --force-reinstall
+          if [ -n "$TRANSFORMERS_REQ" ]; then
+            python -m pip install "$TRANSFORMERS_REQ"
+          fi
+          python -c "import transformers; print('transformers', transformers.__version__)"
           python -m pytest --pyargs $MODULE_NAME --cov=$MODULE_NAME
 

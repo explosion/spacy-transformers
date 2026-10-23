@@ -1,4 +1,4 @@
-from typing import List, Dict, Union, Set
+from typing import Any, List, Dict, Union, Set
 from pathlib import Path
 import random
 from transformers import AutoModel, AutoTokenizer
@@ -18,6 +18,27 @@ import warnings
 registry.span_getters = catalogue.create("spacy", "span_getters", entry_points=True)  # type: ignore
 registry.annotation_setters = catalogue.create("spacy", "annotation_setters", entry_points=True)  # type: ignore
 # fmt: on
+
+
+def warn_if_slow_tokenizer_unavailable(tokenizer: Any, tok_config: Dict) -> None:
+    """Warn if a slow tokenizer was requested but a fast one was loaded.
+
+    transformers v5 no longer provides slow tokenizers and ignores
+    use_fast=False. A fast tokenizer can split some texts into different
+    wordpieces, which can affect a pipeline trained with a slow tokenizer.
+    """
+    if tok_config.get("use_fast", True) is False and getattr(
+        tokenizer, "is_fast", False
+    ):
+        warnings.warn(
+            "The tokenizer was configured with use_fast=False, but a fast "
+            f"tokenizer ({type(tokenizer).__name__}) was loaded. transformers "
+            "v5 no longer provides slow tokenizers, and some models only have "
+            "a fast one. The fast tokenizer can split some texts into different "
+            "wordpieces, which can reduce the accuracy of a pipeline trained "
+            "with a slow tokenizer. If it does, retrain the pipeline with "
+            "use_fast=True."
+        )
 
 
 def huggingface_from_pretrained(source: Union[Path, str], config: Dict):
