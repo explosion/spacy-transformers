@@ -201,13 +201,19 @@ def get_span2wp_from_offset_mapping(span, wp_char_offsets):
     cdef int char_idx, rel_token_i
     # size is +1 so we don't have to check whether the text has a trailing space
     char_to_sp_token = numpy.full((len(span.text) + 1,), -1, dtype="int32")
+    # trailing whitespace is mapped separately and only used as a fallback for
+    # whitespace-only wordpieces, so that wordpieces whose offsets include the
+    # preceding space (e.g. sentencepiece) don't also align to the previous
+    # token
+    char_to_ws_token = numpy.full((len(span.text) + 1,), -1, dtype="int32")
     for token in span:
         rel_token_i = token.i - span_i
         for char_idx in range(
                 token.idx - span_idx,
-                token.idx - span_idx + len(token) + 1,
+                token.idx - span_idx + len(token),
         ):
             char_to_sp_token[char_idx] = rel_token_i
+        char_to_ws_token[token.idx - span_idx + len(token)] = rel_token_i
 
     # align all wordpiece tokens to one or more spacy token indices
     cdef vector[unordered_set_uint32_t_ptr] alignment
@@ -216,6 +222,7 @@ def get_span2wp_from_offset_mapping(span, wp_char_offsets):
     _get_span2wp_alignment(
         &alignment,
         numpy.ascontiguousarray(char_to_sp_token),
+        numpy.ascontiguousarray(char_to_ws_token),
         char_to_sp_token.size,
         numpy.ascontiguousarray(wp_char_offsets, dtype="int64"),
         wp_char_offsets.shape[0],
@@ -242,16 +249,19 @@ def get_span2wp_from_offset_mapping(span, wp_char_offsets):
 cdef int _get_span2wp_alignment(
         vector[unordered_set_uint32_t_ptr]* alignment,
         int32_t[::1] char_to_sp_token,
+        int32_t[::1] char_to_ws_token,
         int char_to_sp_token_length,
         int64_t[:, ::1] wp_char_offsets,
         int wp_char_offsets_length,
     ) nogil:
     cdef int char_idx, start_idx, end_idx, token_i
+    cdef bint aligned
     cdef int wp_j = 0
     cdef int alignment_size = alignment.size()
     while wp_j < wp_char_offsets_length:
         start_idx = wp_char_offsets[wp_j][0]
         end_idx = wp_char_offsets[wp_j][1]
+        aligned = False
         char_idx = start_idx
         while char_idx < end_idx:
             if 0 <= char_idx < char_to_sp_token_length:
@@ -260,6 +270,18 @@ cdef int _get_span2wp_alignment(
                 token_i = -1
             if 0 <= token_i < alignment_size:
                 deref(alignment.at(token_i)).insert(wp_j)
+                aligned = True
+            char_idx += 1
+        # fall back to the token preceding the whitespace
+        char_idx = start_idx
+        while not aligned and char_idx < end_idx:
+            if 0 <= char_idx < char_to_sp_token_length:
+                token_i = char_to_ws_token[char_idx]
+            else:
+                token_i = -1
+            if 0 <= token_i < alignment_size:
+                deref(alignment.at(token_i)).insert(wp_j)
+                aligned = True
             char_idx += 1
         wp_j += 1
     return 0

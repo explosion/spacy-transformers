@@ -97,10 +97,29 @@ def test_apply_alignment(nested_align, X_cols):
             numpy.asarray([(0, 0), (0, 3), (3, 4), (5, 6), (5, 6), (7, 8), (8, 9), (9, 10), (0, 0)], dtype="i"),
             [[1, 2], [3, 4], [5, 6, 7]],
         ),
+        # deberta-v3 offsets include the preceding space, which must not
+        # align the wordpiece to the previous token as well
+        (
+            ["Copenhagen", "is", "the", "capital"],
+            numpy.asarray([(0, 0), (0, 10), (10, 13), (13, 17), (17, 25), (0, 0)], dtype="i"),
+            [[1], [2], [3], [4]],
+        ),
+        (
+            ["of", "1.4", "million"],
+            numpy.asarray([(0, 0), (0, 2), (2, 4), (4, 5), (5, 6), (6, 14), (0, 0)], dtype="i"),
+            [[1], [2, 3, 4], [5]],
+        ),
+        # a whitespace-only wordpiece (e.g. gpt2) aligns to the preceding token
+        (
+            ["a", "b"],
+            numpy.asarray([(0, 0), (0, 1), (1, 2), (2, 3), (0, 0)], dtype="i"),
+            [[1, 2], [3]],
+        ),
     ],
     # fmt: on
 )
 def test_offset_alignment(words, offset_mapping, alignment):
     spans = get_spans([words])
     result = get_span2wp_from_offset_mapping(spans[0], offset_mapping)
+    assert len(result) == len(alignment)
     assert all(sorted(r) == a for r, a in zip(result, alignment))
